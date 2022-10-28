@@ -1,6 +1,6 @@
 # lib
 
-External libraries used by Network Systems.
+Shared libraries used by the various Network Systems projects that do not generate their own executable.
 
 ## googletest
 

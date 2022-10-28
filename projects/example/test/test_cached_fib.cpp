@@ -1,7 +1,9 @@
 #include "cached_fib.h"
 #include "gtest/gtest.h"
 
-CachedFib testFib = CachedFib(5);
+constexpr int defaultSize = 5;
+
+static CachedFib testFib = CachedFib(defaultSize);
 
 class TestFib : public ::testing::Test
 {
@@ -9,7 +11,7 @@ protected:
     TestFib()
     {
         // Every time a test is started, testFib is reinitialized with a constructor parameter of 5
-        testFib = CachedFib(5);
+        testFib = CachedFib(defaultSize);
     }
 
     ~TestFib() override

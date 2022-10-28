@@ -1,6 +1,4 @@
 // Include this module
-#include <functional>
-
 #include "cached_fib.h"
 // Include ROS headers
 #include "rclcpp/rclcpp.hpp"
