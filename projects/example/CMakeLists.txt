@@ -29,6 +29,6 @@ set(test_srcs
 )
 add_executable(${test_module} ${test_srcs})
 target_include_directories(${test_module} PRIVATE ${CMAKE_CURRENT_LIST_DIR}/inc ${PROTO_BUF_INCLUDE_PATH})
-target_link_libraries(${test_module} gtest_main)
+target_link_libraries(${test_module} ${GTEST_LINK_LIBS})
 # Make the unit test runnable with CTest (invoked via test.sh)
 add_test(NAME ${test_module} COMMAND ${test_module})

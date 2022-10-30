@@ -19,7 +19,7 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
 elseif(CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS_RELWITHDEBINFO}")
 endif()
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -Wall -Wextra -Wpedantic")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -Wall -Wextra -Wpedantic -pthread")
 message("Building Network Systems with build type '${CMAKE_BUILD_TYPE}' "
         "and flags: '${CMAKE_CXX_FLAGS}'")
 
@@ -36,6 +36,9 @@ find_package(Boost 1.80.0 COMPONENTS REQUIRED
 
 # Protobuf
 find_package(Protobuf REQUIRED)
+
+# Googletest (installed by sailbot_workspace Docker config)
+set(GTEST_LINK_LIBS "/usr/local/lib/libgtest.a" "/usr/local/lib/libgtest_main.a")
 
 # Add src directories
 add_subdirectory(lib)
