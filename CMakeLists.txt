@@ -1,15 +1,27 @@
 cmake_minimum_required(VERSION 3.10)
+project(network_systems)
 
+# Options and constants
+option(STATIC_ANALYSIS "Enable clang-tidy checks" ON)
 set(LLVM_VERSION "10")
 
+# Configure the compiler
 set(CMAKE_CXX_COMPILER "/usr/bin/clang++-${LLVM_VERSION}")
-set(CMAKE_CXX_CLANG_TIDY "clang-tidy-${LLVM_VERSION}")
-set(CMAKE_CXX_FLAGS
-    "${CMAKE_CXX_FLAGS} -g -std=c++14 -Wall -Wextra -O0 \
-    -fprofile-arcs -ftest-coverage -fprofile-instr-generate -fcoverage-mapping")
+if(STATIC_ANALYSIS)
+    set(CMAKE_CXX_CLANG_TIDY "clang-tidy-${LLVM_VERSION}")
+endif()
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-
-project(network_systems)
+# Configure build flags
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS_DEBUG} -fprofile-arcs \
+        -ftest-coverage -fprofile-instr-generate -fcoverage-mapping")
+    add_definitions(-DDEBUG)
+elseif(CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS_RELWITHDEBINFO}")
+endif()
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -Wall -Wextra -Wpedantic")
+message("Building Network Systems with build type '${CMAKE_BUILD_TYPE}' "
+        "and flags: '${CMAKE_CXX_FLAGS}'")
 
 # ROS dependencies
 find_package(ament_cmake REQUIRED)

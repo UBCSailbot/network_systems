@@ -11,6 +11,6 @@ private:
     std::vector<int> cache;
 
 public:
-    explicit CachedFib(const std::size_t);
-    int getFib(const std::size_t);
+    explicit CachedFib(std::size_t);
+    int getFib(std::size_t);
 };
