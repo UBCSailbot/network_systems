@@ -46,4 +46,7 @@ set(GTEST_LINK_LIBS "/usr/local/lib/libgtest.a" "/usr/local/lib/libgtest_main.a"
 add_subdirectory(lib)
 add_subdirectory(projects)
 
+# Install launch files
+install(DIRECTORY launch DESTINATION share/network_systems)
+
 ament_package()
