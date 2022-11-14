@@ -21,3 +21,9 @@ protected:
 };
 
 TEST_F(TestFib, TestBasic) { ASSERT_EQ(testFib.getFib(5), 3) << "5th fibonacci number must be 3!"; }
+
+TEST_F(TestFib, TestBasic2)
+{
+    ASSERT_EQ(testFib.getFib(6), 5);
+    ASSERT_EQ(testFib.getFib(7), 8);
+}
