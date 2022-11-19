@@ -11,9 +11,16 @@ jobs:
   ros-tests:
     runs-on: ubuntu-latest
     steps:
-      - 
-        name: Checkout code
+      - name: Checkout workspace
         uses: actions/checkout@v3
-      -
-        name: Test
+        with:
+          repository: UBCSailbot/sailbot_workspace
+          ref: user/hhenry01/22-figure-out-subteam-repository-ci
+
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          path: src/network_systems
+
+      - name: Test
         uses: ./.github/actions/test/
