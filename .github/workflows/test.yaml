@@ -1,0 +1,25 @@
+name: Test
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  ros_test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout workspace
+        uses: actions/checkout@v3
+        with:
+          repository: UBCSailbot/sailbot_workspace
+
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          path: src/network_systems
+
+      - name: Test
+        uses: ./.github/actions/test/

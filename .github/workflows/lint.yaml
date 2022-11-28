@@ -1,0 +1,59 @@
+name: Lint
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  ros_lint:
+    name: ament_${{ matrix.linter }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+          linter: [clang-tidy, lint_cmake, xmllint, flake8, pep257]
+    steps:
+      - name: Checkout workspace
+        uses: actions/checkout@v3
+        with:
+          repository: UBCSailbot/sailbot_workspace
+
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          path: src/network_systems
+
+      - name: Run linter
+        uses: ./.github/actions/lint/
+        env: 
+          LINTER: ${{ matrix.linter }}
+
+  # https://github.com/nosborn/github-action-markdown-cli
+  markdownlint:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Check out code
+      uses: actions/checkout@v3
+
+    - name: Run linter
+      uses: nosborn/github-action-markdown-cli@v3.2.0
+      with:
+        config_file: .markdownlint.json
+        files: .
+        dot: true
+
+  # https://github.com/gaurav-nelson/github-action-markdown-link-check
+  markdown-link-check:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Check out code
+      uses: actions/checkout@v3
+
+    - name: Run linter
+      uses: gaurav-nelson/github-action-markdown-link-check@v1
+      with:
+        config-file: .markdown-link-check.json
+        folder-path: .
