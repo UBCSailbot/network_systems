@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  ros-lint:
+  ros_lint:
     name: ament_${{ matrix.linter }}
     runs-on: ubuntu-latest
     strategy:
@@ -35,38 +35,25 @@ jobs:
   markdownlint:
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout workspace
+    - name: Check out code
       uses: actions/checkout@v3
-      with:
-        repository: UBCSailbot/sailbot_workspace
-
-    - name: Checkout code
-      uses: actions/checkout@v3
-      with:
-        path: src/network_systems
 
     - name: Run linter
       uses: nosborn/github-action-markdown-cli@v3.2.0
       with:
+        config_file: .markdownlint.json
         files: .
         dot: true
-        config_file: .markdownlint.json
 
   # https://github.com/gaurav-nelson/github-action-markdown-link-check
   markdown-link-check:
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout workspace
+    - name: Check out code
       uses: actions/checkout@v3
-      with:
-        repository: UBCSailbot/sailbot_workspace
-
-    - name: Checkout code
-      uses: actions/checkout@v3
-      with:
-        path: src/network_systems
 
     - name: Run linter
       uses: gaurav-nelson/github-action-markdown-link-check@v1
       with:
         config-file: .markdown-link-check.json
+        folder-path: .
