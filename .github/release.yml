@@ -5,15 +5,11 @@ changelog:
     authors:
       - dependabot
   categories:
-    - title: Workflow Updates
+    - title: New Features
       labels:
-        - workflows
-    - title: General Infrastructure Updates
+        - enhancement
+    - title: Updated Features
       labels:
-        - infrastructure
-    - title: New Features or Improvements
-      labels:
-        - enhancements
         - maintenance
     - title: Bug Fixes
       labels:
@@ -21,7 +17,7 @@ changelog:
     - title: Infrastructure Updates
       labels:
         - infrastructure
-    - title: Documentation Changes
+    - title: Documentation Updates
       labels:
         - documentation
     - title: Other Changes
