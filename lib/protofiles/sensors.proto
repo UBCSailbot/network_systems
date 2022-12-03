@@ -2,13 +2,13 @@ syntax = "proto3";
 
 package Placeholder;  // TODO replace with new project name
 
-message sensors
+message Sensors
 {
-    message generic
+    message Generic
     {
         uint64 id    = 1;
         bytes  data  = 2;
     }
 
-    repeated generic genSensors = 1;
+    repeated Generic gen_sensors = 1;
 }
