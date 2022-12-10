@@ -31,7 +31,7 @@ find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
 
 # Boost
-find_package(Boost 1.80.0 COMPONENTS REQUIRED
+find_package(Boost 1.74.0 COMPONENTS REQUIRED
     # Insert desired libraries below (see /usr/include/boost/ for available options)
     serialization
 )
