@@ -23,3 +23,5 @@ jobs:
 
       - name: Test
         uses: ./.github/actions/test/
+        env:
+          DISABLE_VCS: true
