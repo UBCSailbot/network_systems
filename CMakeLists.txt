@@ -3,12 +3,12 @@ project(network_systems)
 
 # Options and constants
 option(STATIC_ANALYSIS "Enable clang-tidy checks" ON)
-set(LLVM_VERSION "10")
+set(CLANG_VERSION "14")
 
 # Configure the compiler
-set(CMAKE_CXX_COMPILER "/usr/bin/clang++-${LLVM_VERSION}")
+set(CMAKE_CXX_COMPILER "/usr/bin/clang++-${CLANG_VERSION}")
 if(STATIC_ANALYSIS)
-    set(CMAKE_CXX_CLANG_TIDY "clang-tidy-${LLVM_VERSION}")
+    set(CMAKE_CXX_CLANG_TIDY "clang-tidy-${CLANG_VERSION}")
 endif()
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # Configure build flags
@@ -21,7 +21,7 @@ elseif(CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
 endif()
 # Enable all warnings as errors except unused parameter because auto-generated protobuf files trigger it,
 # and clang-tidy can cover it without false-flagging the protobuf files.
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -Wall -Wextra -Wpedantic -Werror -Wno-unused-parameter -pthread")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++20 -Wall -Wextra -Wpedantic -Werror -Wno-unused-parameter -pthread")
 message("Building Network Systems with build type '${CMAKE_BUILD_TYPE}' "
         "and flags: '${CMAKE_CXX_FLAGS}'")
 
@@ -40,7 +40,7 @@ find_package(Boost 1.74.0 COMPONENTS REQUIRED
 find_package(Protobuf REQUIRED)
 
 # Googletest (installed by sailbot_workspace Docker config)
-set(GTEST_LINK_LIBS "/usr/local/lib/libgtest.a" "/usr/local/lib/libgtest_main.a")
+set(GTEST_LINK_LIBS "/usr/lib/x86_64-linux-gnu/libgtest.a" "/usr/lib/x86_64-linux-gnu/libgtest_main.a")
 
 # Add src directories
 add_subdirectory(lib)

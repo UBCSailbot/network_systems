@@ -14,5 +14,5 @@ set(PROTOBUF_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}
 
 # re-enable clang tidy checks
 if(STATIC_ANALYSIS)
-    set(CMAKE_CXX_CLANG_TIDY "clang-tidy-${LLVM_VERSION}")
+    set(CMAKE_CXX_CLANG_TIDY "clang-tidy-${CLANG_VERSION}")
 endif()

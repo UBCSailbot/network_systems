@@ -25,7 +25,7 @@ private:
     void topic_callback(const std_msgs::msg::UInt64::SharedPtr msg)
     {
         int fibNum = this->c_Fib_.getFib(msg->data);
-        RCLCPP_INFO(this->get_logger(), "Fib num for '%d' is '%d'", msg->data, fibNum);
+        RCLCPP_INFO(this->get_logger(), "Fib num for '%lu' is '%d'", msg->data, fibNum);
     }
 };
 
