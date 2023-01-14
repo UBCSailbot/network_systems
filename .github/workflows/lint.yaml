@@ -8,13 +8,13 @@ on:
   workflow_dispatch:
 
 jobs:
-  ros_lint:
+  ament-lint:
     name: ament_${{ matrix.linter }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-          linter: [clang-tidy, lint_cmake, xmllint, flake8, pep257]
+          linter: [lint_cmake, xmllint, flake8, pep257]
     steps:
       - name: Checkout workspace
         uses: actions/checkout@v3
@@ -27,9 +27,27 @@ jobs:
           path: src/network_systems
 
       - name: Run linter
-        uses: ./.github/actions/lint/
-        env: 
+        uses: ./.github/actions/ament-lint/
+        env:
           LINTER: ${{ matrix.linter }}
+          DISABLE_VCS: true
+
+  clang-tidy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout workspace
+        uses: actions/checkout@v3
+        with:
+          repository: UBCSailbot/sailbot_workspace
+
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          path: src/network_systems
+
+      - name: Run linter
+        uses: ./.github/actions/clang-tidy/
+        env:
           DISABLE_VCS: true
 
   # https://github.com/nosborn/github-action-markdown-cli
