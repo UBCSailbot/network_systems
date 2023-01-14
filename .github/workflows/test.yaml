@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  ros_test:
+  colcon-test:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout workspace
@@ -23,3 +23,5 @@ jobs:
 
       - name: Test
         uses: ./.github/actions/test/
+        env:
+          DISABLE_VCS: true
