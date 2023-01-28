@@ -40,7 +40,8 @@ find_package(Boost 1.74.0 COMPONENTS REQUIRED
 find_package(Protobuf REQUIRED)
 
 # Googletest (installed by sailbot_workspace Docker config)
-set(GTEST_LINK_LIBS "/usr/lib/x86_64-linux-gnu/libgtest.a" "/usr/lib/x86_64-linux-gnu/libgtest_main.a")
+execute_process(COMMAND arch OUTPUT_VARIABLE ARCH OUTPUT_STRIP_TRAILING_WHITESPACE)
+set(GTEST_LINK_LIBS "/usr/lib/${ARCH}-linux-gnu/libgtest.a" "/usr/lib/${ARCH}-linux-gnu/libgtest_main.a")
 
 # Add src directories
 add_subdirectory(lib)
