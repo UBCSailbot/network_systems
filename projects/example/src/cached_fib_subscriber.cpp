@@ -13,18 +13,18 @@ constexpr int INIT_FIB_SIZE = 5;
 class CachedFibSubscriber : public rclcpp::Node
 {
 public:
-    explicit CachedFibSubscriber(const std::size_t initSize) : Node("cached_fib_subscriber"), c_Fib_(initSize)
+    explicit CachedFibSubscriber(const std::size_t initSize) : Node("cached_fib_subscriber"), c_fib_(initSize)
     {
         sub_ = this->create_subscription<std_msgs::msg::UInt64>(
           CACHED_FIB_TOPIC, ROS_Q_SIZE, std::bind(&CachedFibSubscriber::topic_callback, this, std::placeholders::_1));
     }
 
 private:
-    CachedFib c_Fib_;
+    CachedFib c_fib_;
     rclcpp::Subscription<std_msgs::msg::UInt64>::SharedPtr sub_;
     void topic_callback(const std_msgs::msg::UInt64::SharedPtr msg)
     {
-        int fibNum = this->c_Fib_.getFib(msg->data);
+        int fibNum = this->c_fib_.getFib(msg->data);
         RCLCPP_INFO(this->get_logger(), "Fib num for '%lu' is '%d'", msg->data, fibNum);
     }
 };
