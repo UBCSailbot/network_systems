@@ -48,7 +48,7 @@ HwLocalTransceiver::~HwLocalTransceiver(){};
 
 bool HwLocalTransceiver::send(const std::string & data)
 {
-    std::string msg = formatMsg(data);
+    std::string                 msg = formatMsg(data);
     std::lock_guard<std::mutex> lock(serial_mtx_);
     boost::asio::write(serial_, boost::asio::buffer(msg, msg.size()));
     // if successful, else return false

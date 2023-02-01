@@ -151,7 +151,7 @@ public:
     std::string receive();
 
 private:
-    rclcpp::Publisher<std_msgs::msg::String>::SharedPtr pub_;
+    rclcpp::Publisher<std_msgs::msg::String>::SharedPtr    pub_;
     rclcpp::Subscription<std_msgs::msg::String>::SharedPtr sub_;
     // Latest message published by the Mock Remote Transceiver
     std::string latest_rcvd_msg_;
