@@ -10,7 +10,7 @@
 
 /**
  * Abstract Local Transceiver Class
- * Hanldes transmission and reception of data to and from the remote server
+ * Handles transmission and reception of data to and from the remote server
  *
  */
 class LocalTransceiver

@@ -5,14 +5,26 @@
 #include <sys/ioctl.h>
 #include <sys/socket.h>
 
+#include <cstring>
 #include <stdexcept>
 #include <thread>
 
 #include "can_frame_parser.h"
 
+using IFreq       = struct ifreq;
+using SockAddr    = struct sockaddr;
+using SockAddrCan = struct sockaddr_can;
+
 namespace
 {
-std::string get_can_frame_dbg_str(const can_frame & frame)
+
+/**
+ * @brief Format a CAN frame into a string for debugging and logging
+ * 
+ * @param frame CAN frame to format
+ * @return String representation of frame
+ */
+std::string fmtCanFrameDbgStr(const CanFrame & frame)
 {
     std::string str = "ID: " + std::to_string(frame.can_id) + "\nData:";
     // Bytes ascending from left to right matches candump output order
@@ -24,6 +36,42 @@ std::string get_can_frame_dbg_str(const can_frame & frame)
 }  // namespace
 
 CanTransceiver::~CanTransceiver(){};
+
+void CanTransceiver::onNewCmd(CanId id /*, other data fields...*/)
+{
+    switch (id) {
+        case RudderCmd: {
+            struct RudderCmd cmd;
+            CanFrame         frame = cmd.toLinuxCan();
+            send(frame);
+            break;
+        }
+        default:
+            // log error
+            std::cerr << "Unknown CAN ID: " << id << std::endl;
+    }
+}
+
+void CanTransceiver::onNewCanData(const CanFrame & frame)
+{
+    switch (frame.can_id) {
+        case Placeholder0: {
+            struct Placeholder0 inst(frame);
+            // buffer data (PLACHOLDER METHOD)
+            memcpy(sensor_buf_, &inst, sizeof(inst));
+            break;
+        }
+        case Placeholder1: {
+            struct Placeholder1 inst(frame);
+            // buffer data (PLACHOLDER METHOD)
+            memcpy(sensor_buf_, &inst, sizeof(inst));
+            break;
+        }
+        default:
+            // log error
+            std::cerr << "Unknown CAN ID: " << frame.can_id << std::endl;
+    }
+}
 
 CanbusIntf::CanbusIntf(const std::string & can_inst)
 {
@@ -47,23 +95,24 @@ CanbusIntf::CanbusIntf(const std::string & can_inst)
 
 CanbusIntf::~CanbusIntf() { close(sock_desc_); }
 
-void CanbusIntf::start() { receive_thread_ = std::thread(&CanbusIntf::receive, this); }
+void CanbusIntf::startReceive() { receive_thread_ = std::thread(&CanbusIntf::receive, this); }
 
 void CanbusIntf::receive()
 {
-    can_frame r_frame;
+    CanFrame frame;
     while (true) {
-        read(sock_desc_, &r_frame, sizeof(can_frame));
+        read(sock_desc_, &frame, sizeof(can_frame));
+        onNewCanData(frame);
     }
 }
 
-void CanbusIntf::send(const can_frame & w_frame) const
+void CanbusIntf::send(const CanFrame & frame) const
 {
-    if (write(sock_desc_, &w_frame, sizeof(can_frame)) != sizeof(can_frame)) {
+    if (write(sock_desc_, &frame, sizeof(can_frame)) != sizeof(can_frame)) {
         // Log error
-        std::cout << "Failed to write frame to CAN:" << std::endl;
-        std::cout << get_can_frame_dbg_str(w_frame) << std::endl;
+        std::cerr << "Failed to write frame to CAN:" << std::endl;
+        std::cerr << fmtCanFrameDbgStr(frame) << std::endl;
     }
 }
 
-void CansimIntf::receive() { CanbusIntf::receive(); }
+void CanSimIntf::receive() {}

@@ -22,7 +22,7 @@ elseif(CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
 endif()
 # Enable all warnings as errors except unused parameter because auto-generated protobuf files trigger it,
 # and clang-tidy can cover it without false-flagging the protobuf files.
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++20 -Wall -Wextra -Wpedantic -Werror -Wno-unused-parameter -pthread -fms-extensions")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++20 -Wall -Wextra -Wpedantic -Werror -Wno-unused-parameter -pthread")
 message("Building Network Systems with build type '${CMAKE_BUILD_TYPE}' "
         "and flags: '${CMAKE_CXX_FLAGS}'")
 

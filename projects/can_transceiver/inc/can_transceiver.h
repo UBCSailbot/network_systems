@@ -4,37 +4,120 @@
 
 #include <string>
 
+#include "can_frame_parser.h"
 #include "rclcpp/rclcpp.hpp"
 
-using IFreq       = struct ifreq;
-using SockAddr    = struct sockaddr;
-using SockAddrCan = struct sockaddr_can;
-
+/**
+ * Abstract CAN Transceiver Class
+ * Handles transmission and reception of data to and from the hardware/simulator
+ * 
+ */
 class CanTransceiver
 {
 public:
+    /**
+    * @brief Destroy the Can Transceiver object
+    * 
+    */
     virtual ~CanTransceiver() = 0;
-    virtual void start()      = 0;
+
+    /**
+     * @brief Kick off a thread to poll for and receive data
+     * 
+     */
+    virtual void startReceive() = 0;
+
+    /**
+     * @brief Call when a new command (ex. rudder command) needs to be executed
+     *        Passes the command down to the hardware/simulator
+     * 
+     */
+    void onNewCmd(CanId id /*, other data fields... */);
+
+    /**
+     * @brief Retrieve the most recent set of sensors data
+     * 
+     * @return Data in some format - string is just a placeholder; DO NOT USE STRING IN ACTUAL IMPLEMENTATION
+     */
+    std::string getRecentSensors();
 
 protected:
+    // Buffer where recent sensor data is stored - DO NOT USE VOID POINTER IN ACTUAL IMPLEMENTATION
+    void * sensor_buf_;
+
+    /**
+     * @brief Retrieve latest incoming data from hardware/simulator and process it
+     * 
+     */
     virtual void receive() = 0;
+
+    /**
+     * @brief Send a command to the hardware/simulator
+     * 
+     * @param frame Command frame to send
+     */
+    virtual void send(const CanFrame & frame) const = 0;
+
+    /**
+     * @brief Call on receiving a new CAN data frame from hardware/simulator
+     * 
+     * @param frame received CAN data frame
+     */
+    void onNewCanData(const CanFrame & frame);
 };
 
+/**
+ * Implementation of CAN Transceiver that interfaces with CAN hardware
+ * 
+ */
 class CanbusIntf : public CanTransceiver
 {
 public:
+    /**
+    * @brief Construct a new Canbus Intf object
+    * 
+    * @param can_inst 
+    */
     explicit CanbusIntf(const std::string & can_inst);
+
+    /**
+     * @brief Destroy the Canbus Intf object
+     * 
+     */
     ~CanbusIntf();
-    void start();
+
+    /**
+     * @brief Kick off a thread to receive data over CAN
+     * 
+     */
+    void startReceive();
 
 protected:
+    // Thread that listens to CAN
     std::thread receive_thread_;
-    int         sock_desc_;
-    void        receive();
-    void        send(const can_frame & w_frame) const;
+
+    // CAN socket this instance is attached to
+    int sock_desc_;
+
+    /**
+     * @brief Retrieve latest incoming CAN frame from hardware and process it
+     * 
+     */
+    void receive();
+
+    /**
+     * @brief Send a command to hardware
+     * 
+     * @param frame command frame to send
+     */
+    void send(const CanFrame & frame) const;
 };
 
-class CansimIntf : public CanbusIntf, public rclcpp::Node
+/**
+ * Implementation of CAN Transceiver that interfaces with the simulator
+ * 
+ */
+class CanSimIntf : public CanTransceiver, public rclcpp::Node
 {
-    void receive() override;
+    void receive();
 };

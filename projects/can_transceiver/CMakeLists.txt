@@ -2,6 +2,7 @@ set(module can_transceiver)
 
 set(srcs
     ${CMAKE_CURRENT_LIST_DIR}/src/can_transceiver.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/src/can_frame_parser.cpp
 )
 
 # Create module ROS executable

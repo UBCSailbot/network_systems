@@ -7,6 +7,7 @@
 #include "rclcpp/subscription.hpp"
 #include "rclcpp/timer.hpp"
 #include "ros_nodes.h"
+#include "std_msgs/msg/string.hpp"
 
 /**
  * Local Transceiver Interface Node
@@ -26,9 +27,9 @@ public:
         static constexpr int  ROS_Q_SIZE     = 5;
         static constexpr auto TIMER_INTERVAL = std::chrono::milliseconds(500);
         pub_   = this->create_publisher<std_msgs::msg::String>(PLACEHOLDER_TOPIC_0, ROS_Q_SIZE);
-        timer_ = this->create_wall_timer(TIMER_INTERVAL, std::bind(&LocalTransceiverIntf::pub_callback, this));
+        timer_ = this->create_wall_timer(TIMER_INTERVAL, std::bind(&LocalTransceiverIntf::pub_cb, this));
         sub_   = this->create_subscription<std_msgs::msg::String>(
-          PLACEHOLDER_TOPIC_1, ROS_Q_SIZE, std::bind(&LocalTransceiverIntf::sub_callback, this, std::placeholders::_1));
+          PLACEHOLDER_TOPIC_1, ROS_Q_SIZE, std::bind(&LocalTransceiverIntf::sub_cb, this, std::placeholders::_1));
     }
 
 private:
@@ -44,7 +45,7 @@ private:
      * @brief Callback function to publish to onboard ROS network
      * 
      */
-    void pub_callback(/* placeholder */)
+    void pub_cb(/* placeholder */)
     {
         std::string some_msg_content = lcl_trns_->getRemoteData();
         auto        msg              = std_msgs::msg::String();
@@ -56,7 +57,7 @@ private:
      * @brief Callback function to subscribe to the onboard ROS network
      * 
      */
-    void sub_callback(std_msgs::msg::String /* placeholder */) { lcl_trns_->onNewSensorData(); }
+    void sub_cb(std_msgs::msg::String /* placeholder */) { lcl_trns_->onNewSensorData(); }
 };
 
 int main(int argc, char * argv[])
