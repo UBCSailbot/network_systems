@@ -89,6 +89,14 @@ public:
      */
     ~HwLocalTransceiver();
 
+private:
+    // boost io service - required for boost::asio operations
+    boost::asio::io_service io_;
+    // serial port data where is sent and received
+    boost::asio::serial_port serial_;
+    // mutex to synchronize access to the serial port
+    std::mutex serial_mtx_;
+
     /**
      * @brief Send data to the serial port and onto the remote server
      * 
@@ -104,14 +112,6 @@ public:
      * @return The data byte stream of the message payload
      */
     std::string receive();
-
-private:
-    // boost io service - required for boost::asio operations
-    boost::asio::io_service io_;
-    // serial port data where is sent and received
-    boost::asio::serial_port serial_;
-    // mutex to synchronize access to the serial port
-    std::mutex serial_mtx_;
 };
 
 /**
@@ -134,6 +134,14 @@ public:
      */
     ~MockLocalTransceiver();
 
+private:
+    rclcpp::Publisher<std_msgs::msg::String>::SharedPtr    pub_;
+    rclcpp::Subscription<std_msgs::msg::String>::SharedPtr sub_;
+    // Latest message published by the Mock Remote Transceiver
+    std::string latest_rcvd_msg_;
+    // Callback function to subscribe to the MOCK_REMOTE_TO_LOCAL_TRANSCEIVER_TOPIC
+    void sub_callback(std_msgs::msg::String::SharedPtr msg);
+
     /**
      * @brief Send data to the ROS network and onto Mock Remote Transceiver
      * 
@@ -149,12 +157,4 @@ public:
      * @return The data byte stream of the message payload
      */
     std::string receive();
-
-private:
-    rclcpp::Publisher<std_msgs::msg::String>::SharedPtr    pub_;
-    rclcpp::Subscription<std_msgs::msg::String>::SharedPtr sub_;
-    // Latest message published by the Mock Remote Transceiver
-    std::string latest_rcvd_msg_;
-    // Callback function to subscribe to the MOCK_REMOTE_TO_LOCAL_TRANSCEIVER_TOPIC
-    void sub_callback(std_msgs::msg::String::SharedPtr msg);
 };

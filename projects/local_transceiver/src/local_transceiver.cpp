@@ -4,8 +4,9 @@
 
 #include "boost/asio/serial_port.hpp"
 #include "boost/asio/write.hpp"
-#include "ros_nodes.h"
+#include "ros_info.h"
 #include "sensors.pb.h"
+#include "shared_constants.h"
 
 LocalTransceiver::~LocalTransceiver(){};
 
@@ -48,7 +49,10 @@ HwLocalTransceiver::~HwLocalTransceiver(){};
 
 bool HwLocalTransceiver::send(const std::string & data)
 {
-    std::string                 msg = formatMsg(data);
+    std::string msg = formatMsg(data);
+    if (msg.size() >= MAX_LOCAL_TO_REMOTE_PAYLOAD_SIZE_BYTES) {
+        // format the message to be under the size limits
+    }
     std::lock_guard<std::mutex> lock(serial_mtx_);
     boost::asio::write(serial_, boost::asio::buffer(msg, msg.size()));
     // if successful, else return false

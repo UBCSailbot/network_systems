@@ -6,7 +6,8 @@
 #include <array>
 #include <stdexcept>
 
-using CanFrame = struct can_frame;
+using CanFrame   = struct can_frame;
+using RawDataBuf = std::array<uint8_t, CAN_MAX_DLEN>;
 
 // Enum of all device IDs - TODO: Look into autogenerating this based on a csv file or similar
 enum CanId : uint32_t { Placeholder0 = 0, Placeholder1 = 1, RudderCmd, CAN_ID_MAX };
@@ -51,7 +52,7 @@ public:
             uint8_t  field_4_       : 4;
         } fields_;
         // Raw data buffer representation of data
-        std::array<uint8_t, CAN_MAX_DLEN> raw_buf_;
+        RawDataBuf raw_buf_;
     } data_;
     static_assert(sizeof(data_) == CAN_MAX_DLEN);
 
@@ -86,7 +87,7 @@ public:
             uint32_t field_1_;
         } fields_;
         // Raw data buffer representation of data
-        std::array<uint8_t, CAN_MAX_DLEN> raw_buf_;
+        RawDataBuf raw_buf_;
     } data_;
     static_assert(sizeof(data_) == CAN_MAX_DLEN);
 
@@ -133,7 +134,7 @@ public:
             uint8_t  field_4_       : 4;
         } fields_;
         // Raw data buffer representation of data
-        std::array<uint8_t, CAN_MAX_DLEN> raw_buf_;
+        RawDataBuf raw_buf_;
     } data_;
     static_assert(sizeof(data_) == CAN_MAX_DLEN);
 

@@ -57,13 +57,13 @@ void CanTransceiver::onNewCanData(const CanFrame & frame)
     switch (frame.can_id) {
         case Placeholder0: {
             struct Placeholder0 inst(frame);
-            // buffer data (PLACHOLDER METHOD)
+            // buffer data (PLACEHOLDER METHOD)
             memcpy(sensor_buf_, &inst, sizeof(inst));
             break;
         }
         case Placeholder1: {
             struct Placeholder1 inst(frame);
-            // buffer data (PLACHOLDER METHOD)
+            // buffer data (PLACEHOLDER METHOD)
             memcpy(sensor_buf_, &inst, sizeof(inst));
             break;
         }
@@ -91,11 +91,11 @@ CanbusIntf::CanbusIntf(const std::string & can_inst)
     if (bind(sock_desc_, reinterpret_cast<const SockAddr *>(&addr), sizeof(addr)) < 0) {
         throw std::runtime_error("Failed to bind CAN socket");
     }
+
+    receive_thread_ = std::thread(&CanbusIntf::receive, this);
 }
 
 CanbusIntf::~CanbusIntf() { close(sock_desc_); }
-
-void CanbusIntf::startReceive() { receive_thread_ = std::thread(&CanbusIntf::receive, this); }
 
 void CanbusIntf::receive()
 {

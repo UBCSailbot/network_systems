@@ -22,12 +22,6 @@ public:
     virtual ~CanTransceiver() = 0;
 
     /**
-     * @brief Kick off a thread to poll for and receive data
-     * 
-     */
-    virtual void startReceive() = 0;
-
-    /**
      * @brief Call when a new command (ex. rudder command) needs to be executed
      *        Passes the command down to the hardware/simulator
      * 
@@ -42,9 +36,8 @@ public:
     std::string getRecentSensors();
 
 protected:
-    // Buffer where recent sensor data is stored - DO NOT USE VOID POINTER IN ACTUAL IMPLEMENTATION
+    // Buffer where recent data is stored - DO NOT USE VOID POINTER IN ACTUAL IMPLEMENTATION
     void * sensor_buf_;
-
     /**
      * @brief Retrieve latest incoming data from hardware/simulator and process it
      * 
@@ -74,7 +67,7 @@ class CanbusIntf : public CanTransceiver
 {
 public:
     /**
-    * @brief Construct a new Canbus Intf object
+    * @brief Construct a new Canbus Intf object and start listening for incoming data on a new thread
     * 
     * @param can_inst 
     */
@@ -86,13 +79,7 @@ public:
      */
     ~CanbusIntf();
 
-    /**
-     * @brief Kick off a thread to receive data over CAN
-     * 
-     */
-    void startReceive();
-
-protected:
+private:
     // Thread that listens to CAN
     std::thread receive_thread_;
 

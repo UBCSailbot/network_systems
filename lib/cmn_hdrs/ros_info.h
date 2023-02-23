@@ -1,3 +1,4 @@
+// Consider autogenerating this file
 #pragma once
 
 constexpr auto PLACEHOLDER_TOPIC_0 = "PLACEHOLDER_TOPIC_0";

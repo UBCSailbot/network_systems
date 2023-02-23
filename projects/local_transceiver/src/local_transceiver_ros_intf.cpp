@@ -6,7 +6,7 @@
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp/subscription.hpp"
 #include "rclcpp/timer.hpp"
-#include "ros_nodes.h"
+#include "ros_info.h"
 #include "std_msgs/msg/string.hpp"
 
 /**

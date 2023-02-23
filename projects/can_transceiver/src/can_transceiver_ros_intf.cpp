@@ -4,7 +4,7 @@
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp/subscription.hpp"
 #include "rclcpp/timer.hpp"
-#include "ros_nodes.h"
+#include "ros_info.h"
 #include "std_msgs/msg/string.hpp"
 
 class CanTransceiverIntf : public rclcpp::Node
@@ -29,6 +29,10 @@ private:
     rclcpp::Publisher<std_msgs::msg::String>::SharedPtr    pub_;
     rclcpp::Subscription<std_msgs::msg::String>::SharedPtr sub_;
 
+    /**
+     * @brief Callback function to publish to onboard ROS network
+     *
+     */
     void pub_cb(/* placeholder */)
     {
         std::string recent_sensors = can_trns_->getRecentSensors();
