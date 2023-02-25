@@ -2,7 +2,7 @@
 #include "gtest/gtest.h"
 
 static constexpr int DEFAULT_SIZE = 5;
-static CachedFib g_test_fib = CachedFib(DEFAULT_SIZE);
+static CachedFib     g_test_fib   = CachedFib(DEFAULT_SIZE);
 
 class TestFib : public ::testing::Test
 {

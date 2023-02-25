@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.10)
 project(network_systems)
+include(functions.cmake)
 
 # Options and constants
 option(STATIC_ANALYSIS "Enable clang-tidy checks" ON)
