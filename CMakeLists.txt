@@ -4,6 +4,7 @@ include(functions.cmake)
 
 # Options and constants
 option(STATIC_ANALYSIS "Enable clang-tidy checks" ON)
+option(UNIT_TEST "Enable unit tests" ON)
 set(CLANG_VERSION "14")
 
 # Configure the compiler
@@ -41,8 +42,10 @@ find_package(Boost 1.74.0 COMPONENTS REQUIRED
 find_package(Protobuf REQUIRED)
 
 # Googletest (installed by sailbot_workspace Docker config)
-execute_process(COMMAND arch OUTPUT_VARIABLE ARCH OUTPUT_STRIP_TRAILING_WHITESPACE)
-set(GTEST_LINK_LIBS "/usr/lib/${ARCH}-linux-gnu/libgtest.a" "/usr/lib/${ARCH}-linux-gnu/libgtest_main.a")
+if(UNIT_TEST)
+    execute_process(COMMAND arch OUTPUT_VARIABLE ARCH OUTPUT_STRIP_TRAILING_WHITESPACE)
+    set(GTEST_LINK_LIBS "/usr/lib/${ARCH}-linux-gnu/libgtest.a" "/usr/lib/${ARCH}-linux-gnu/libgtest_main.a")
+endif()
 
 # Add src directories
 add_subdirectory(lib)
