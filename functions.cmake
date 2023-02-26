@@ -29,15 +29,17 @@ endfunction()
 
 # Create unit test
 function(make_unit_test module srcs link_libs inc_dirs)
-    set(test_module test_${module})
-    add_executable(${test_module} ${srcs})
-    target_include_directories(
-        ${test_module} PRIVATE
-        ${CMAKE_CURRENT_LIST_DIR}/inc
-        ${CMN_HDRS_INC_PATH}
-        ${inc_dirs}
-    )
-    target_link_libraries(${test_module} PUBLIC ${GTEST_LINK_LIBS} ${link_libs})
-    # Make the unit test runnable with CTest (invoked via test.sh)
-    add_test(NAME ${test_module} COMMAND ${test_module})
+    if(UNIT_TEST)
+        set(test_module test_${module})
+        add_executable(${test_module} ${srcs})
+        target_include_directories(
+            ${test_module} PRIVATE
+            ${CMAKE_CURRENT_LIST_DIR}/inc
+            ${CMN_HDRS_INC_PATH}
+            ${inc_dirs}
+        )
+        target_link_libraries(${test_module} PUBLIC ${GTEST_LINK_LIBS} ${link_libs})
+        # Make the unit test runnable with CTest (invoked via test.sh)
+        add_test(NAME ${test_module} COMMAND ${test_module})
+    endif()
 endfunction()
