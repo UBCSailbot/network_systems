@@ -115,4 +115,9 @@ void CanbusIntf::send(const CanFrame & frame) const
     }
 }
 
-void CanSimIntf::receive() {}
+//===========================================================================================
+// Simulation Interface Components
+//===========================================================================================
+
+//void CanSimIntf::receive() {}
+//void CanSimIntf::sendData() {}

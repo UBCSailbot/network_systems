@@ -2,10 +2,13 @@
 
 #include <linux/can.h>
 
+#include <std_msgs/msg/detail/string__struct.hpp>
 #include <string>
 
 #include "can_frame_parser.h"
 #include "rclcpp/rclcpp.hpp"
+
+using std::placeholders::_1;
 
 /**
  * Abstract CAN Transceiver Class
@@ -104,7 +107,52 @@ private:
  * Implementation of CAN Transceiver that interfaces with the simulator
  * 
  */
+//===========================================================================================
+// Simulation Interface Components
+//===========================================================================================
+// [Simulator]<->[CAN Simulation Interface]<->[Virtual CAN bus]<->[CAN Transceiver]
+
+// Refer to https://ubcsailbot.atlassian.net/wiki/spaces/prjt22/pages/1768849494/Simulation+Interface#Interfaces
+
+/**
+ * Implementation of CAN Transceiver that interfaces with the simulator
+ * This replaces the CAN bus during testing to interface with simulator
+ */
+// Receives info from ROS node with topic, specified by controls team
+// Refer to https://ubcsailbot.atlassian.net/wiki/spaces/prjt22/pages/1785790595/Boat+Simulator+Design+Specification
+
+// Subscribes to topic and gets this information:
+// Latitude (degrees)
+// Longitude (degrees)
+// Boat speed (knots)
+// Boat accel (knots/s)
+// Boat Bearing (Degrees)
+// Wind speed (Knots)
+// Wind Bearing (Degrees)
+
+// Receives from ROS topic, /Simulator. Controls team sends to that
+// This is done by subscribing to ROS node /Simulator
 class CanSimIntf : public CanTransceiver, public rclcpp::Node
 {
-    void receive();
+    // There is no timer because subscriber will respond to whatever data is published to the topic /Simulator
+public:
+    CanSimIntf() : Node("Simulator")
+    {
+        subscription_ = this->create_subscription<std_msgs::msg::String>(
+          // Topic is called /Simulator
+          "Simulator", 10, std::bind(&CanSimIntf::topic_callback, this, _1));  //TO CHANGE in future. Probably not 10
+    }
+
+private:
+    // Receives string message data over topic and writes to RCLCPP_INFO macro
+    void topic_callback(const std_msgs::msg::String::SharedPtr msg) const
+    {
+        RCLCPP_INFO(this->get_logger(), "I heard: '%s'", msg->data.c_str());
+    }
+    rclcpp::Subscription<std_msgs::msg::String>::SharedPtr subscription_;
 };
+
+/**
+ * This will interface with virtual CAN bus 
+ * Look into in future on how to set up.
+ */
