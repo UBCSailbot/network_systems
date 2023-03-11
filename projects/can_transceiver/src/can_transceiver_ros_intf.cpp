@@ -15,10 +15,10 @@ public:
     {
         static constexpr int  ROS_Q_SIZE     = 5;
         static constexpr auto TIMER_INTERVAL = std::chrono::milliseconds(500);
-        pub_   = this->create_publisher<std_msgs::msg::String>(PLACEHOLDER_TOPIC_0, ROS_Q_SIZE);
+        pub_   = this->create_publisher<std_msgs::msg::String>(PLACEHOLDER_TOPIC_0_TOPIC, ROS_Q_SIZE);
         timer_ = this->create_wall_timer(TIMER_INTERVAL, std::bind(&CanTransceiverIntf::pub_cb, this));
         sub_   = this->create_subscription<std_msgs::msg::String>(
-          PLACEHOLDER_TOPIC_1, ROS_Q_SIZE, std::bind(&CanTransceiverIntf::sub_cb, this, std::placeholders::_1));
+          PLACEHOLDER_TOPIC_1_TOPIC, ROS_Q_SIZE, std::bind(&CanTransceiverIntf::sub_cb, this, std::placeholders::_1));
     }
 
 private:
