@@ -8,6 +8,7 @@ function(make_lib module srcs link_libs inc_dirs)
         ${CMN_HDRS_INC_PATH}
         ${inc_dirs}
     )
+    add_dependencies(${module} ${AUTOGEN_TARGETS})
 endfunction()
 
 # Create module ROS executable
@@ -22,6 +23,7 @@ function(make_ros_exe module srcs link_libs inc_dirs)
         ${CMN_HDRS_INC_PATH}
         ${inc_dirs}
     )
+    add_dependencies(${bin_module} ${AUTOGEN_TARGETS})
     install(TARGETS ${bin_module} DESTINATION lib/${PROJECT_NAME})
     # Rename the output binary to just be the module name
     set_target_properties(${bin_module} PROPERTIES OUTPUT_NAME ${module})
@@ -39,6 +41,7 @@ function(make_unit_test module srcs link_libs inc_dirs)
             ${inc_dirs}
         )
         target_link_libraries(${test_module} PUBLIC ${GTEST_LINK_LIBS} ${link_libs})
+        add_dependencies(${test_module} ${AUTOGEN_TARGETS})
         # Make the unit test runnable with CTest (invoked via test.sh)
         add_test(NAME ${test_module} COMMAND ${test_module})
     endif()
