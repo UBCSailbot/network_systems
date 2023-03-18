@@ -1,0 +1,25 @@
+name: Test Definitions
+
+# This uses workflows in a different repo, refer to:
+# https://docs.github.com/en/actions/using-workflows/reusing-workflows#calling-a-reusable-workflow
+
+# This runs sailbot workspace workflows and actions.
+# Runs the Tests workflow in sailbot_workspace
+   
+# Run condition
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+# Calls tests in sailbot_workspace 
+# https://github.com/UBCSailbot/sailbot_workspace
+  tests:
+        uses: UBCSailbot/sailbot_workspace/.github/workflows/test_definitions.yml@user/colinli02/11-Publish-ROS-package-actions_FINAL
+        with:
+            repository: ${{ github.event.repository.name }}
+            disable-vcs: true 
+            rebuild-docs: false
