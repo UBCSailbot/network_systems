@@ -5,11 +5,19 @@
 #include <sys/ioctl.h>
 #include <sys/socket.h>
 
+#include <chrono>
 #include <cstring>
+#include <functional>
+#include <memory>
 #include <stdexcept>
+#include <string>
 #include <thread>
 
 #include "can_frame_parser.h"
+#include "rclcpp/rclcpp.hpp"
+#include "std_msgs/msg/string.hpp"
+
+using namespace std::chrono_literals;
 
 using IFreq       = struct ifreq;
 using SockAddr    = struct sockaddr;
@@ -118,6 +126,27 @@ void CanbusIntf::send(const CanFrame & frame) const
 //===========================================================================================
 // Simulation Interface Components
 //===========================================================================================
+// Publishes to topic SimulatorFeedback
+class CanSimIntfFeedback : public rclcpp::Node
+{
+public:
+    int publisherPlaceholder = 0;
 
-//void CanSimIntf::receive() {}
-//void CanSimIntf::sendData() {}
+    CanSimIntfFeedback() : Node("SimulatorFeedback"), count_(0)
+    {
+        publisher_ = this->create_publisher<std_msgs::msg::String>("topic", publisherPlaceholder);
+        timer_     = this->create_wall_timer(500ms, std::bind(&CanSimIntfFeedback::timer_callback, this));
+    }
+
+private:
+    void timer_callback()
+    {
+        auto message = std_msgs::msg::String();
+        message.data = "Hello, world! " + std::to_string(count_++);  //placeholder helloworld
+        RCLCPP_INFO(this->get_logger(), "Publishing: '%s'", message.data.c_str());
+        publisher_->publish(message);
+    }
+    rclcpp::TimerBase::SharedPtr                        timer_;
+    rclcpp::Publisher<std_msgs::msg::String>::SharedPtr publisher_;
+    size_t                                              count_;
+};
