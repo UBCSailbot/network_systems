@@ -15,7 +15,8 @@ Given an input text file where each line is the name of a ROS topic, generates a
 ```
 
 Creates a pair of socat sockets `$LOCAL_TRANSCEIVER_TEST_PORT` and `$VIRTUAL_IRIDIUM_PORT` and binds the latter to a
-virtual iridium server running on localhost:8080. Allows testing of satellite code without needing physical hardware.
+virtual iridium server running on localhost:8080, which substitutes the Rockblock HTTP server used in deployment.
+Allows testing of satellite code without needing physical hardware.
 
 Optional argument - server url:
 
