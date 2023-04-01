@@ -10,9 +10,6 @@ trap "kill 0" EXIT
 touch $LOCAL_TRANSCEIVER_TEST_PORT
 touch $VIRTUAL_IRIDIUM_PORT
 
-# Configure baud rate
-stty 19200 < $LOCAL_TRANSCEIVER_TEST_PORT
-
 # Setup socat relay pair
 socat -d -d -t 0 pty,raw,echo=0,link=$LOCAL_TRANSCEIVER_TEST_PORT pty,raw,echo=0,link=$VIRTUAL_IRIDIUM_PORT &
 

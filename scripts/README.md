@@ -28,10 +28,11 @@ Optional argument - server url:
 2. To monitor just the `$LOCAL_TRANSCEIVER_TEST_PORT` without extra debug messages, in a new terminal run
     `cat $LOCAL_TRANSCEIVER_TEST_PORT`. What you see output from this command will be what the Local Transceiver reads
     and sends.
-3. `printf "at+sbdix\r" > $LOCAL_TRANSCEIVER_TEST_PORT`. This command queries the (currently empty) mailbox.
-4. `curl -X POST -F "test=1234" http://localhost:8080` (this is garbage data - it doesn't mean
+3. `stty 19200 < $LOCAL_TRANSCEIVER_TEST_PORT` to set the baud rate.
+4. `printf "at+sbdix\r" > $LOCAL_TRANSCEIVER_TEST_PORT`. This command queries the (currently empty) mailbox.
+5. `curl -X POST -F "test=1234" http://localhost:8080` (this is garbage data - it doesn't mean
     anything). You should see the original terminal print that it received a POST request.
-5. `echo at+sbdix` to view the mailbox again. It will now indicate that it has the data.
+6. `echo at+sbdix` to view the mailbox again. It will now indicate that it has the data.
 
 Other relevant commands include (but are not limited to):
 
