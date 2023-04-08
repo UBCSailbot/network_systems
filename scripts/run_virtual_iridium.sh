@@ -1,6 +1,7 @@
 #!/bin/bash
 
-SERVER_URL=${1:-127.0.0.1:8000}
+WEBHOOK_SERVER_ENDPOINT=${1:-127.0.0.1:8081}
+VIRTUAL_IRIDIUM_HTTP_SERVER_PORT=${2:-8080}
 
 # Make sure everything is killed on exit
 trap "exit" INT TERM
@@ -14,5 +15,5 @@ touch $VIRTUAL_IRIDIUM_PORT
 socat -d -d -t 0 pty,raw,echo=0,link=$LOCAL_TRANSCEIVER_TEST_PORT pty,raw,echo=0,link=$VIRTUAL_IRIDIUM_PORT &
 
 # Run Virtual Iridium
-python2 $ROS_WORKSPACE/src/virtual_iridium/python/Iridium9602.py --webhook_server_endpoint $SERVER_URL \
-    --http_server_port 8080 -d $VIRTUAL_IRIDIUM_PORT -m HTTP_POST
+python2 $ROS_WORKSPACE/src/virtual_iridium/python/Iridium9602.py --webhook_server_endpoint $WEBHOOK_SERVER_ENDPOINT \
+    --http_server_port $VIRTUAL_IRIDIUM_HTTP_SERVER_PORT -d $VIRTUAL_IRIDIUM_PORT -m HTTP_POST
