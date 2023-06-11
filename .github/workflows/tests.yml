@@ -24,7 +24,7 @@ jobs:
     with:
       repository: ${{ github.event.repository.name }}
       ros-ci: true
-      clang-tidy: false
+      clang-tidy: true
       rebuild-docs: true
     # If rebuild-docs is true:
     # 1. Create the repository secret PAT_TOKEN (copy from Bitwarden)
