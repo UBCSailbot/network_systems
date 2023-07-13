@@ -3,6 +3,8 @@ from launch_ros.actions import Node
 
 
 def generate_launch_description():
+    # TODO: Read from globals configuration file
+
     return LaunchDescription([
         Node(
             package='network_systems',
