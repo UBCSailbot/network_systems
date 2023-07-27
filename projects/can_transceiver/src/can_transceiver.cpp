@@ -28,7 +28,7 @@ namespace
 
 /**
  * @brief Format a CAN frame into a string for debugging and logging
- * 
+ *
  * @param frame CAN frame to format
  * @return String representation of frame
  */
@@ -124,9 +124,9 @@ void CanbusIntf::send(const CanFrame & frame) const
 }
 
 //===========================================================================================
-// Simulation Interface Components
+// Simulation Interface Component
 //===========================================================================================
-// Publishes to topic SimulatorFeedback
+// Publishes to topics over ROS for Controls
 class CanSimIntfFeedback : public rclcpp::Node
 {
 public:

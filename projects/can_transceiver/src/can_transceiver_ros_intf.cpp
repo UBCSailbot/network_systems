@@ -45,32 +45,21 @@ private:
 
     /**
      * @brief Callback function to subscribe to the onboard ROS network
-     * 
+     *
      */
     void sub_cb(std_msgs::msg::String /* placeholder */) { can_trns_->onNewCmd(Placeholder0); }
 };
 
 //===========================================================================================
-// Simulation Interface Components
+// Simulation Interface Component
 //===========================================================================================
-// [Simulator]<->[CAN Simulation Interface]<->[Virtual CAN bus]<->[CAN Transceiver]
-
-// Refer to https://ubcsailbot.atlassian.net/wiki/spaces/prjt22/pages/1768849494/Simulation+Interface#Interfaces
-
-/**
- * Implementation of CAN Transceiver that interfaces with the simulator
- * This replaces the CAN bus during testing to interface with simulator
- *
- * Receives info from ROS node with topic, specified by controls team
- * Refer to https://ubcsailbot.atlassian.net/wiki/spaces/prjt22/pages/1785790595/Boat+Simulator+Design+Specification
- * 
- * Receives from ROS topic, /Simulator. Controls team sends to that
- * This is done by subscribing to ROS node /Simulator
+/* Refer to https://ubcsailbot.atlassian.net/wiki/spaces/prjt22/pages/1768849494/Simulation+Interface#Interfaces
+ * Interacts with CAN transceiver over "fake" CAN within cpp code
+ * Also subscribes to simulator over ROS
  */
-
 class CanSimIntf : public CanTransceiver, public rclcpp::Node
 {
-    // There is no timer because subscriber will respond to whatever data is published to the topic /Simulator
+// There is no timer because subscriber will respond to whatever data is published to the topic /Simulator
 public:
     CanSimIntf() : Node("Simulator")
     {
