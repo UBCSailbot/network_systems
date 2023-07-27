@@ -9,6 +9,8 @@
 #include "ros_info.h"
 #include "std_msgs/msg/string.hpp"
 
+#define QUEUE_SIZE 10
+
 class CanTransceiverIntf : public rclcpp::Node
 {
 public:
@@ -51,38 +53,46 @@ private:
 };
 
 //===========================================================================================
-// Simulation Interface Component
+// Simulation Interface Component (FLow Up)
 //===========================================================================================
 /* Refer to https://ubcsailbot.atlassian.net/wiki/spaces/prjt22/pages/1768849494/Simulation+Interface#Interfaces
- * Interacts with CAN transceiver over "fake" CAN within cpp code
+ * Control Simulator -> CanSimIntf() -> CAN Transceiver
  * Also subscribes to simulator over ROS
  */
 class CanSimIntf : public CanTransceiver, public rclcpp::Node
 {
 // There is no timer because subscriber will respond to whatever data is published to the topic /Simulator
 public:
-    CanSimIntf() : Node("Simulator")
-    {
-        int simulatorData = 0;  //Placeholder
+    // Our node which publishes
+    // Node can publish to any number of topics
 
+    CanSimIntf() //Our node which subs to topics
+    : Node("CanSimIntfSubscriber")
+    {
+        // Topic: mock_gps
         subscription_ = this->create_subscription<std_msgs::msg::String>(
-          // Topic is called /Simulator
-          "Simulator", simulatorData, std::bind(&CanSimIntf::topic_callback, this, std::placeholders::_1));
+          "mock_gps", QUEUE_SIZE, std::bind(&CanSimIntf::topic_callback, this, std::placeholders::_1));
+
+        // Topic: mock_wind_sensors
+        subscription_ = this->create_subscription<std_msgs::msg::String>(
+          "mock_wind_sensors", QUEUE_SIZE, std::bind(&CanSimIntf::topic_callback, this, std::placeholders::_1));
     }
 
 private:
     // Receives string message data over topic and writes to RCLCPP_INFO macro
+    // When moment message is available in queue: prints statement in log
     void topic_callback(const std_msgs::msg::String::SharedPtr msg) const
     {
         RCLCPP_INFO(this->get_logger(), "I heard: '%s'", msg->data.c_str());
     }
+    // Field declaration: Subscription Subscriber
     rclcpp::Subscription<std_msgs::msg::String>::SharedPtr subscription_;
 };
+
 
 //===========================================================================================
 // Main
 //===========================================================================================
-
 int main(int argc, char * argv[])
 {
     rclcpp::init(argc, argv);

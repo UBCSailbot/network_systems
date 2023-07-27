@@ -23,6 +23,7 @@ using IFreq       = struct ifreq;
 using SockAddr    = struct sockaddr;
 using SockAddrCan = struct sockaddr_can;
 
+#define QUEUE_SIZE 10
 namespace
 {
 
@@ -124,17 +125,24 @@ void CanbusIntf::send(const CanFrame & frame) const
 }
 
 //===========================================================================================
-// Simulation Interface Component
+// Simulation Interface Component (Flow Down)
 //===========================================================================================
-// Publishes to topics over ROS for Controls
-class CanSimIntfFeedback : public rclcpp::Node
+/* Refer to https://ubcsailbot.atlassian.net/wiki/spaces/prjt22/pages/1768849494/Simulation+Interface#Interfaces
+ * CAN Transceiver -> "CanSimIntfFeedback()" -> Control Simulator
+ * Publishes to topics over ROS for Controls
+ */
+class CanSimIntfFeedback : public CanTransceiver, public rclcpp::Node
 {
 public:
-    int publisherPlaceholder = 0;
-
-    CanSimIntfFeedback() : Node("SimulatorFeedback"), count_(0)
+    CanSimIntfFeedback() : Node("CanSimIntfPublisher"), count_(0)
     {
-        publisher_ = this->create_publisher<std_msgs::msg::String>("topic", publisherPlaceholder);
+        // Publisher with string msg type, ros topic, and queuesize
+        publisher_ = this->create_publisher<std_msgs::msg::String>("wind_sensors", QUEUE_SIZE);
+        publisher_ = this->create_publisher<std_msgs::msg::String>("filtered_wind_sensor", QUEUE_SIZE);
+        publisher_ = this->create_publisher<std_msgs::msg::String>("gps", QUEUE_SIZE);
+        publisher_ = this->create_publisher<std_msgs::msg::String>("data_sensors", QUEUE_SIZE);
+        publisher_ = this->create_publisher<std_msgs::msg::String>("batteries", QUEUE_SIZE);
+        // Timer with 500ms delay
         timer_     = this->create_wall_timer(500ms, std::bind(&CanSimIntfFeedback::timer_callback, this));
     }
 
@@ -144,9 +152,13 @@ private:
         auto message = std_msgs::msg::String();
         message.data = "Hello, world! " + std::to_string(count_++);  //placeholder helloworld
         RCLCPP_INFO(this->get_logger(), "Publishing: '%s'", message.data.c_str());
+        // Publishes msg
         publisher_->publish(message);
     }
+    // Timer object to allow our CamSimIntfFeedback node to perform action at x rate
     rclcpp::TimerBase::SharedPtr                        timer_;
+    // Publisher
     rclcpp::Publisher<std_msgs::msg::String>::SharedPtr publisher_;
+    // Variable to count number of msgs published
     size_t                                              count_;
 };
