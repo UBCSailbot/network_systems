@@ -4,11 +4,49 @@ package Placeholder;  // TODO replace with new project name
 
 message Sensors
 {
-    message Generic
+    message Gps
     {
-        uint64 id    = 1;
-        bytes  data  = 2;
+        float  lat          = 1;
+        float  lon          = 2;
+        float  spd          = 3;
+        float  tmg          = 4;
+        uint32 true_heading = 5;
+        uint32 timestamp    = 6;
     }
 
-    repeated Generic gen_sensors = 1;
+    message Wind
+    {
+        float  spd       = 1;
+        uint32 angle     = 2;
+        uint32 timestamp = 3;
+    }
+
+    message Battery
+    {
+        float  volt      = 1;
+        float  curr      = 2;
+        uint32 timestamp = 3;
+    }
+
+    message Generic
+    {
+        uint32 id        = 1;
+        uint32 timestamp = 2;
+        uint64 data      = 3;
+    }
+
+    message Ais
+    {
+        uint32 mmsi         = 1;
+        float  lat          = 2;
+        float  lon          = 3;
+        uint32 true_heading = 4;
+        uint32 timestampe   = 5;
+    }
+
+    Gps              gps          = 1;
+    repeated Wind    wind_sensors = 2;
+    repeated Battery batteries    = 3;
+    repeated Generic gen_sensors  = 4;
+    repeated Ais     boats        = 5;
 }

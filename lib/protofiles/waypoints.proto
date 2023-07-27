@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package Placeholder;  // TODO replace with new project name
+
+message Waypoints
+{
+    message waypoint
+    {
+        float  lat          = 1;
+        float  lon          = 2;
+    }
+
+    uint32            num_waypoints = 1;
+    repeated waypoint waypoints     = 2;
+}
