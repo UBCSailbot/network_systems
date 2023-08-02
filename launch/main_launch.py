@@ -1,34 +1,15 @@
+"""Launch file that runs all nodes for the network systems ROS package."""
+
+import importlib
 import os
 from typing import List
 
 from launch_ros.actions import Node
 
 from launch import LaunchDescription, LaunchDescriptionEntity
-from launch.actions import DeclareLaunchArgument, OpaqueFunction
+from launch.actions import OpaqueFunction
 from launch.launch_context import LaunchContext
 from launch.substitutions import LaunchConfiguration
-
-# Global launch arguments and constants. Should be the same across all launch files.
-ROS_PACKAGES_DIR = os.path.join(os.getenv("ROS_WORKSPACE"), "src")
-GLOBAL_LAUNCH_ARGUMENTS = [
-    DeclareLaunchArgument(
-        name="config",
-        default_value=os.path.join(ROS_PACKAGES_DIR, "global_launch", "config", "globals.yaml"),
-        description="Path to ROS parameter config file.",
-    ),
-    # Reference: https://answers.ros.org/question/311471/selecting-log-level-in-ros2-launch-file/
-    DeclareLaunchArgument(
-        name="log_level",
-        default_value=["info"],
-        description="Logging level",
-    ),
-    DeclareLaunchArgument(
-        name="mode",
-        default_value="simulation",
-        choices=["production", "simulation"],
-        description="System mode.",
-    ),
-]
 
 # Local launch arguments and constants
 PACKAGE_NAME = "network_systems"
@@ -44,9 +25,27 @@ def generate_launch_description() -> LaunchDescription:
     Returns:
         LaunchDescription: The launch description.
     """
+    global_launch_arguments = get_global_launch_arguments()
+    local_launch_arguments = LOCAL_LAUNCH_ARGUMENTS
     return LaunchDescription(
-        [*GLOBAL_LAUNCH_ARGUMENTS, *LOCAL_LAUNCH_ARGUMENTS, OpaqueFunction(function=setup_launch)]
+        [*global_launch_arguments, *local_launch_arguments, OpaqueFunction(function=setup_launch)]
     )
+
+
+def get_global_launch_arguments() -> List[LaunchDescriptionEntity]:
+    """Gets the global launch arguments defined in the global launch file.
+
+    Returns:
+        List[LaunchDescriptionEntity]: List of global launch argument objects.
+    """
+    global_main_launch = os.path.join(
+        os.getenv("ROS_WORKSPACE"), "src", "global_launch", "main_launch.py"
+    )
+    spec = importlib.util.spec_from_file_location("global_launch", global_main_launch)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    global_launch_arguments = module.GLOBAL_LAUNCH_ARGUMENTS
+    return global_launch_arguments
 
 
 def setup_launch(context: LaunchContext) -> List[LaunchDescriptionEntity]:
@@ -76,7 +75,7 @@ def get_cached_fib_description(context: LaunchContext) -> Node:
     ros_parameters = [LaunchConfiguration("config").perform(context)]
     ros_arguments = [
         "--log-level",
-        [f"cached_fib:=", LaunchConfiguration("log_level")],
+        ["cached_fib:=", LaunchConfiguration("log_level")],
     ]
 
     node = Node(
