@@ -17,9 +17,6 @@ PACKAGE_NAME = "network_systems"
 # Add args with DeclareLaunchArguments object(s) and utilize in setup_launch()
 LOCAL_LAUNCH_ARGUMENTS = []
 
-# Add vars with SetEnvironmentVariable object(s)
-LOCAL_ENVIRONMENT_VARS = []
-
 
 def generate_launch_description() -> LaunchDescription:
     """The launch file entry point. Generates the launch description for the `network_systems`
@@ -34,7 +31,6 @@ def generate_launch_description() -> LaunchDescription:
             *global_launch_arguments,
             *global_environment_vars,
             *LOCAL_LAUNCH_ARGUMENTS,
-            *LOCAL_ENVIRONMENT_VARS,
             OpaqueFunction(function=setup_launch),
         ]
     )
