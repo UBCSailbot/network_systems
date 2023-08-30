@@ -89,17 +89,18 @@ def get_cached_fib_description(context: LaunchContext) -> Node:
     Returns:
         Node: The node object that launches the cached_fib node.
     """
+    node_name = "cached_fib"
     ros_parameters = [LaunchConfiguration("config").perform(context)]
     ros_arguments = [
         "--log-level",
-        ["cached_fib:=", LaunchConfiguration("log_level")],
+        [f"{node_name}:=", LaunchConfiguration("log_level")],
     ]
 
     node = Node(
         package=PACKAGE_NAME,
         namespace="example",
         executable="example",
-        name="cached_fib",
+        name=node_name,
         parameters=ros_parameters,
         ros_arguments=ros_arguments,
     )
