@@ -16,4 +16,4 @@ set(bin_srcs
     ${srcs}
     ${CMAKE_CURRENT_LIST_DIR}/src/can_transceiver_ros_intf.cpp
 )
-make_ros_exe(${module} "${bin_srcs}" "${link_libs}" "${inc_dirs}")
+make_exe(${module} "${bin_srcs}" "${link_libs}" "${inc_dirs}")

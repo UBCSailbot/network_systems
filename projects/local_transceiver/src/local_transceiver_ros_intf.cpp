@@ -11,14 +11,14 @@
 
 /**
  * Local Transceiver Interface Node
- * 
+ *
  */
 class LocalTransceiverIntf : public rclcpp::Node
 {
 public:
     /**
      * @brief Construct a new Local Transceiver Intf Node
-     * 
+     *
      * @param lcl_trns Local Transceiver instance
      */
     explicit LocalTransceiverIntf(std::shared_ptr<LocalTransceiver> lcl_trns)
@@ -43,7 +43,7 @@ private:
 
     /**
      * @brief Callback function to publish to onboard ROS network
-     * 
+     *
      */
     void pub_cb(/* placeholder */)
     {
@@ -55,7 +55,7 @@ private:
 
     /**
      * @brief Callback function to subscribe to the onboard ROS network
-     * 
+     *
      */
     void sub_cb(std_msgs::msg::String /* placeholder */) { lcl_trns_->onNewSensorData(); }
 };

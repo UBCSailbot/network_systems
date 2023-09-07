@@ -1,6 +1,7 @@
 set(module local_transceiver)
 
 set(link_libs
+    "/workspaces/sailbot_workspace/build/network_systems/lib/protofiles/libprotofiles.a"
 )
 
 set(inc_dirs
@@ -16,4 +17,4 @@ set(bin_srcs
     ${srcs}
     ${CMAKE_CURRENT_LIST_DIR}/src/local_transceiver_ros_intf.cpp
 )
-make_ros_exe(${module} "${bin_srcs}" "${link_libs}" "${inc_dirs}")
+make_exe(${module} "${bin_srcs}" "${link_libs}" "${inc_dirs}")

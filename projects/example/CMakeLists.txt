@@ -18,7 +18,7 @@ set(bin_srcs
     ${srcs}
     ${CMAKE_CURRENT_LIST_DIR}/src/cached_fib_subscriber.cpp
 )
-make_ros_exe(${module} "${bin_srcs}" "${link_libs}" "${inc_dirs}")
+make_exe(${module} "${bin_srcs}" "${link_libs}" "${inc_dirs}")
 
 # Create unit test
 set(test_srcs

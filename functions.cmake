@@ -12,7 +12,7 @@ function(make_lib module srcs link_libs inc_dirs)
 endfunction()
 
 # Create module ROS executable
-function(make_ros_exe module srcs link_libs inc_dirs)
+function(make_exe module srcs link_libs inc_dirs)
     set(bin_module bin_${module})
     add_executable(${bin_module} ${srcs})
     ament_target_dependencies(${bin_module} PUBLIC rclcpp std_msgs)

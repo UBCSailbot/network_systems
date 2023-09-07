@@ -24,7 +24,7 @@ endif()
 # Enable all warnings as errors except unused parameter because auto-generated protobuf files trigger it,
 # and clang-tidy can cover it without false-flagging the protobuf files.
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++20 -Wall -Wextra -Wpedantic -Werror -Wno-unused-parameter -pthread")
-message("Building Network Systems with build type '${CMAKE_BUILD_TYPE}' "
+message(WARNING "Building Network Systems with build type '${CMAKE_BUILD_TYPE}' "
         "and flags: '${CMAKE_CXX_FLAGS}'")
 
 # ROS dependencies
@@ -38,8 +38,16 @@ find_package(Boost 1.74.0 COMPONENTS REQUIRED
     serialization
 )
 
+# MongoDB
+find_package(libmongocxx REQUIRED)
+find_package(libbsoncxx REQUIRED)
+
 # Protobuf
 find_package(Protobuf REQUIRED)
+set(PROTOBUF_LINK_LIBS
+    ${Protobuf_LIBRARIES}
+    "/workspaces/sailbot_workspace/build/network_systems/lib/protofiles/libprotofiles.a"
+)
 
 # Googletest (installed by sailbot_workspace Docker config)
 if(UNIT_TEST)
