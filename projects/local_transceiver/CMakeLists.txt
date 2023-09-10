@@ -1,7 +1,7 @@
 set(module local_transceiver)
 
 set(link_libs
-    "/workspaces/sailbot_workspace/build/network_systems/lib/protofiles/libprotofiles.a"
+    ${PROTOBUF_LINK_LIBS}
 )
 
 set(inc_dirs

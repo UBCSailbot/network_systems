@@ -46,7 +46,7 @@ find_package(libbsoncxx REQUIRED)
 find_package(Protobuf REQUIRED)
 set(PROTOBUF_LINK_LIBS
     ${Protobuf_LIBRARIES}
-    "/workspaces/sailbot_workspace/build/network_systems/lib/protofiles/libprotofiles.a"
+    protofiles
 )
 
 # Googletest (installed by sailbot_workspace Docker config)
