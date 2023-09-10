@@ -30,26 +30,26 @@ bool SailbotDB::testConnection()
         // Ping the database.
         const DocVal ping_cmd = make_document(bsoncxx::builder::basic::kvp("ping", 1));
         db_.run_command(ping_cmd.view());
-        std::cout << "Pinged your deployment. You successfully connected to MongoDB!" << std::endl;
         return true;
     } catch (const std::exception & e) {
-        // Handle errors.
         std::cout << "Exception: " << e.what() << std::endl;
         return false;
     }
 }
 
-void SailbotDB::storeSensors(const Placeholder::Sensors & sensors_pb) { storeGps(sensors_pb.gps()); }
+bool SailbotDB::storeSensors(const Placeholder::Sensors & sensors_pb) { return storeGps(sensors_pb.gps()); }
 
 // END PUBLIC
 
 // PRIVATE
 
-void SailbotDB::storeGps(const Placeholder::Sensors::Gps & gps_pb)
+bool SailbotDB::storeGps(const Placeholder::Sensors::Gps & gps_pb)
 {
     mongocxx::collection gps_coll = db_[COLLECTION_GPS];
     const DocVal         gps_doc  = make_document(
-               kvp("lat", gps_pb.lat()), kvp("lon", gps_pb.lon()), kvp("spd", gps_pb.spd()), kvp("heading", gps_pb.heading()));
+               kvp("lat", gps_pb.lat()), kvp("lon", gps_pb.lon()), kvp("speed", gps_pb.speed()),
+               kvp("heading", gps_pb.heading()));
+    return static_cast<bool>(gps_coll.insert_one(bsoncxx::document::view_or_value(gps_doc)));
 }
 
 // END PRIVATE

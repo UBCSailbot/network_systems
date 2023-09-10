@@ -18,7 +18,7 @@ set(srcs
 )
 
 # Make executable (not ROS)
-make_exe(${module} "${srcs}" "${link_libs}" "${inc_dirs}")
+# make_exe(${module} "${srcs}" "${link_libs}" "${inc_dirs}")
 
 # Create unit test
 set(test_srcs

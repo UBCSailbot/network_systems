@@ -6,36 +6,36 @@ message Sensors
 {
     message Gps
     {
-        float  lat          = 1;
-        float  lon          = 2;
-        float  spd          = 3;
-        float  heading      = 4;
+        float  lat     = 1;
+        float  lon     = 2;
+        float  speed   = 3;
+        float  heading = 4;
     }
 
     message Wind
     {
-        float  spd       = 1;
-        uint32 angle     = 2;
+        float  speed = 1;
+        uint32 angle = 2;
     }
 
     message Battery
     {
-        float  volt      = 1;
-        float  curr      = 2;
+        float  voltage = 1;
+        float  current = 2;
     }
 
     message Ais
     {
-        uint32 mmsi         = 1;
-        float  lat          = 2;
-        float  lon          = 3;
-        uint32 true_heading = 4;
+        uint32 id      = 1;
+        float  lat     = 2;
+        float  lon     = 3;
+        uint32 heading = 4;
     }
 
     message Generic
     {
-        uint32 id        = 1;
-        uint64 data      = 2;
+        uint32 id   = 1;
+        uint64 data = 2;
     }
 
     Gps              gps          = 1;

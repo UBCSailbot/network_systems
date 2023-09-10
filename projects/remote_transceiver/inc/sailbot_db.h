@@ -1,4 +1,4 @@
-#include <string>
+#pragma once
 
 #include "bsoncxx/builder/basic/document.hpp"
 #include "mongocxx/client.hpp"
@@ -34,13 +34,28 @@ public:
      */
     bool testConnection();
 
-    void storeSensors(const Placeholder::Sensors & sensors_pb);
+    /**
+     * @brief Write sensor data to the database
+     *
+     * @param sensors_pb Protobuf Sensors object
+     * @return true  if successful
+     * @return false on failure
+     */
+    bool storeSensors(const Placeholder::Sensors & sensors_pb);
 
 protected:
-    mongocxx::instance inst_;
-    mongocxx::client   client_;
-    mongocxx::database db_;
+    mongocxx::database db_;  // MongoDB database this object is attached to
 
 private:
-    void storeGps(const Placeholder::Sensors::Gps & gps_pb);
+    mongocxx::client   client_;  // Connected MongoDB client (must be present)
+    mongocxx::instance inst_;    // MongoDB instance (must be present - there can only ever be one)
+
+    /**
+     * @brief Write GPS data to the database
+     *
+     * @param gps_pb Protobuf GPS object
+     * @return true  if successful
+     * @return false on failure
+     */
+    bool storeGps(const Placeholder::Sensors::Gps & gps_pb);
 };
