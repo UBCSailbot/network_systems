@@ -6,8 +6,8 @@ message Waypoints
 {
     message waypoint
     {
-        float  lat          = 1;
-        float  lon          = 2;
+        float  latitude  = 1;
+        float  longitude = 2;
     }
 
     uint32            num_waypoints = 1;

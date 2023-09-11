@@ -44,8 +44,8 @@ public:
         Placeholder::Sensors::Gps * gps = new Placeholder::Sensors::Gps();
         sensors.set_allocated_gps(gps);
         bsoncxx::document::view gps_doc = *(gps_docs.begin());
-        gps->set_lat(static_cast<float>(gps_doc["lat"].get_double().value));
-        gps->set_lon(static_cast<float>(gps_doc["lon"].get_double().value));
+        gps->set_latitude(static_cast<float>(gps_doc["latitude"].get_double().value));
+        gps->set_longitude(static_cast<float>(gps_doc["longitude"].get_double().value));
         gps->set_speed(static_cast<float>(gps_doc["speed"].get_double().value));
         gps->set_heading(static_cast<float>(gps_doc["heading"].get_double().value));
         // Protobuf handles freeing of dynamically allocated objects (gps) automatically
@@ -78,8 +78,8 @@ Placeholder::Sensors::Gps * genRandGpsData()
     std::uniform_real_distribution<float> lon_dist(LON_LBND, LON_UBND);
     std::uniform_real_distribution<float> speed_dist(SPEED_LBND, SPEED_UBND);
     std::uniform_real_distribution<float> heading_dist(HEADING_LBND, HEADING_UBND);
-    gps_data->set_lat(lat_dist(g_mt));
-    gps_data->set_lon(lon_dist(g_mt));
+    gps_data->set_latitude(lat_dist(g_mt));
+    gps_data->set_longitude(lon_dist(g_mt));
     gps_data->set_speed(speed_dist(g_mt));
     gps_data->set_heading(heading_dist(g_mt));
 
@@ -115,8 +115,8 @@ TEST_F(TestRemoteTransceiver, TestStoreSensors)
     Placeholder::Sensors rand_sensors = genRandSensors();
     ASSERT_TRUE(g_test_db.storeSensors(rand_sensors));
     Placeholder::Sensors dumped_sensors = g_test_db.dumpSensors();
-    EXPECT_FLOAT_EQ(dumped_sensors.gps().lat(), rand_sensors.gps().lat());
-    EXPECT_FLOAT_EQ(dumped_sensors.gps().lon(), rand_sensors.gps().lon());
+    EXPECT_FLOAT_EQ(dumped_sensors.gps().latitude(), rand_sensors.gps().latitude());
+    EXPECT_FLOAT_EQ(dumped_sensors.gps().longitude(), rand_sensors.gps().longitude());
     EXPECT_FLOAT_EQ(dumped_sensors.gps().speed(), rand_sensors.gps().speed());
     EXPECT_FLOAT_EQ(dumped_sensors.gps().heading(), rand_sensors.gps().heading());
 }

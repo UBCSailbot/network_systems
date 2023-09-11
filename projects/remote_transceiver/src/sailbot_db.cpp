@@ -47,7 +47,7 @@ bool SailbotDB::storeGps(const Placeholder::Sensors::Gps & gps_pb)
 {
     mongocxx::collection gps_coll = db_[COLLECTION_GPS];
     const DocVal         gps_doc  = make_document(
-               kvp("lat", gps_pb.lat()), kvp("lon", gps_pb.lon()), kvp("speed", gps_pb.speed()),
+               kvp("latitude", gps_pb.latitude()), kvp("longitude", gps_pb.longitude()), kvp("speed", gps_pb.speed()),
                kvp("heading", gps_pb.heading()));
     return static_cast<bool>(gps_coll.insert_one(bsoncxx::document::view_or_value(gps_doc)));
 }

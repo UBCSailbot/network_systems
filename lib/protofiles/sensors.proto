@@ -6,10 +6,10 @@ message Sensors
 {
     message Gps
     {
-        float  lat     = 1;
-        float  lon     = 2;
-        float  speed   = 3;
-        float  heading = 4;
+        float  latitude  = 1;
+        float  longitude = 2;
+        float  speed     = 3;
+        float  heading   = 4;
     }
 
     message Wind
@@ -26,10 +26,10 @@ message Sensors
 
     message Ais
     {
-        uint32 id      = 1;
-        float  lat     = 2;
-        float  lon     = 3;
-        uint32 heading = 4;
+        uint32 id        = 1;
+        float  latitude  = 2;
+        float  longitude = 3;
+        uint32 heading   = 4;
     }
 
     message Generic
