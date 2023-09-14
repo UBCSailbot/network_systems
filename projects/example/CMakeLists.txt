@@ -7,6 +7,9 @@ set(link_libs
 set(inc_dirs
 )
 
+set(compile_defs
+)
+
 # Create module library
 set(srcs
     ${CMAKE_CURRENT_LIST_DIR}/src/cached_fib.cpp
@@ -25,4 +28,4 @@ set(test_srcs
     ${srcs}
     ${CMAKE_CURRENT_LIST_DIR}/test/test_cached_fib.cpp
 )
-make_unit_test(${module} "${test_srcs}" "${link_libs}" "${inc_dirs}")
+make_unit_test(${module} "${test_srcs}" "${link_libs}" "${inc_dirs}" "${compile_defs}")

@@ -6,11 +6,10 @@
 #include "mongocxx/instance.hpp"
 #include "sensors.pb.h"
 
-constexpr auto MONGO_DB_CONNECTION_STRING = "mongodb://localhost:27017";
-constexpr auto COLLECTION_GPS             = "gps";
-constexpr auto COLLECTION_AIS             = "ais_ships";
-constexpr auto COLLECTION_DATA_SENSORS    = "data_sensors";
-constexpr auto COLLECTION_WIND            = "wind_sensors";
+constexpr auto COLLECTION_GPS          = "gps";
+constexpr auto COLLECTION_AIS          = "ais_ships";
+constexpr auto COLLECTION_DATA_SENSORS = "data_sensors";
+constexpr auto COLLECTION_WIND         = "wind_sensors";
 
 /**
  * Class that encapsulates a Sailbot MongoDB database

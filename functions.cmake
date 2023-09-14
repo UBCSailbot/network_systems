@@ -1,6 +1,7 @@
 # Create module library
 function(make_lib module srcs link_libs inc_dirs)
     add_library(${module} ${srcs})
+    target_compile_definitions(${module} PUBLIC ${compile_defs})
     target_link_libraries(${module} PUBLIC ${link_libs})
     target_include_directories(
         ${module} PUBLIC
@@ -15,6 +16,7 @@ endfunction()
 function(make_exe module srcs link_libs inc_dirs)
     set(bin_module bin_${module})
     add_executable(${bin_module} ${srcs})
+    target_compile_definitions(${bin_module} PUBLIC ${compile_defs})
     ament_target_dependencies(${bin_module} PUBLIC rclcpp std_msgs)
     target_link_libraries(${bin_module} PUBLIC ${link_libs})
     target_include_directories(
@@ -30,10 +32,11 @@ function(make_exe module srcs link_libs inc_dirs)
 endfunction()
 
 # Create unit test
-function(make_unit_test module srcs link_libs inc_dirs)
+function(make_unit_test module srcs link_libs inc_dirs compile_defs)
     if(UNIT_TEST)
         set(test_module test_${module})
         add_executable(${test_module} ${srcs})
+        target_compile_definitions(${test_module} PUBLIC ${compile_defs})
         target_include_directories(
             ${test_module} PRIVATE
             ${CMAKE_CURRENT_LIST_DIR}/inc

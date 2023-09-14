@@ -19,13 +19,14 @@ SailbotDB::SailbotDB(const std::string & db_name)
 {
     // inst_ implicitly initialized and will throw an exception if we try to explicitly initialize it like below
     // inst_             = {};
-    mongocxx::uri uri = mongocxx::uri{MONGO_DB_CONNECTION_STRING};
+    mongocxx::uri uri = mongocxx::uri{MONGODB_CONN_STR};
     client_           = {uri};
     db_               = client_[db_name];
 }
 
 bool SailbotDB::testConnection()
 {
+    std::cout << MONGODB_CONN_STR << std::endl;
     try {
         // Ping the database.
         const DocVal ping_cmd = make_document(bsoncxx::builder::basic::kvp("ping", 1));
