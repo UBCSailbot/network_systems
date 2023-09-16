@@ -137,11 +137,11 @@ public:
     CanSimIntfFeedback() : Node("CanSimIntfPublisher"), count_(0)
     {
         // Publisher with string msg type, ros topic, and queuesize
-        publisher_ = this->create_publisher<std_msgs::msg::String>("wind_sensors", QUEUE_SIZE);
-        publisher_ = this->create_publisher<std_msgs::msg::String>("filtered_wind_sensor", QUEUE_SIZE);
-        publisher_ = this->create_publisher<std_msgs::msg::String>("gps", QUEUE_SIZE);
-        publisher_ = this->create_publisher<std_msgs::msg::String>("data_sensors", QUEUE_SIZE);
-        publisher_ = this->create_publisher<std_msgs::msg::String>("batteries", QUEUE_SIZE);
+        publisher1wind_sensors_ = this->create_publisher<std_msgs::msg::String>("wind_sensors", QUEUE_SIZE);
+        publisher2filtered_wind_sensor_ = this->create_publisher<std_msgs::msg::String>("filtered_wind_sensor", QUEUE_SIZE);
+        publisher3gps_ = this->create_publisher<std_msgs::msg::String>("gps", QUEUE_SIZE);
+        publisher4data_sensors_ = this->create_publisher<std_msgs::msg::String>("data_sensors", QUEUE_SIZE);
+        publisher5batteries_ = this->create_publisher<std_msgs::msg::String>("batteries", QUEUE_SIZE);
         // Timer with 500ms delay
         timer_     = this->create_wall_timer(500ms, std::bind(&CanSimIntfFeedback::timer_callback, this));
     }
@@ -149,16 +149,39 @@ public:
 private:
     void timer_callback()
     {
-        auto message = std_msgs::msg::String();
-        message.data = "Hello, world! " + std::to_string(count_++);  //placeholder helloworld
-        RCLCPP_INFO(this->get_logger(), "Publishing: '%s'", message.data.c_str());
+        // Publishes to local pathfinding gps through publisher3gps_
+        // lat_lon (lat, lon), speed (kmph), heading (0 to 360 deg)
+        auto message3 = std_msgs::msg::String();
+        message3.data = "Hello, world! " + std::to_string(count_++);  //placeholder helloworld
+        RCLCPP_INFO(this->get_logger(), "Publishing: '%s'", message3.data.c_str());
         // Publishes msg
-        publisher_->publish(message);
+        publisher3gps_->publish(message3);
+
+        // Publishes to publisher1_
+        auto message1 = std_msgs::msg::String();
+        message1.data = "Hello, world! " + std::to_string(count_++);  //placeholder helloworld
+        RCLCPP_INFO(this->get_logger(), "Publishing: '%s'", message1.data.c_str());
+        // Publishes msg
+        publisher1wind_sensors_->publish(message1);
+
+        // Publishes to publisher2_ (placeholder example of repeat)
+        auto message2 = std_msgs::msg::String();
+        message2.data = "Hello, world (again)! " + std::to_string(count_++);  //placeholder helloworld
+        RCLCPP_INFO(this->get_logger(), "Publishing: '%s'", message2.data.c_str());
+        // Publishes msg
+        publisher2filtered_wind_sensor_->publish(message2);
+
+        //
     }
     // Timer object to allow our CamSimIntfFeedback node to perform action at x rate
     rclcpp::TimerBase::SharedPtr                        timer_;
-    // Publisher
-    rclcpp::Publisher<std_msgs::msg::String>::SharedPtr publisher_;
+    // Publishers (placeholder names)
+    rclcpp::Publisher<std_msgs::msg::String>::SharedPtr publisher1wind_sensors_;
+    rclcpp::Publisher<std_msgs::msg::String>::SharedPtr publisher2filtered_wind_sensor_;
+    rclcpp::Publisher<std_msgs::msg::String>::SharedPtr publisher3gps_;
+    rclcpp::Publisher<std_msgs::msg::String>::SharedPtr publisher4data_sensors_;
+    rclcpp::Publisher<std_msgs::msg::String>::SharedPtr publisher5batteries_;
+
     // Variable to count number of msgs published
     size_t                                              count_;
 };
