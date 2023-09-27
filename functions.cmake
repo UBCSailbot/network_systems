@@ -15,7 +15,7 @@ endfunction()
 function(make_ros_exe module srcs link_libs inc_dirs)
     set(bin_module bin_${module})
     add_executable(${bin_module} ${srcs})
-    ament_target_dependencies(${bin_module} PUBLIC rclcpp std_msgs)
+    ament_target_dependencies(${bin_module} PUBLIC ${ROS_DEPS})
     target_link_libraries(${bin_module} PUBLIC ${link_libs})
     target_include_directories(
         ${bin_module} PUBLIC

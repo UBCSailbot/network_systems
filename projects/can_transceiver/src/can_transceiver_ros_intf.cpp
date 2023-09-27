@@ -2,6 +2,7 @@
 
 #include "can_frame_parser.h"
 #include "can_transceiver.h"
+#include "custom_interfaces/msg/gps.hpp"
 #include "rclcpp/publisher.hpp"
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp/subscription.hpp"
@@ -61,12 +62,12 @@ private:
  */
 class CanSimIntf : public CanTransceiver, public rclcpp::Node
 {
-// There is no timer because subscriber will respond to whatever data is published to the topic /Simulator
+    // There is no timer because subscriber will respond to whatever data is published to the topic /Simulator
 public:
     // Our node which publishes
     // Node can publish to any number of topics
 
-    CanSimIntf() //Our node which subs to topics
+    CanSimIntf()  //Our node which subs to topics
     : Node("CanSimIntfSubscriber")
     {
         // Topic: mock_gps
@@ -88,7 +89,6 @@ private:
     // Field declaration: Subscription Subscriber
     rclcpp::Subscription<std_msgs::msg::String>::SharedPtr subscription_;
 };
-
 
 //===========================================================================================
 // Main
