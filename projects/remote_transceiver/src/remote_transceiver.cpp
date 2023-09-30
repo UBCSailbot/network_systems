@@ -4,7 +4,7 @@
 
 #include "sailbot_db.h"
 
-#ifndef NDEBUG
+#ifdef NDEBUG
 // Cannot have main function defined with Googletest enabled
 // Cannot have multiple SailbotDB instances defined ANYWHERE
 int main()

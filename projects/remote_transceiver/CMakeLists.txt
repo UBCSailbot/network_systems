@@ -2,8 +2,8 @@ set (module remote_transceiver)
 
 set(link_libs
     ${PROTOBUF_LINK_LIBS}
-    ${LIBMONGOCXX_LIBRARIES}
-    ${LIBBSONCXX_LIBRARIES}
+    mongo::mongocxx_shared
+    mongo::bsoncxx_shared
 )
 
 set(inc_dirs
@@ -24,7 +24,7 @@ set(compile_defs
 message(${compile_defs})
 
 # Make executable (not ROS)
-# make_exe(${module} "${srcs}" "${link_libs}" "${inc_dirs}")
+make_exe(${module} "${srcs}" "${link_libs}" "${inc_dirs}")
 
 # Create unit test
 set(test_srcs

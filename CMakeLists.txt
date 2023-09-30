@@ -39,8 +39,8 @@ find_package(Boost 1.74.0 COMPONENTS REQUIRED
 )
 
 # MongoDB
-find_package(libmongocxx REQUIRED)
-find_package(libbsoncxx REQUIRED)
+find_package(mongocxx REQUIRED)
+find_package(bsoncxx REQUIRED)
 
 # Protobuf
 find_package(Protobuf REQUIRED)
