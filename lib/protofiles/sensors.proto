@@ -29,7 +29,8 @@ message Sensors
         uint32 id        = 1;
         float  latitude  = 2;
         float  longitude = 3;
-        uint32 heading   = 4;
+        float  speed     = 4;
+        float  heading   = 5;
     }
 
     message Generic

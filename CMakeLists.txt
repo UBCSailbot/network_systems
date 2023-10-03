@@ -15,9 +15,11 @@ endif()
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # Configure build flags
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS_DEBUG} -fprofile-arcs \
-        -ftest-coverage -fprofile-instr-generate -fcoverage-mapping")
-    add_definitions(-DDEBUG)
+    set(coverage_flags "-fprofile-arcs -ftest-coverage -fprofile-instr-generate -fcoverage-mapping")
+    set(CMAKE_CXX_FLAGS
+        "${CMAKE_CXX_FLAGS_DEBUG}"
+        # ${coverage_flags} Needs to be implemented
+    )
 elseif(CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS_RELWITHDEBINFO}")
 endif()
@@ -51,8 +53,8 @@ set(PROTOBUF_LINK_LIBS
 
 # Googletest (installed by sailbot_workspace Docker config)
 if(UNIT_TEST)
-    execute_process(COMMAND arch OUTPUT_VARIABLE ARCH OUTPUT_STRIP_TRAILING_WHITESPACE)
-    set(GTEST_LINK_LIBS "/usr/lib/${ARCH}-linux-gnu/libgtest.a" "/usr/lib/${ARCH}-linux-gnu/libgtest_main.a")
+    find_package(GTest CONFIG REQUIRED)
+    set(GTEST_LINK_LIBS gtest gtest_main)
 endif()
 
 # Add src directories

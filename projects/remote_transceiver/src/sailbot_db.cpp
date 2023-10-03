@@ -1,17 +1,18 @@
 #include "sailbot_db.h"
 
+#include <bsoncxx/builder/stream/helpers.hpp>
+#include <bsoncxx/json.hpp>
 #include <iostream>
 
-#include "bsoncxx/builder/basic/document.hpp"
+#include "bsoncxx/builder/stream/array.hpp"
+#include "bsoncxx/builder/stream/document.hpp"
 #include "mongocxx/client.hpp"
 #include "mongocxx/collection.hpp"
 #include "mongocxx/instance.hpp"
 #include "sensors.pb.h"
 
-using bsoncxx::builder::basic::kvp;
-using bsoncxx::builder::basic::make_array;
-using bsoncxx::builder::basic::make_document;
-using DocVal = bsoncxx::document::value;
+namespace bstream = bsoncxx::builder::stream;
+using Placeholder::Sensors;
 
 // PUBLIC
 
@@ -24,12 +25,13 @@ SailbotDB::SailbotDB(const std::string & db_name)
     db_               = client_[db_name];
 }
 
+void SailbotDB::printDoc(const DocVal & doc) { std::cout << bsoncxx::to_json(doc.view()) << std::endl; }
+
 bool SailbotDB::testConnection()
 {
-    std::cout << MONGODB_CONN_STR << std::endl;
     try {
         // Ping the database.
-        const DocVal ping_cmd = make_document(bsoncxx::builder::basic::kvp("ping", 1));
+        const DocVal ping_cmd = bstream::document{} << "ping" << 1 << bstream::finalize;
         db_.run_command(ping_cmd.view());
         return true;
     } catch (const std::exception & e) {
@@ -38,19 +40,38 @@ bool SailbotDB::testConnection()
     }
 }
 
-bool SailbotDB::storeSensors(const Placeholder::Sensors & sensors_pb) { return storeGps(sensors_pb.gps()); }
+bool SailbotDB::storeSensors(const Sensors & sensors_pb)
+{
+    return storeGps(sensors_pb.gps()) && storeAis(sensors_pb.ais_ships());
+}
 
 // END PUBLIC
 
 // PRIVATE
 
-bool SailbotDB::storeGps(const Placeholder::Sensors::Gps & gps_pb)
+bool SailbotDB::storeGps(const Sensors::Gps & gps_pb)
 {
     mongocxx::collection gps_coll = db_[COLLECTION_GPS];
-    const DocVal         gps_doc  = make_document(
-               kvp("latitude", gps_pb.latitude()), kvp("longitude", gps_pb.longitude()), kvp("speed", gps_pb.speed()),
-               kvp("heading", gps_pb.heading()));
-    return static_cast<bool>(gps_coll.insert_one(bsoncxx::document::view_or_value(gps_doc)));
+    DocVal gps_doc = bstream::document{} << "latitude" << gps_pb.latitude() << "longitude" << gps_pb.longitude()
+                                         << "speed" << gps_pb.speed() << "heading" << gps_pb.heading()
+                                         << bstream::finalize;
+    return static_cast<bool>(gps_coll.insert_one(gps_doc.view()));
+}
+
+bool SailbotDB::storeAis(const ProtoList<Sensors::Ais> & ais_ships_pb)
+{
+    mongocxx::collection ais_coll = db_[COLLECTION_AIS_SHIPS];
+    bstream::document    doc_builder{};
+    auto                 ais_ships_doc_arr = doc_builder << "ais_ships" << bstream::open_array;
+    for (const Sensors::Ais & ais_ship : ais_ships_pb) {
+        // The BSON spec does not allow unsigned integers (throws exception), so cast our uint32s to sint64s
+        ais_ships_doc_arr = ais_ships_doc_arr << bstream::open_document << "id" << static_cast<int64_t>(ais_ship.id())
+                                              << "latitude" << ais_ship.latitude() << "longitude"
+                                              << ais_ship.longitude() << "speed" << ais_ship.speed() << "heading"
+                                              << ais_ship.heading() << bstream::close_document;
+    }
+    DocVal ais_ships_doc = ais_ships_doc_arr << bstream::close_array << bstream::finalize;
+    return static_cast<bool>(ais_coll.insert_one(ais_ships_doc.view()));
 }
 
 // END PRIVATE

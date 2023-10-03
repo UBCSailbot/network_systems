@@ -4,9 +4,6 @@
 
 #include "sailbot_db.h"
 
-#ifdef NDEBUG
-// Cannot have main function defined with Googletest enabled
-// Cannot have multiple SailbotDB instances defined ANYWHERE
 int main()
 {
     SailbotDB sailbot_db("admin");
@@ -16,4 +13,3 @@ int main()
     }
     return 0;
 }
-#endif

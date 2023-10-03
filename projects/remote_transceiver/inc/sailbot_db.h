@@ -1,15 +1,21 @@
 #pragma once
 
-#include "bsoncxx/builder/basic/document.hpp"
+#include <google/protobuf/repeated_field.h>
+
 #include "mongocxx/client.hpp"
 #include "mongocxx/collection.hpp"
 #include "mongocxx/instance.hpp"
 #include "sensors.pb.h"
 
-constexpr auto COLLECTION_GPS          = "gps";
-constexpr auto COLLECTION_AIS          = "ais_ships";
+constexpr auto COLLECTION_AIS_SHIPS    = "ais_ships";
+constexpr auto COLLECTION_BATTERIES    = "batteries";
 constexpr auto COLLECTION_DATA_SENSORS = "data_sensors";
-constexpr auto COLLECTION_WIND         = "wind_sensors";
+constexpr auto COLLECTION_GPS          = "gps";
+constexpr auto COLLECTION_WIND_SENSORS = "wind_sensors";
+
+template <typename T>
+using ProtoList = google::protobuf::RepeatedPtrField<T>;
+using DocVal    = bsoncxx::document::value;
 
 /**
  * Class that encapsulates a Sailbot MongoDB database
@@ -24,6 +30,13 @@ public:
     * @param db_name name of desired database
     */
     explicit SailbotDB(const std::string & db_name);
+
+    /**
+     * @brief Format and print a document in the DB
+     *
+     * @param doc document value
+     */
+    static void printDoc(const DocVal & doc);
 
     /**
      * @brief Ping the connected database to see if the connection succeeded
@@ -57,4 +70,13 @@ private:
      * @return false on failure
      */
     bool storeGps(const Placeholder::Sensors::Gps & gps_pb);
+
+    /**
+     * @brief Write AIS data to the database
+     *
+     * @param ais_ships_pb Protobuf list of AIS objects, where the size of the list is the number of ships
+     * @return true  if successful
+     * @return false on failure
+     */
+    bool storeAis(const ProtoList<Placeholder::Sensors::Ais> & ais_ships_pb);
 };

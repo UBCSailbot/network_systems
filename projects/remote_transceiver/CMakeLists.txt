@@ -13,7 +13,6 @@ set(inc_dirs
 )
 
 set(srcs
-    ${CMAKE_CURRENT_LIST_DIR}/src/remote_transceiver.cpp
     ${CMAKE_CURRENT_LIST_DIR}/src/sailbot_db.cpp
 )
 
@@ -21,10 +20,13 @@ set(compile_defs
     MONGODB_CONN_STR="$ENV{MONGODB_CONN_STR}"
 )
 
-message(${compile_defs})
+set(bin_srcs
+    ${srcs}
+    ${CMAKE_CURRENT_LIST_DIR}/src/remote_transceiver.cpp
+)
 
 # Make executable (not ROS)
-make_exe(${module} "${srcs}" "${link_libs}" "${inc_dirs}")
+make_exe(${module} "${bin_srcs}" "${link_libs}" "${inc_dirs}")
 
 # Create unit test
 set(test_srcs
