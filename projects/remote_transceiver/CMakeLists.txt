@@ -17,7 +17,6 @@ set(srcs
 )
 
 set(compile_defs
-    MONGODB_CONN_STR="$ENV{MONGODB_CONN_STR}"
 )
 
 set(bin_srcs
@@ -26,7 +25,7 @@ set(bin_srcs
 )
 
 # Make executable (not ROS)
-make_exe(${module} "${bin_srcs}" "${link_libs}" "${inc_dirs}")
+make_exe(${module} "${bin_srcs}" "${link_libs}" "${inc_dirs}" "${compile_defs}")
 
 # Create unit test
 set(test_srcs

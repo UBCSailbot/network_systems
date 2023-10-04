@@ -16,11 +16,11 @@ using Placeholder::Sensors;
 
 // PUBLIC
 
-SailbotDB::SailbotDB(const std::string & db_name)
+SailbotDB::SailbotDB(const std::string & db_name, const std::string & mongodb_conn_str)
 {
     // inst_ implicitly initialized and will throw an exception if we try to explicitly initialize it like below
     // inst_             = {};
-    mongocxx::uri uri = mongocxx::uri{MONGODB_CONN_STR};
+    mongocxx::uri uri = mongocxx::uri{mongodb_conn_str};
     client_           = {uri};
     db_               = client_[db_name];
 }
