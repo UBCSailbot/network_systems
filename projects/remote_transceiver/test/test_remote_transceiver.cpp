@@ -9,7 +9,8 @@
 #include "sensors.pb.h"
 #include "shared_constants.h"
 
-static constexpr int NUM_AIS_SHIPS = 15;
+static constexpr int  NUM_AIS_SHIPS    = 15;
+static constexpr auto MONGODB_CONN_STR = "mongodb://localhost:27017";
 
 using Placeholder::Sensors;
 
@@ -21,7 +22,7 @@ class TestDB : public SailbotDB
 public:
     static constexpr const char * TEST_DB = "test";
 
-    TestDB() : SailbotDB(TEST_DB) {}
+    TestDB() : SailbotDB(TEST_DB, MONGODB_CONN_STR) {}
 
     /**
      * @brief Delete all documents in all collections

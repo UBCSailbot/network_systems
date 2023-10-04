@@ -27,9 +27,10 @@ public:
     /**
     * @brief Construct a new SailbotDB object
     *
-    * @param db_name name of desired database
+    * @param db_name          name of desired database
+    * @param mongodb_conn_str URL for mongodb database (ex. mongodb://localhost:27017)
     */
-    explicit SailbotDB(const std::string & db_name);
+    explicit SailbotDB(const std::string & db_name, const std::string & mongodb_conn_str);
 
     /**
      * @brief Format and print a document in the DB

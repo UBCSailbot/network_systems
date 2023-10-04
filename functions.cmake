@@ -1,5 +1,5 @@
 # Create module library
-function(make_lib module srcs link_libs inc_dirs)
+function(make_lib module srcs link_libs inc_dirs compile_defs)
     add_library(${module} ${srcs})
     target_compile_definitions(${module} PUBLIC ${compile_defs})
     target_link_libraries(${module} PUBLIC ${link_libs})
@@ -13,7 +13,7 @@ function(make_lib module srcs link_libs inc_dirs)
 endfunction()
 
 # Create module ROS executable
-function(make_exe module srcs link_libs inc_dirs)
+function(make_exe module srcs link_libs inc_dirs ${compile_defs})
     set(bin_module bin_${module})
     add_executable(${bin_module} ${srcs})
     target_compile_definitions(${bin_module} PUBLIC ${compile_defs})
