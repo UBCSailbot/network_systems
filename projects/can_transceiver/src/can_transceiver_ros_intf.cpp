@@ -1,8 +1,12 @@
+#include <custom_interfaces/msg/detail/gps__struct.hpp>
+#include <custom_interfaces/msg/detail/wind_sensor__struct.hpp>
+#include <custom_interfaces/msg/detail/wind_sensors__struct.hpp>
 #include <memory>
 
 #include "can_frame_parser.h"
 #include "can_transceiver.h"
 #include "custom_interfaces/msg/gps.hpp"
+#include "custom_interfaces/msg/wind_sensors.hpp"
 #include "rclcpp/publisher.hpp"
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp/subscription.hpp"
@@ -71,23 +75,33 @@ public:
     : Node("CanSimIntfSubscriber")
     {
         // Topic: mock_gps
-        subscription_ = this->create_subscription<std_msgs::msg::String>(
-          "mock_gps", QUEUE_SIZE, std::bind(&CanSimIntf::topic_callback, this, std::placeholders::_1));
+        subscriptionGPS_ = this->create_subscription<custom_interfaces::msg::GPS>(
+          "mock_gps", QUEUE_SIZE, std::bind(&CanSimIntf::gps_callback, this, std::placeholders::_1));
 
         // Topic: mock_wind_sensors
-        subscription_ = this->create_subscription<std_msgs::msg::String>(
-          "mock_wind_sensors", QUEUE_SIZE, std::bind(&CanSimIntf::topic_callback, this, std::placeholders::_1));
+        subscriptionWindSensor_ = this->create_subscription<custom_interfaces::msg::WindSensor>(
+          "mock_wind_sensors", QUEUE_SIZE, std::bind(&CanSimIntf::wind_callback, this, std::placeholders::_1));
     }
 
 private:
     // Receives string message data over topic and writes to RCLCPP_INFO macro
     // When moment message is available in queue: prints statement in log
-    void topic_callback(const std_msgs::msg::String::SharedPtr msg) const
+    void gps_callback(const custom_interfaces::msg::GPS::SharedPtr msg) const
     {
-        RCLCPP_INFO(this->get_logger(), "I heard: '%s'", msg->data.c_str());
+        RCLCPP_INFO(this->get_logger(), "I heard: '%f'", msg->heading.heading);
+        RCLCPP_INFO(this->get_logger(), "I heard: '%f'", msg->lat_lon.latitude);
+        RCLCPP_INFO(this->get_logger(), "I heard: '%f'", msg->lat_lon.longitude);
+        RCLCPP_INFO(this->get_logger(), "I heard: '%f'", msg->speed.speed);
     }
-    // Field declaration: Subscription Subscriber
-    rclcpp::Subscription<std_msgs::msg::String>::SharedPtr subscription_;
+    void wind_callback(const custom_interfaces::msg::WindSensor::SharedPtr msg) const
+    {
+        RCLCPP_INFO(this->get_logger(), "I heard: '%d'", msg->direction);
+        RCLCPP_INFO(this->get_logger(), "I heard: '%f'", msg->speed.speed);
+    }
+    // Field declaration: Subscription Subscribers
+    rclcpp::Subscription<custom_interfaces::msg::GPS>::SharedPtr subscriptionGPS_;
+    rclcpp::Subscription<custom_interfaces::msg::WindSensor>::SharedPtr subscriptionWindSensor_;
+
 };
 
 //===========================================================================================
