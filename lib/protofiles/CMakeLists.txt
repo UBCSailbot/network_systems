@@ -7,6 +7,7 @@ protobuf_generate_cpp(ProtoSrcs ProtoHdrs ${ProtoFiles})
 add_library(protofiles STATIC ${ProtoSrcs} ${ProtoHdrs})
 target_include_directories(protofiles PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
 target_link_libraries(protofiles ${PROTOBUF_LIBRARY})
+
 # The generated headers are placed in the binary directory
 # save the path so we can include/link it
 set(PROTOBUF_INCLUDE_PATH ${CMAKE_CURRENT_BINARY_DIR}

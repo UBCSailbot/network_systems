@@ -15,16 +15,18 @@ endif()
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # Configure build flags
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS_DEBUG} -fprofile-arcs \
-        -ftest-coverage -fprofile-instr-generate -fcoverage-mapping")
-    add_definitions(-DDEBUG)
+    set(coverage_flags "-fprofile-arcs -ftest-coverage -fprofile-instr-generate -fcoverage-mapping")
+    set(CMAKE_CXX_FLAGS
+        "${CMAKE_CXX_FLAGS_DEBUG}"
+        # ${coverage_flags} Needs to be implemented
+    )
 elseif(CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS_RELWITHDEBINFO}")
 endif()
 # Enable all warnings as errors except unused parameter because auto-generated protobuf files trigger it,
 # and clang-tidy can cover it without false-flagging the protobuf files.
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++20 -Wall -Wextra -Wpedantic -Werror -Wno-unused-parameter -pthread")
-message("Building Network Systems with build type '${CMAKE_BUILD_TYPE}' "
+message(WARNING "Building Network Systems with build type '${CMAKE_BUILD_TYPE}' "
         "and flags: '${CMAKE_CXX_FLAGS}'")
 
 # ROS dependencies
@@ -38,13 +40,21 @@ find_package(Boost 1.74.0 COMPONENTS REQUIRED
     serialization
 )
 
+# MongoDB
+find_package(mongocxx REQUIRED)
+find_package(bsoncxx REQUIRED)
+
 # Protobuf
 find_package(Protobuf REQUIRED)
+set(PROTOBUF_LINK_LIBS
+    ${Protobuf_LIBRARIES}
+    protofiles
+)
 
 # Googletest (installed by sailbot_workspace Docker config)
 if(UNIT_TEST)
-    execute_process(COMMAND arch OUTPUT_VARIABLE ARCH OUTPUT_STRIP_TRAILING_WHITESPACE)
-    set(GTEST_LINK_LIBS "/usr/lib/${ARCH}-linux-gnu/libgtest.a" "/usr/lib/${ARCH}-linux-gnu/libgtest_main.a")
+    find_package(GTest CONFIG REQUIRED)
+    set(GTEST_LINK_LIBS gtest gtest_main)
 endif()
 
 # Add src directories
