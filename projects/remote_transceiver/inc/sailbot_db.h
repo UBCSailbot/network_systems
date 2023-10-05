@@ -54,7 +54,7 @@ public:
      * @return true  if successful
      * @return false on failure
      */
-    bool storeSensors(const Placeholder::Sensors & sensors_pb);
+    bool storeSensors(const Polaris::Sensors & sensors_pb);
 
 protected:
     mongocxx::database db_;  // MongoDB database this object is attached to
@@ -70,7 +70,7 @@ private:
      * @return true  if successful
      * @return false on failure
      */
-    bool storeGps(const Placeholder::Sensors::Gps & gps_pb);
+    bool storeGps(const Polaris::Sensors::Gps & gps_pb);
 
     /**
      * @brief Write AIS data to the database
@@ -79,5 +79,5 @@ private:
      * @return true  if successful
      * @return false on failure
      */
-    bool storeAis(const ProtoList<Placeholder::Sensors::Ais> & ais_ships_pb);
+    bool storeAis(const ProtoList<Polaris::Sensors::Ais> & ais_ships_pb);
 };

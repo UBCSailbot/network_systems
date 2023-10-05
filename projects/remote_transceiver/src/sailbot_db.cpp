@@ -12,7 +12,7 @@
 #include "sensors.pb.h"
 
 namespace bstream = bsoncxx::builder::stream;
-using Placeholder::Sensors;
+using Polaris::Sensors;
 
 // PUBLIC
 

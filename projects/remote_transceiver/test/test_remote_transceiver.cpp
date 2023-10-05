@@ -12,7 +12,7 @@
 static constexpr int  NUM_AIS_SHIPS    = 15;
 static constexpr auto MONGODB_CONN_STR = "mongodb://localhost:27017";
 
-using Placeholder::Sensors;
+using Polaris::Sensors;
 
 /**
  * Child class of SailbotDB that includes additional database utility functions to help testing
