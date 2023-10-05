@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package Placeholder;  // TODO replace with new project name
+package Polaris;
 
 message Waypoints
 {
