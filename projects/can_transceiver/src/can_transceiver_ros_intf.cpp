@@ -9,6 +9,7 @@
 
 #include "can_frame_parser.h"
 #include "can_transceiver.h"
+
 #include "custom_interfaces/msg/gps.hpp"
 #include "custom_interfaces/msg/wind_sensors.hpp"
 #include "rclcpp/publisher.hpp"
@@ -63,6 +64,7 @@ private:
     void sub_cb(std_msgs::msg::String /* placeholder */) { can_trns_->onNewCmd(Placeholder0); }
 };
 
+
 //===========================================================================================
 // Simulation Interface Component (FLow Up)
 //===========================================================================================
@@ -70,7 +72,7 @@ private:
  * Control Simulator -> CanSimIntf() -> CAN Transceiver
  * Also subscribes to simulator over ROS
  */
-class CanSimIntf : public CanTransceiver, public rclcpp::Node
+class CanSimIntf : public rclcpp::Node
 {
     // There is no timer because subscriber will respond to whatever data is published to the topic /Simulator
 public:
@@ -118,7 +120,7 @@ private:
  * CAN Transceiver -> "CanSimIntfFeedback()" -> Control Simulator
  * Publishes to topics over ROS for Controls
  */
-class CanSimIntfFeedback : public CanTransceiver, public rclcpp::Node
+class CanSimIntfFeedback : public rclcpp::Node
 {
 public:
     CanSimIntfFeedback() : Node("CanSimIntf_Publisher"), count_(0)
@@ -162,6 +164,7 @@ private:
     }
     // Timer object to allow our CamSimIntfFeedback node to perform action at x rate
     rclcpp::TimerBase::SharedPtr                        timer_;
+
     // Publishers (placeholder names)
     rclcpp::Publisher<std_msgs::msg::String>::SharedPtr publisher1wind_sensors_;
     rclcpp::Publisher<std_msgs::msg::String>::SharedPtr publisher2filtered_wind_sensor_;
@@ -179,8 +182,8 @@ private:
 int main(int argc, char * argv[])
 {
     rclcpp::init(argc, argv);
-    //rclcpp::spin(std::make_shared<CanSimIntf>());
-    //rclcpp::spin(std::make_shared<CanSimIntfFeedback>());
+    rclcpp::spin(std::make_shared<CanSimIntf>());
+    rclcpp::spin(std::make_shared<CanSimIntfFeedback>());
     rclcpp::shutdown();
     return 0;
 }
