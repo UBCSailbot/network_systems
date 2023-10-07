@@ -113,16 +113,16 @@ private:
 // Reminder: If publisher node (boat_simulator isn't running, this will not print.)
     void gps_callback(const custom_interfaces::msg::GPS::SharedPtr msg) const
     {
-        RCLCPP_INFO(this->get_logger(), "I heard: '%f'", msg->heading.heading); //TO-DO: Combine into 1 print
-        RCLCPP_INFO(this->get_logger(), "I heard: '%f'", msg->lat_lon.latitude);
-        RCLCPP_INFO(this->get_logger(), "I heard: '%f'", msg->lat_lon.longitude);
-        RCLCPP_INFO(this->get_logger(), "I heard: '%f'", msg->speed.speed);
+        RCLCPP_INFO(this->get_logger(), "mock_gps Heading: '%f'", msg->heading.heading); //TO-DO: Combine into 1 print
+        RCLCPP_INFO(this->get_logger(), "mock_gps Lat: '%f'", msg->lat_lon.latitude);
+        RCLCPP_INFO(this->get_logger(), "mock_gps Long: '%f'", msg->lat_lon.longitude);
+        RCLCPP_INFO(this->get_logger(), "mock_gps Speed: '%f'", msg->speed.speed);
     }
     void wind_callback(const custom_interfaces::msg::WindSensors::SharedPtr msg) const
     {
         for(int i=0;i<WIND_SENSOR_BOUND;++i){
-        RCLCPP_INFO(this->get_logger(), "I heard: '%f'", msg->wind_sensors[i].speed.speed); //TO-DO: Combine into 1 ()
-        RCLCPP_INFO(this->get_logger(), "I heard: '%i'", msg->wind_sensors[i].direction);
+        RCLCPP_INFO(this->get_logger(), "mock_wind_sensor spd: '%f'", msg->wind_sensors[i].speed.speed);
+        RCLCPP_INFO(this->get_logger(), "mock_wind_sensor dir: '%i'", msg->wind_sensors[i].direction);
         }
     }
 
