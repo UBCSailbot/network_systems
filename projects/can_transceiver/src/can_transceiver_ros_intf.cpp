@@ -6,6 +6,7 @@
 #include <chrono>
 #include <functional>
 #include <string>
+#include <thread>
 
 #include "can_frame_parser.h"
 #include "can_transceiver.h"
@@ -66,34 +67,41 @@ private:
 
 
 //===========================================================================================
-// Simulation Interface Component (FLow Up)
+// Simulation Interface
 //===========================================================================================
 /* Refer to https://ubcsailbot.atlassian.net/wiki/spaces/prjt22/pages/1768849494/Simulation+Interface#Interfaces
- * Control Simulator -> CanSimIntf() -> CAN Transceiver
- * Also subscribes to simulator over ROS
+ * Handles publishing and subscribing to certain ROS topics
  */
 class CanSimIntf : public rclcpp::Node
 {
-    // There is no timer because subscriber will respond to whatever data is published to the topic /Simulator
 public:
-    // Our node which publishes
-    // Node can publish to any number of topics
-
     CanSimIntf()  //Our node which subs to topics
-    : Node("CanSimIntf_Subscriber")
+    : Node("CanSimIntf")
     {
+    // Subscriber
+    // There is no timer because subscriber will respond to whatever data is published to the topic /Simulator
         // Topic: mock_gps
         subscriptionGPS_ = this->create_subscription<custom_interfaces::msg::GPS>(
           "mock_gps", QUEUE_SIZE, std::bind(&CanSimIntf::gps_callback, this, std::placeholders::_1));
 
-        // // Topic: mock_wind_sensors
-        // subscriptionWindSensor_ = this->create_subscription<custom_interfaces::msg::WindSensor>(
-        //   "mock_wind_sensors", QUEUE_SIZE, std::bind(&CanSimIntf::wind_callback, this, std::placeholders::_1));
+        // Topic: mock_wind_sensors
+        subscriptionWindSensor_ = this->create_subscription<custom_interfaces::msg::WindSensor>(
+          "mock_wind_sensors", QUEUE_SIZE, std::bind(&CanSimIntf::wind_callback, this, std::placeholders::_1));
+
+    // Publisher
+        publisher1wind_sensors_ = this->create_publisher<std_msgs::msg::String>("wind_sensors", QUEUE_SIZE);
+        publisher2filtered_wind_sensor_ = this->create_publisher<std_msgs::msg::String>("filtered_wind_sensor", QUEUE_SIZE);
+        publisher3gps_ = this->create_publisher<std_msgs::msg::String>("gps", QUEUE_SIZE);
+        publisher4data_sensors_ = this->create_publisher<std_msgs::msg::String>("data_sensors", QUEUE_SIZE);
+        publisher5batteries_ = this->create_publisher<std_msgs::msg::String>("batteries", QUEUE_SIZE);
+        // Timer with 500ms delay
+        timer_     = this->create_wall_timer(500ms, std::bind(&CanSimIntf::timer_callback, this));
     }
 
 private:
-    // Receives string message data over topic and writes to RCLCPP_INFO macro
-    // When moment message is available in queue: prints statement in log
+
+// Subscriber
+// When moment message is available in queue: prints statement in log
     void gps_callback(const custom_interfaces::msg::GPS::SharedPtr msg) const
     {
         RCLCPP_INFO(this->get_logger(), "I heard: '%f'", msg->heading.heading);
@@ -101,41 +109,13 @@ private:
         RCLCPP_INFO(this->get_logger(), "I heard: '%f'", msg->lat_lon.longitude);
         RCLCPP_INFO(this->get_logger(), "I heard: '%f'", msg->speed.speed);
     }
-    // void wind_callback(const custom_interfaces::msg::WindSensor::SharedPtr msg) const
-    // {
-    //     RCLCPP_INFO(this->get_logger(), "I heard: '%d'", msg->direction);
-    //     RCLCPP_INFO(this->get_logger(), "I heard: '%f'", msg->speed.speed);
-    // }
-    // Field declaration: Subscription Subscribers
-    rclcpp::Subscription<custom_interfaces::msg::GPS>::SharedPtr subscriptionGPS_;
-    //rclcpp::Subscription<custom_interfaces::msg::WindSensor>::SharedPtr subscriptionWindSensor_;
-
-};
-
-
-//===========================================================================================
-// Simulation Interface Component (Flow Down)
-//===========================================================================================
-/* Refer to https://ubcsailbot.atlassian.net/wiki/spaces/prjt22/pages/1768849494/Simulation+Interface#Interfaces
- * CAN Transceiver -> "CanSimIntfFeedback()" -> Control Simulator
- * Publishes to topics over ROS for Controls
- */
-class CanSimIntfFeedback : public rclcpp::Node
-{
-public:
-    CanSimIntfFeedback() : Node("CanSimIntf_Publisher"), count_(0)
+    void wind_callback(const custom_interfaces::msg::WindSensor::SharedPtr msg) const
     {
-        // Publisher with string msg type, ros topic, and queuesize
-        publisher1wind_sensors_ = this->create_publisher<std_msgs::msg::String>("wind_sensors", QUEUE_SIZE);
-        publisher2filtered_wind_sensor_ = this->create_publisher<std_msgs::msg::String>("filtered_wind_sensor", QUEUE_SIZE);
-        publisher3gps_ = this->create_publisher<std_msgs::msg::String>("gps", QUEUE_SIZE);
-        publisher4data_sensors_ = this->create_publisher<std_msgs::msg::String>("data_sensors", QUEUE_SIZE);
-        publisher5batteries_ = this->create_publisher<std_msgs::msg::String>("batteries", QUEUE_SIZE);
-        // Timer with 500ms delay
-        timer_     = this->create_wall_timer(500ms, std::bind(&CanSimIntfFeedback::timer_callback, this));
+        RCLCPP_INFO(this->get_logger(), "I heard: '%d'", msg->direction);
+        RCLCPP_INFO(this->get_logger(), "I heard: '%f'", msg->speed.speed);
     }
 
-private:
+// Publisher
     void timer_callback()
     {
         // Publishes to local pathfinding gps through publisher3gps_
@@ -159,22 +139,28 @@ private:
         RCLCPP_INFO(this->get_logger(), "Publishing: '%s'", message2.data.c_str());
         // Publishes msg
         publisher2filtered_wind_sensor_->publish(message2);
-
-        //
     }
-    // Timer object to allow our CamSimIntfFeedback node to perform action at x rate
-    rclcpp::TimerBase::SharedPtr                        timer_;
+// Field Operations
 
-    // Publishers (placeholder names)
+    // Publisher Field Declarations
     rclcpp::Publisher<std_msgs::msg::String>::SharedPtr publisher1wind_sensors_;
     rclcpp::Publisher<std_msgs::msg::String>::SharedPtr publisher2filtered_wind_sensor_;
     rclcpp::Publisher<std_msgs::msg::String>::SharedPtr publisher3gps_;
     rclcpp::Publisher<std_msgs::msg::String>::SharedPtr publisher4data_sensors_;
     rclcpp::Publisher<std_msgs::msg::String>::SharedPtr publisher5batteries_;
 
+    // Subscriber Field Declarations
+    rclcpp::Subscription<custom_interfaces::msg::GPS>::SharedPtr subscriptionGPS_;
+    rclcpp::Subscription<custom_interfaces::msg::WindSensor>::SharedPtr subscriptionWindSensor_;
+
     // Variable to count number of msgs published
     size_t                                              count_;
+
+    // Timer object to allow our CamSimIntfFeedback node to perform action at x rate
+    rclcpp::TimerBase::SharedPtr                        timer_;
+
 };
+
 
 //===========================================================================================
 // Main
@@ -183,7 +169,6 @@ int main(int argc, char * argv[])
 {
     rclcpp::init(argc, argv);
     rclcpp::spin(std::make_shared<CanSimIntf>());
-    rclcpp::spin(std::make_shared<CanSimIntfFeedback>());
     rclcpp::shutdown();
     return 0;
 }
