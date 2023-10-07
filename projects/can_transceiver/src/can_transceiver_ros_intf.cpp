@@ -1,7 +1,11 @@
+#include <cstdio>
 #include <custom_interfaces/msg/detail/gps__struct.hpp>
 #include <custom_interfaces/msg/detail/wind_sensor__struct.hpp>
 #include <custom_interfaces/msg/detail/wind_sensors__struct.hpp>
 #include <memory>
+#include <chrono>
+#include <functional>
+#include <string>
 
 #include "can_frame_parser.h"
 #include "can_transceiver.h"
@@ -13,6 +17,8 @@
 #include "rclcpp/timer.hpp"
 #include "ros_info.h"
 #include "std_msgs/msg/string.hpp"
+
+using namespace std::chrono_literals;
 
 #define QUEUE_SIZE 10
 
@@ -72,15 +78,15 @@ public:
     // Node can publish to any number of topics
 
     CanSimIntf()  //Our node which subs to topics
-    : Node("CanSimIntfSubscriber")
+    : Node("CanSimIntf_Subscriber")
     {
         // Topic: mock_gps
         subscriptionGPS_ = this->create_subscription<custom_interfaces::msg::GPS>(
           "mock_gps", QUEUE_SIZE, std::bind(&CanSimIntf::gps_callback, this, std::placeholders::_1));
 
-        // Topic: mock_wind_sensors
-        subscriptionWindSensor_ = this->create_subscription<custom_interfaces::msg::WindSensor>(
-          "mock_wind_sensors", QUEUE_SIZE, std::bind(&CanSimIntf::wind_callback, this, std::placeholders::_1));
+        // // Topic: mock_wind_sensors
+        // subscriptionWindSensor_ = this->create_subscription<custom_interfaces::msg::WindSensor>(
+        //   "mock_wind_sensors", QUEUE_SIZE, std::bind(&CanSimIntf::wind_callback, this, std::placeholders::_1));
     }
 
 private:
@@ -93,15 +99,78 @@ private:
         RCLCPP_INFO(this->get_logger(), "I heard: '%f'", msg->lat_lon.longitude);
         RCLCPP_INFO(this->get_logger(), "I heard: '%f'", msg->speed.speed);
     }
-    void wind_callback(const custom_interfaces::msg::WindSensor::SharedPtr msg) const
-    {
-        RCLCPP_INFO(this->get_logger(), "I heard: '%d'", msg->direction);
-        RCLCPP_INFO(this->get_logger(), "I heard: '%f'", msg->speed.speed);
-    }
+    // void wind_callback(const custom_interfaces::msg::WindSensor::SharedPtr msg) const
+    // {
+    //     RCLCPP_INFO(this->get_logger(), "I heard: '%d'", msg->direction);
+    //     RCLCPP_INFO(this->get_logger(), "I heard: '%f'", msg->speed.speed);
+    // }
     // Field declaration: Subscription Subscribers
     rclcpp::Subscription<custom_interfaces::msg::GPS>::SharedPtr subscriptionGPS_;
-    rclcpp::Subscription<custom_interfaces::msg::WindSensor>::SharedPtr subscriptionWindSensor_;
+    //rclcpp::Subscription<custom_interfaces::msg::WindSensor>::SharedPtr subscriptionWindSensor_;
 
+};
+
+
+//===========================================================================================
+// Simulation Interface Component (Flow Down)
+//===========================================================================================
+/* Refer to https://ubcsailbot.atlassian.net/wiki/spaces/prjt22/pages/1768849494/Simulation+Interface#Interfaces
+ * CAN Transceiver -> "CanSimIntfFeedback()" -> Control Simulator
+ * Publishes to topics over ROS for Controls
+ */
+class CanSimIntfFeedback : public CanTransceiver, public rclcpp::Node
+{
+public:
+    CanSimIntfFeedback() : Node("CanSimIntf_Publisher"), count_(0)
+    {
+        // Publisher with string msg type, ros topic, and queuesize
+        publisher1wind_sensors_ = this->create_publisher<std_msgs::msg::String>("wind_sensors", QUEUE_SIZE);
+        publisher2filtered_wind_sensor_ = this->create_publisher<std_msgs::msg::String>("filtered_wind_sensor", QUEUE_SIZE);
+        publisher3gps_ = this->create_publisher<std_msgs::msg::String>("gps", QUEUE_SIZE);
+        publisher4data_sensors_ = this->create_publisher<std_msgs::msg::String>("data_sensors", QUEUE_SIZE);
+        publisher5batteries_ = this->create_publisher<std_msgs::msg::String>("batteries", QUEUE_SIZE);
+        // Timer with 500ms delay
+        timer_     = this->create_wall_timer(500ms, std::bind(&CanSimIntfFeedback::timer_callback, this));
+    }
+
+private:
+    void timer_callback()
+    {
+        // Publishes to local pathfinding gps through publisher3gps_
+        // lat_lon (lat, lon), speed (kmph), heading (0 to 360 deg)
+        auto message3 = std_msgs::msg::String();
+        message3.data = "Hello, world! " + std::to_string(count_++);  //placeholder helloworld
+        RCLCPP_INFO(this->get_logger(), "Publishing: '%s'", message3.data.c_str());
+        // Publishes msg
+        publisher3gps_->publish(message3);
+
+        // Publishes to publisher1_
+        auto message1 = std_msgs::msg::String();
+        message1.data = "Hello, world! " + std::to_string(count_++);  //placeholder helloworld
+        RCLCPP_INFO(this->get_logger(), "Publishing: '%s'", message1.data.c_str());
+        // Publishes msg
+        publisher1wind_sensors_->publish(message1);
+
+        // Publishes to publisher2_ (placeholder example of repeat)
+        auto message2 = std_msgs::msg::String();
+        message2.data = "Hello, world (again)! " + std::to_string(count_++);  //placeholder helloworld
+        RCLCPP_INFO(this->get_logger(), "Publishing: '%s'", message2.data.c_str());
+        // Publishes msg
+        publisher2filtered_wind_sensor_->publish(message2);
+
+        //
+    }
+    // Timer object to allow our CamSimIntfFeedback node to perform action at x rate
+    rclcpp::TimerBase::SharedPtr                        timer_;
+    // Publishers (placeholder names)
+    rclcpp::Publisher<std_msgs::msg::String>::SharedPtr publisher1wind_sensors_;
+    rclcpp::Publisher<std_msgs::msg::String>::SharedPtr publisher2filtered_wind_sensor_;
+    rclcpp::Publisher<std_msgs::msg::String>::SharedPtr publisher3gps_;
+    rclcpp::Publisher<std_msgs::msg::String>::SharedPtr publisher4data_sensors_;
+    rclcpp::Publisher<std_msgs::msg::String>::SharedPtr publisher5batteries_;
+
+    // Variable to count number of msgs published
+    size_t                                              count_;
 };
 
 //===========================================================================================
@@ -110,5 +179,8 @@ private:
 int main(int argc, char * argv[])
 {
     rclcpp::init(argc, argv);
+    //rclcpp::spin(std::make_shared<CanSimIntf>());
+    //rclcpp::spin(std::make_shared<CanSimIntfFeedback>());
+    rclcpp::shutdown();
     return 0;
 }
