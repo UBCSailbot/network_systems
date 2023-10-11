@@ -1,4 +1,4 @@
-set (module remote_transceiver)
+set(module remote_transceiver)
 
 set(link_libs
     ${PROTOBUF_LINK_LIBS}
