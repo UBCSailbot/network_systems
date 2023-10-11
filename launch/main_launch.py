@@ -63,7 +63,7 @@ def setup_launch(context: LaunchContext) -> List[Node]:
         context (LaunchContext): The current launch context.
 
     Returns:
-        List[LaunchDescriptionEntity]: Launch descriptions.
+        List[Nodes]: Nodes to launch.
     """
     launch_description_entities = list()
     launch_description_entities.append(get_cached_fib_description(context))
