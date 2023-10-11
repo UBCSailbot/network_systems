@@ -1,13 +1,13 @@
 """Launch file that runs all nodes for the network systems ROS package."""
 
-import importlib
 import os
+from importlib.util import module_from_spec, spec_from_file_location
 from typing import List
 
 from launch_ros.actions import Node
 
 from launch import LaunchDescription, LaunchDescriptionEntity
-from launch.actions import OpaqueFunction
+from launch.actions import DeclareLaunchArgument, OpaqueFunction
 from launch.launch_context import LaunchContext
 from launch.substitutions import LaunchConfiguration
 
@@ -15,7 +15,7 @@ from launch.substitutions import LaunchConfiguration
 PACKAGE_NAME = "network_systems"
 
 # Add args with DeclareLaunchArguments object(s) and utilize in setup_launch()
-LOCAL_LAUNCH_ARGUMENTS = []
+LOCAL_LAUNCH_ARGUMENTS: List[DeclareLaunchArgument] = []
 
 
 def generate_launch_description() -> LaunchDescription:
@@ -42,15 +42,16 @@ def get_global_launch_arguments() -> List[LaunchDescriptionEntity]:
     Returns:
         List[LaunchDescriptionEntity]: List of global launch argument objects.
     """
-    global_main_launch = os.path.join(
-        os.getenv("ROS_WORKSPACE"), "src", "global_launch", "main_launch.py"
-    )
-    spec = importlib.util.spec_from_file_location("global_launch", global_main_launch)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
+    ros_workspace = os.getenv("ROS_WORKSPACE", default="/workspaces/sailbot_workspace")
+    global_main_launch = os.path.join(ros_workspace, "src", "global_launch", "main_launch.py")
+    spec = spec_from_file_location("global_launch", global_main_launch)
+    if spec is None:
+        raise ImportError(f"Couldn't import global_launch module from {global_main_launch}")
+    module = module_from_spec(spec)  # type: ignore[arg-type] # spec is not None
+    spec.loader.exec_module(module)  # type: ignore[union-attr] # spec is not None
     global_launch_arguments = module.GLOBAL_LAUNCH_ARGUMENTS
     global_environment_vars = module.ENVIRONMENT_VARIABLES
-    return global_launch_arguments, global_environment_vars
+    return global_launch_arguments, global_environment_vars  # type: ignore[return-value] # no type
 
 
 def setup_launch(context: LaunchContext) -> List[LaunchDescriptionEntity]:
