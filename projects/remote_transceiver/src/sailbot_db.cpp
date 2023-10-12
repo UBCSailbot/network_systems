@@ -74,4 +74,46 @@ bool SailbotDB::storeAis(const ProtoList<Sensors::Ais> & ais_ships_pb)
     return static_cast<bool>(ais_coll.insert_one(ais_ships_doc.view()));
 }
 
+bool SailbotDB::storeGenericSensor(const ProtoList<Sensors::Generic> & generic_pb)
+{
+    mongocxx::collection generic_coll = db_[COLLECTION_DATA_SENSORS];
+    bstream::document    doc_builder{};
+    auto                 generic_doc_arr = doc_builder << "data_sensors" << bstream::open_array;
+    for (const Sensors::Generic & generic : generic_pb) {
+        generic_doc_arr = generic_doc_arr << bstream::open_document << "id" << static_cast<int16_t>(generic.id())
+                                          << "data" << static_cast<int64_t>(generic.data()) << bstream::close_document;
+    }
+    DocVal generic_doc = generic_doc_arr << bstream::close_array << bstream::finalize;
+    return static_cast<bool>(generic_coll.insert_one(generic_doc.view()));
+}
+
+
+bool SailbotDB::storeBatteries(const ProtoList<Sensors::Battery> & battery_pb)
+{
+    mongocxx::collection batteries_coll = db_[COLLECTION_BATTERIES];
+    bstream::document    doc_builder{};
+    auto                 batteries_doc_arr = doc_builder << "batteries" << bstream::open_array;
+    for (const Sensors::Battery & battery : battery_pb){
+        batteries_doc_arr = batteries_doc_arr << bstream::open_document << "voltage" << battery.voltage()
+                                            << "current" << battery.current() << bstream::close_document;
+    }
+    DocVal batteries_doc = batteries_doc_arr << bstream::close_array << bstream::finalize;
+    return static_cast<bool>(batteries_coll.insert_one(batteries_doc.view()));
+}
+
+bool SailbotDB::storeWindSensor(const ProtoList<Sensors::Wind> & wind_pb)
+{
+    mongocxx::collection wind_coll = db_[COLLECTION_WIND_SENSORS];
+    bstream::document     doc_builder{};
+    auto                  wind_doc_arr = doc_builder << "wind_sensors" << bstream::open_array;
+    for (const Sensors::Wind & wind_sensor : wind_pb){
+        wind_doc_arr = wind_doc_arr << bstream::open_document << "speed" << wind_sensor.speed() << "direction"
+                                    << static_cast<int16_t>(wind_sensor.direction()) << bstream::close_document;
+    }
+    DocVal wind_doc = wind_doc_arr << bstream::close_array << bstream::finalize;
+    return static_cast<bool>(wind_coll.insert_one(wind_doc.view()));
+}
+
+
+
 // END PRIVATE

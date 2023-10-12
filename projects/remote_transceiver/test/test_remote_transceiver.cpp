@@ -72,6 +72,9 @@ public:
         }
         EXPECT_EQ(sensors.ais_ships().size(), NUM_AIS_SHIPS) << "Size mismatch when reading AIS ships from DB";
 
+
+
+
         return sensors;
 
         // NOLINTEND(clang-analyzer-cplusplus.NewDeleteLeaks)
