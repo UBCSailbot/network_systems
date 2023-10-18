@@ -15,3 +15,15 @@ constexpr float SPEED_UBND = 10.0;   //arbitrary number
 // boat heading
 constexpr float HEADING_LBND = 0.0;
 constexpr float HEADING_UBND = 360.0;
+
+
+
+/***** Bounds for Battery ******/
+constexpr float VOLT_LBND = 0.5;       // arbitrary number
+constexpr float VOLT_UBND = 250.0;     // arbitrary number
+constexpr float CURRENT_LBND = -200.0; // arbitrary number - confirm? :)
+constexpr float CURRENT_UBND = 200.0;  // arbitrary number - confirm? :)
+
+/***** Bounds for Wind Sensor ******/
+constexpr int DIRECTION_LBND = -180;
+constexpr int DIRECTION_UBND = 179;
