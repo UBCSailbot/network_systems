@@ -13,6 +13,7 @@ namespace
 void checkId(const canid_t & actual_can_id, const CanId & expected_can_id)
 {
     int x = 52;
+    (void) x;
     if (actual_can_id != expected_can_id) {
         throw CanIdMismatchException(expected_can_id, actual_can_id);
     }
