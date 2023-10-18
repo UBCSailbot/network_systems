@@ -9,19 +9,20 @@
 #include "sensors.pb.h"
 #include "shared_constants.h"
 
-static constexpr int  NUM_AIS_SHIPS    = 15;
+static constexpr int NUM_AIS_SHIPS    = 15;
+static constexpr int NUM_GENERIC_SENSORS = 5; //arbitrary number
+static constexpr int NUM_BATTERIES = 2;
+static constexpr int NUM_WIND_SENSORS = 2;
 static constexpr auto MONGODB_CONN_STR = "mongodb://localhost:27017";
 
 using Polaris::Sensors;
 
-/**
- * Child class of SailbotDB that includes additional database utility functions to help testing
- */
+
+ //Child class of SailbotDB that includes additional database utility functions to help testing
 class TestDB : public SailbotDB
 {
 public:
     static constexpr const char * TEST_DB = "test";
-
     TestDB() : SailbotDB(TEST_DB, MONGODB_CONN_STR) {}
 
     /**
@@ -31,22 +32,27 @@ public:
     {
         mongocxx::collection gps_coll = db_[COLLECTION_GPS];
         mongocxx::collection ais_coll = db_[COLLECTION_AIS_SHIPS];
+        mongocxx::collection generic_coll =db_[COLLECTION_DATA_SENSORS];
+        mongocxx::collection batteries_coll =db_[COLLECTION_BATTERIES];
+        mongocxx::collection wind_coll =db_[COLLECTION_WIND_SENSORS];
+
         gps_coll.delete_many(bsoncxx::builder::basic::make_document());
         ais_coll.delete_many(bsoncxx::builder::basic::make_document());
+        generic_coll.delete_many(bsoncxx::builder::basic::make_document());
+        batteries_coll.delete_many(bsoncxx::builder::basic::make_document());
+        wind_coll.delete_many(bsoncxx::builder::basic::make_document());
     }
 
     /**
-     * @brief Read all sensors from the TestDB
-     *
-     * @return Sensors object
+     * @return Sensors objects: gps, ais, generic, batteries, wind
      */
     Sensors dumpSensors()
     {
         Sensors sensors;
-
         // Protobuf handles freeing of dynamically allocated objects automatically
         // NOLINTBEGIN(clang-analyzer-cplusplus.NewDeleteLeaks)
 
+        // gps
         mongocxx::collection gps_coll = db_[COLLECTION_GPS];
         mongocxx::cursor     gps_docs = gps_coll.find({});
         EXPECT_EQ(gps_coll.count_documents({}), 1) << "Error: TestDB should only have one document per collection";
@@ -58,6 +64,7 @@ public:
         gps->set_speed(static_cast<float>(gps_doc["speed"].get_double().value));
         gps->set_heading(static_cast<float>(gps_doc["heading"].get_double().value));
 
+        // ais ships
         mongocxx::collection ais_coll = db_[COLLECTION_AIS_SHIPS];
         mongocxx::cursor     ais_docs = ais_coll.find({});
         EXPECT_EQ(ais_coll.count_documents({}), 1) << "Error: TestDB should only have one document per collection";
@@ -72,11 +79,42 @@ public:
         }
         EXPECT_EQ(sensors.ais_ships().size(), NUM_AIS_SHIPS) << "Size mismatch when reading AIS ships from DB";
 
+        // generic sensor
+        mongocxx::collection generic_coll = db_[COLLECTION_DATA_SENSORS];
+        mongocxx::cursor     generic_sensor_doc = generic_coll.find({});
+        EXPECT_EQ(generic_coll.count_documents({}), 1) << "Error: TestDB should only have one document per collection";
+        bsoncxx::document::view generic_doc = *(generic_sensor_doc.begin());
+        for (bsoncxx::array::element generic_doc : generic_doc["data_sensors"].get_array().value){
+            Sensors::Generic * generic = sensors.add_data_sensors();
+            generic->set_id(static_cast<uint8_t>(generic_doc["id"].get_int32().value));
+            generic->set_data(static_cast<uint64_t>(generic_doc["data"].get_int64().value));
+        }
 
+        // battery
+        mongocxx::collection batteries_coll = db_[COLLECTION_BATTERIES];
+        mongocxx::cursor     batteries_data_doc = batteries_coll.find({});
+        EXPECT_EQ(batteries_coll.count_documents({}), 1) << "Error: TestDB should only have one document per collection";
+        bsoncxx::document::view batteries_doc = *(batteries_data_doc.begin());
+        for (bsoncxx::array::element batteries_doc : batteries_doc["batteries"].get_array().value){
+            Sensors::Battery * battery = sensors.add_batteries();
+            battery->set_voltage(static_cast<float>(batteries_doc["voltage"].get_double().value));
+            battery->set_current(static_cast<float>(batteries_doc["current"].get_double().value));
+        }
+        EXPECT_EQ(sensors.batteries().size(), NUM_BATTERIES)<< "Size mismatch when reading batteries from DB";
 
+        // wind sensor
+        mongocxx::collection wind_coll = db_[COLLECTION_WIND_SENSORS];
+        mongocxx::cursor     wind_sensors_doc = wind_coll.find({});
+        EXPECT_EQ(wind_coll.count_documents({}), 1) << "Error: TestDB should only have one document per collection";
+        bsoncxx::document::view wind_doc = *(wind_sensors_doc.begin());
+        for (bsoncxx::array::element wind_doc : wind_doc["wind_sensors"].get_array().value){
+            Sensors::Wind * wind = sensors.add_wind_sensors();
+            wind->set_speed(static_cast<float>(wind_doc["speed"].get_double().value));
+            wind->set_direction(static_cast<int16_t>(wind_doc["direction"].get_int32().value));
+        }
+        EXPECT_EQ(sensors.wind_sensors().size(), NUM_WIND_SENSORS)<< "Size mismatch when reading batteries from DB";
 
         return sensors;
-
         // NOLINTEND(clang-analyzer-cplusplus.NewDeleteLeaks)
     }
 };
@@ -93,8 +131,9 @@ protected:
     ~TestRemoteTransceiver() override {}
 };
 
+
 /**
- * @brief Generate random GPS data
+ * @brief generate random GPS data
  *
  * @return pointer to generated GPS data
  */
@@ -114,6 +153,11 @@ Sensors::Gps * genRandGpsData()
     return gps_data;
 }
 
+ /**
+ * @brief generate random ais ships data
+ *
+ * @return pointer to generated ais data
+ */
 void genRandAisData(Sensors::Ais * ais_ship)
 {
     std::uniform_int_distribution<uint32_t> id_dist(0, UINT32_MAX);
@@ -130,6 +174,49 @@ void genRandAisData(Sensors::Ais * ais_ship)
 }
 
 /**
+ * @brief generate random generic sensor data
+ *
+ * @return pointer to generated generic sensor data
+ */
+void genRandGenericSensorData(Sensors::Generic * generic_sensor)
+{
+    std::uniform_int_distribution<uint8_t> id_generic(0, UINT8_MAX);
+    std::uniform_int_distribution<uint64_t> data_generic(0, UINT64_MAX);
+
+    generic_sensor->set_id(id_generic(g_mt));
+    generic_sensor->set_data(data_generic(g_mt));
+}
+
+/**
+ * @brief generate random battery data
+ *
+ * @return pointer to generated battery data
+ */
+void genRandBatteriesData(Sensors::Battery * battery)
+{
+    std::uniform_real_distribution<float> voltage_battery(VOLT_LBND, VOLT_UBND);
+    std::uniform_real_distribution<float> current_battery(CURRENT_LBND, CURRENT_UBND);
+
+    battery->set_voltage(voltage_battery(g_mt));
+    battery->set_current(current_battery(g_mt));
+}
+
+/**
+ * @brief generate random wind sensors data
+ *
+ * @return pointer to generated wind sensors data
+ */
+void genRandWindData(Sensors::Wind * wind_data)
+{
+    std::uniform_real_distribution<float> speed_wind(SPEED_LBND, SPEED_UBND);
+    std::uniform_int_distribution<int> direction_wind(DIRECTION_LBND, DIRECTION_UBND);
+
+    wind_data->set_speed(speed_wind(g_mt));
+    wind_data->set_direction(direction_wind(g_mt));
+}
+
+
+/**
  * @brief Generate random data for all sensors
  *
  * @return Sensors object
@@ -139,11 +226,30 @@ Sensors genRandSensors()
     Sensors sensors;
     // Protobuf handles freeing of dynamically allocated objects automatically
     // NOLINTBEGIN(clang-analyzer-cplusplus.NewDeleteLeaks)
+
+    // gps
     sensors.set_allocated_gps(genRandGpsData());
-    // TODO(): Polaris should be included as one of the AIS ships
+
+    // ais ships, TODO(): Polaris should be included as one of the AIS ships
     for (int i = 0; i < NUM_AIS_SHIPS; i++) {
         genRandAisData(sensors.add_ais_ships());
     }
+
+    // generic sensors
+    for (int i = 0; i < NUM_GENERIC_SENSORS; i++){
+        genRandGenericSensorData(sensors.add_data_sensors());
+    }
+
+    // batteries
+    for (int i = 0; i < NUM_BATTERIES; i++){
+        genRandBatteriesData(sensors.add_batteries());
+    }
+
+    // wind sensors
+    for (int i = 0; i < NUM_WIND_SENSORS; i++){
+        genRandWindData(sensors.add_wind_sensors());
+    }
+
     return sensors;
     // NOLINTEND(clang-analyzer-cplusplus.NewDeleteLeaks)
 }
@@ -171,6 +277,7 @@ TEST_F(TestRemoteTransceiver, TestStoreSensors)
     EXPECT_FLOAT_EQ(dumped_sensors.gps().speed(), rand_sensors.gps().speed());
     EXPECT_FLOAT_EQ(dumped_sensors.gps().heading(), rand_sensors.gps().heading());
 
+    // ais ships
     // Array size checking done in dumpSensors
     for (int i = 0; i < NUM_AIS_SHIPS; i++) {
         const Sensors::Ais & dumped_ais_ships = dumped_sensors.ais_ships(i);
@@ -181,4 +288,29 @@ TEST_F(TestRemoteTransceiver, TestStoreSensors)
         EXPECT_FLOAT_EQ(dumped_ais_ships.speed(), rand_ais_ships.speed());
         EXPECT_FLOAT_EQ(dumped_ais_ships.heading(), rand_ais_ships.heading());
     }
+
+    // generic sensors
+    for (int i = 0; i < NUM_GENERIC_SENSORS; i++){
+        const Sensors::Generic & dumped_data_sensors = dumped_sensors.data_sensors(i);
+        const Sensors::Generic & rand_data_sensors = rand_sensors.data_sensors(i);
+        EXPECT_EQ(dumped_data_sensors.id(), rand_data_sensors.id());
+        EXPECT_EQ(dumped_data_sensors.data(), rand_data_sensors.data());
+    }
+
+    // batteries
+    for (int i = 0; i < NUM_BATTERIES; i++){
+        const Sensors::Battery & dumped_batteries = dumped_sensors.batteries(i);
+        const Sensors::Battery & rand_batteries = rand_sensors.batteries(i);
+        EXPECT_EQ(dumped_batteries.voltage(), rand_batteries.voltage());
+        EXPECT_EQ(dumped_batteries.current(), rand_batteries.current());
+    }
+
+    // wind sensors
+    for (int i = 0; i < NUM_WIND_SENSORS; i++){
+        const Sensors::Wind & dumped_wind_sensors = dumped_sensors.wind_sensors(i);
+        const Sensors::Wind & rand_wind_sensors = rand_sensors.wind_sensors(i);
+        EXPECT_EQ(dumped_wind_sensors.speed(), rand_wind_sensors.speed());
+        EXPECT_EQ(dumped_wind_sensors.direction(), rand_wind_sensors.direction());
+    }
+
 }
