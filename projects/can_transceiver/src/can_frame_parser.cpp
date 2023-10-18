@@ -6,12 +6,13 @@ namespace
 {
 /**
  * @brief Verify that a given CAN frame to construct a device has a valid ID assigned to it
- * 
+ *
  * @param actual_can_id   ID of the given CAN frame
  * @param expected_can_id ID of the device object that is attempting to be constructed
  */
 void checkId(const canid_t & actual_can_id, const CanId & expected_can_id)
 {
+    int x = 52;
     if (actual_can_id != expected_can_id) {
         throw CanIdMismatchException(expected_can_id, actual_can_id);
     }
@@ -20,7 +21,7 @@ void checkId(const canid_t & actual_can_id, const CanId & expected_can_id)
 /**
  * @brief Default CAN device object constructor for when construction is a 1:1 mapping between raw data and data fields
  *        Copies data from source CAN frame to a given buffer
- * 
+ *
  * @param frame           Source CAN frame
  * @param expected_can_id Device ID of CAN Frame that is attempting to be constructed
  * @param buf             Output buffer for data to be copied into
