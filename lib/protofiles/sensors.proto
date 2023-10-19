@@ -14,8 +14,8 @@ message Sensors
 
     message Wind
     {
-        float  speed = 1;
-        uint32 angle = 2;
+        float  speed     = 1;
+        int32  direction = 2;
     }
 
     message Battery

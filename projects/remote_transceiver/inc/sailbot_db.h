@@ -80,4 +80,25 @@ private:
      * @return false on failure
      */
     bool storeAis(const ProtoList<Polaris::Sensors::Ais> & ais_ships_pb);
+
+    /**
+    * @brief Adds a generic sensor to the database flow
+    *
+    * @return True if sensor is added, false otherwise
+    */
+    bool storeGenericSensor(const ProtoList<Polaris::Sensors::Generic> & generic_pb);
+
+    /**
+    * @brief Adds a battery sensor to the database flow
+    *
+    * @return True if sensor is added, false otherwise
+    */
+    bool storeBatteries(const ProtoList<Polaris::Sensors::Battery> & battery_pb);
+
+    /**
+    * @brief Adds a wind sensor to the database flow
+    *
+    * @return True if sensor is added, false otherwise
+    */
+    bool storeWindSensor(const ProtoList<Polaris::Sensors::Wind> & wind_pb);
 };
