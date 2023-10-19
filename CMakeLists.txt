@@ -30,14 +30,22 @@ message(WARNING "Building Network Systems with build type '${CMAKE_BUILD_TYPE}' 
         "and flags: '${CMAKE_CXX_FLAGS}'")
 
 # ROS dependencies
+set(ROS_DEPS
+    rclcpp
+    std_msgs
+    custom_interfaces
+)
 find_package(ament_cmake REQUIRED)
-find_package(rclcpp REQUIRED)
-find_package(std_msgs REQUIRED)
+foreach(dep IN LISTS ROS_DEPS)
+    find_package(${dep} REQUIRED)
+endforeach()
+
 
 # Boost
 find_package(Boost 1.74.0 COMPONENTS REQUIRED
     # Insert desired libraries below (see /usr/include/boost/ for available options)
     serialization
+    thread
 )
 
 # MongoDB

@@ -17,7 +17,7 @@ function(make_exe module srcs link_libs inc_dirs ${compile_defs})
     set(bin_module bin_${module})
     add_executable(${bin_module} ${srcs})
     target_compile_definitions(${bin_module} PUBLIC ${compile_defs})
-    ament_target_dependencies(${bin_module} PUBLIC rclcpp std_msgs)
+    ament_target_dependencies(${bin_module} PUBLIC ${ROS_DEPS})
     target_link_libraries(${bin_module} PUBLIC ${link_libs})
     target_include_directories(
         ${bin_module} PUBLIC
