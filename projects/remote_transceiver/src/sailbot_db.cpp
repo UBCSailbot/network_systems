@@ -42,21 +42,15 @@ bool SailbotDB::testConnection()
 
 bool SailbotDB::storeSensors(const Sensors & sensors_pb)
 {
-    return storeGps(sensors_pb.gps()) && storeAis(sensors_pb.ais_ships())
-           && storeGenericSensor(sensors_pb.data_sensors()) && storeBatteries(sensors_pb.batteries())
-           && storeWindSensor(sensors_pb.wind_sensors());
+    return storeGps(sensors_pb.gps()) && storeAis(sensors_pb.ais_ships()) &&
+           storeGenericSensor(sensors_pb.data_sensors()) && storeBatteries(sensors_pb.batteries()) &&
+           storeWindSensor(sensors_pb.wind_sensors());
 }
 
 // END PUBLIC
 
 // PRIVATE
 
-
-/**
- * @brief Adds a gps sensor to the database flow
- *
- * @return True if sensor is added, false otherwise
- */
 bool SailbotDB::storeGps(const Sensors::Gps & gps_pb)
 {
     mongocxx::collection gps_coll = db_[COLLECTION_GPS];
@@ -66,11 +60,6 @@ bool SailbotDB::storeGps(const Sensors::Gps & gps_pb)
     return static_cast<bool>(gps_coll.insert_one(gps_doc.view()));
 }
 
-/**
- * @brief Adds a ais ship sensor to the database flow
- *
- * @return True if sensor is added, false otherwise
- */
 bool SailbotDB::storeAis(const ProtoList<Sensors::Ais> & ais_ships_pb)
 {
     mongocxx::collection ais_coll = db_[COLLECTION_AIS_SHIPS];
@@ -87,11 +76,6 @@ bool SailbotDB::storeAis(const ProtoList<Sensors::Ais> & ais_ships_pb)
     return static_cast<bool>(ais_coll.insert_one(ais_ships_doc.view()));
 }
 
-/**
- * @brief Adds a generic sensor to the database flow
- *
- * @return True if sensor is added, false otherwise
- */
 bool SailbotDB::storeGenericSensor(const ProtoList<Sensors::Generic> & generic_pb)
 {
     mongocxx::collection generic_coll = db_[COLLECTION_DATA_SENSORS];
@@ -105,35 +89,25 @@ bool SailbotDB::storeGenericSensor(const ProtoList<Sensors::Generic> & generic_p
     return static_cast<bool>(generic_coll.insert_one(generic_doc.view()));
 }
 
-/**
- * @brief Adds a battery sensor to the database flow
- *
- * @return True if sensor is added, false otherwise
- */
 bool SailbotDB::storeBatteries(const ProtoList<Sensors::Battery> & battery_pb)
 {
     mongocxx::collection batteries_coll = db_[COLLECTION_BATTERIES];
     bstream::document    doc_builder{};
     auto                 batteries_doc_arr = doc_builder << "batteries" << bstream::open_array;
-    for (const Sensors::Battery & battery : battery_pb){
-        batteries_doc_arr = batteries_doc_arr << bstream::open_document << "voltage" << battery.voltage()
-                                            << "current" << battery.current() << bstream::close_document;
+    for (const Sensors::Battery & battery : battery_pb) {
+        batteries_doc_arr = batteries_doc_arr << bstream::open_document << "voltage" << battery.voltage() << "current"
+                                              << battery.current() << bstream::close_document;
     }
     DocVal batteries_doc = batteries_doc_arr << bstream::close_array << bstream::finalize;
     return static_cast<bool>(batteries_coll.insert_one(batteries_doc.view()));
 }
 
-/**
- * @brief Adds a wind sensor to the database flow
- *
- * @return True if sensor is added, false otherwise
- */
 bool SailbotDB::storeWindSensor(const ProtoList<Sensors::Wind> & wind_pb)
 {
     mongocxx::collection wind_coll = db_[COLLECTION_WIND_SENSORS];
-    bstream::document     doc_builder{};
-    auto                  wind_doc_arr = doc_builder << "wind_sensors" << bstream::open_array;
-    for (const Sensors::Wind & wind_sensor : wind_pb){
+    bstream::document    doc_builder{};
+    auto                 wind_doc_arr = doc_builder << "wind_sensors" << bstream::open_array;
+    for (const Sensors::Wind & wind_sensor : wind_pb) {
         wind_doc_arr = wind_doc_arr << bstream::open_document << "speed" << wind_sensor.speed() << "direction"
                                     << static_cast<int16_t>(wind_sensor.direction()) << bstream::close_document;
     }
