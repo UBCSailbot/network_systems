@@ -60,6 +60,7 @@ class LocalTransceiver
 
 public:
     /**
+
      * @brief Construct a new Local Transceiver object and connect it to a serial port
      *
      * @param port_name serial port (ex. /dev/ttyS0)
@@ -72,6 +73,8 @@ public:
      *
      * @note must call stop() to properly cleanup the object
      *
+     * @tparam T of type custom_interfaces::msg::T
+     * @param sensor new sensor data
      */
     ~LocalTransceiver();
 

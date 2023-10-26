@@ -75,6 +75,7 @@ void LocalTransceiver::stop()
 template <typename T>
 void LocalTransceiver::onNewSensorData(T sensor)
 {
+
     sensor_buf_.updateSensor(sensor);
 }
 
