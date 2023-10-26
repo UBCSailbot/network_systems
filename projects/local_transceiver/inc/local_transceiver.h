@@ -5,89 +5,98 @@
 
 #include "boost/asio/io_service.hpp"
 #include "boost/asio/serial_port.hpp"
+#include "custom_interfaces/msg/ais_ships.hpp"
+#include "custom_interfaces/msg/gps.hpp"
 #include "rclcpp/node.hpp"
+#include "sensors.pb.h"
 #include "std_msgs/msg/string.hpp"
 
-/**
- * Abstract Local Transceiver Class
- * Handles transmission and reception of data to and from the remote server
- *
- */
-class LocalTransceiver
-{
-public:
-    /**
-    * @brief Destroy the Local Transceiver object
-    *
-    */
-    virtual ~LocalTransceiver() = 0;
-
-    /**
-     * @brief Call when new data is received from the ROS network on the boat.
-     *        Serializes the data and sends it off to the remote server
-     *
-     */
-    void onNewSensorData(/* some datatype */);
-
-    /**
-     * @brief Get the latest data from the remote server
-     *
-     * @return ROS msg to send back to the boat ROS network (string is a placeholder)
-     */
-    std::string getRemoteData();
-
-protected:
-    /**
-     * @brief Formats the data to have the necessary payload headers for our transmission method
-     *
-     * @param data data byte string to be sent
-     * @return Formatted message
-     */
-    static std::string formatMsg(const std::string & data);
-
-    /**
-     * @brief Parse the message received from the remote server
-     *
-     * @param msg message received from the remote server
-     * @return the data byte string payload from the message
-     */
-    static std::string parseMsg(const std::string & msg);
-
-    /**
-     * @brief Send a data byte string to our transmission medium
-     *
-     * @param data byte string to send
-     * @return true  on success
-     * @return false on failure
-     */
-    virtual bool send(const std::string & data) = 0;
-
-    /**
-     * @brief Retrieve the latest message from our reception medium
-     *
-     * @return The data byte stream of the message payload
-     */
-    virtual std::string receive() = 0;
-};
+namespace msg = custom_interfaces::msg;
 
 /**
  * Implementation of Local Transceiver that operates through a serial interface
  */
-class HwLocalTransceiver : public LocalTransceiver
+class LocalTransceiver
 {
+    /**
+     * Buffer class to synchronize sensors updates and transmissions
+     */
+    class SensorBuf
+    {
+    public:
+        /**
+         * @brief Construct a new Sensor Buf object
+         *
+         */
+        SensorBuf();
+
+        /**
+         * @brief Update the buffer with new GPS data
+         *
+         * @param gps custom_interfaces gps object
+         */
+        void updateSensor(msg::GPS gps);
+
+        /**
+         * @brief Update the buffer with new AIS Ships data
+         *
+         * @param ships custom_interfaces AISShips object
+         */
+        void updateSensor(msg::AISShips ships);
+
+        // TODO(Jng468): Add other sensors
+
+        /**
+         * @brief Get a copy of the sensors object
+         *
+         * @return Copy of sensors_
+         */
+        Polaris::Sensors sensors();
+
+    private:
+        Polaris::Sensors sensors_;  // Underlying Sensors object
+        std::mutex       buf_mtx_;  // Mutex to synhronize access to sensors_
+    };
+
 public:
     /**
-     * @brief Construct a new Hw Local Transceiver object
+     * @brief Construct a new Local Transceiver object
      *
      * @param serial_id  serial port (ex. /dev/ttyS0)
      */
-    explicit HwLocalTransceiver(const std::string & serial_id);
+    explicit LocalTransceiver(const std::string & serial_id);
 
     /**
-     * @brief Destroy the Hw Local Transceiver object
+     * @brief Callback function for when new sensor data is received from the ROS network on Polaris
      *
+     * @tparam T of type custom_interfaces::msg::T
+     * @param sensor new sensor data
      */
-    ~HwLocalTransceiver();
+    template <typename T>
+    void onNewSensorData(T sensor);
+
+    /**
+     * @brief Send current data to the serial port and to the remote server
+     *
+     * @return true  on success
+     * @return false on failure
+     */
+    bool send();
+
+    /**
+     * @brief Send a debug command and return the output
+     *
+     * @param cmd string to send to the serial port
+     * @return output of the sent cmd
+     */
+    std::string debugSend(const std::string & cmd);
+
+    /**
+     * @brief Retrieve the latest message from the remote server via the serial port
+     *
+     * @return The message as a binary string
+     */
+    std::string receive();
 
 private:
     // boost io service - required for boost::asio operations
@@ -96,65 +105,44 @@ private:
     boost::asio::serial_port serial_;
     // mutex to synchronize access to the serial port
     std::mutex serial_mtx_;
+    // Buffer for sensors to be sent to the satellite
+    SensorBuf sensor_buf_;
 
     /**
-     * @brief Send data to the serial port and onto the remote server
+     * @brief Send a command to the serial port
      *
-     * @param data byte string to send
-     * @return true  on success
-     * @return false on failure
+     * @param cmd command to send
      */
-    bool send(const std::string & data);
+    void send(const std::string & cmd);
 
     /**
-     * @brief Retrieve the latest message from the remote server via the serial port
+     * @brief Formats binary data to be sent to the satellite according to the AT command specification
      *
-     * @return The data byte stream of the message payload
+     * @param data data binary string to be sent
+     * @return Formatted message to be written to serial
      */
-    std::string receive();
-};
-
-/**
- * Mock version of the Local Transceiver
- * Sends and receives data via ROS to a locally ran Mock Remote Transceiver
- *
- */
-class MockLocalTransceiver : public LocalTransceiver, public rclcpp::Node
-{
-public:
-    /**
-     * @brief Construct a new Mock Local Transceiver object
-     *
-     */
-    explicit MockLocalTransceiver();
+    static std::string createOutMsg(const std::string & data);
 
     /**
-     * @brief Destroy the Mock Local Transceiver object
+     * @brief Parse the message received from the remote server
      *
+     * @param msg message received from the remote server
+     * @return the data byte string payload from the message
      */
-    ~MockLocalTransceiver();
-
-private:
-    rclcpp::Publisher<std_msgs::msg::String>::SharedPtr    pub_;
-    rclcpp::Subscription<std_msgs::msg::String>::SharedPtr sub_;
-    // Latest message published by the Mock Remote Transceiver
-    std::string latest_rcvd_msg_;
-    // Callback function to subscribe to the MOCK_REMOTE_TO_LOCAL_TRANSCEIVER_TOPIC
-    void sub_callback(std_msgs::msg::String::SharedPtr msg);
+    static std::string parseInMsg(const std::string & msg);
 
     /**
-     * @brief Send data to the ROS network and onto Mock Remote Transceiver
+     * @brief Read a line from serial
      *
-     * @param data byte string to send
-     * @return true  on success
-     * @return false on failure
+     * @return line
      */
-    bool send(const std::string & data);
+    std::string readLine();
 
     /**
-     * @brief Retrieve the latest message from the Mock Remote Transceiver via ROS
+     * @brief Check that the last command sent to serial was valid
      *
-     * @return The data byte stream of the message payload
+     * @return true  if valid
+     * @return false if invalid
      */
-    std::string receive();
+    bool checkOK();
 };

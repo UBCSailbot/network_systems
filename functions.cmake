@@ -37,6 +37,7 @@ function(make_unit_test module srcs link_libs inc_dirs compile_defs)
         set(test_module test_${module})
         add_executable(${test_module} ${srcs})
         target_compile_definitions(${test_module} PUBLIC ${compile_defs})
+        ament_target_dependencies(${test_module} PUBLIC ${ROS_DEPS})
         target_include_directories(
             ${test_module} PRIVATE
             ${CMAKE_CURRENT_LIST_DIR}/inc
