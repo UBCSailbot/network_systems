@@ -17,6 +17,7 @@
 #include "custom_interfaces/msg/wind_sensors.hpp"
 #include "custom_interfaces/msg/batteries.hpp"
 #include "custom_interfaces/msg/generic_sensors.hpp"
+#include "custom_interfaces/msg/helper_generic_sensor.hpp"
 #include "custom_interfaces/msg/wind_sensor.hpp"
 
 #include "rclcpp/publisher.hpp"
@@ -171,15 +172,19 @@ private:
         // Publishes msg
         publisherBatteries_->publish(WBatteriesData);
 
-        // // ** Generic Sensors **
-        // auto GenSensorData = custom_interfaces::msg::GenericSensors();
-        // GenSensorData.generic_sensors[0].id = 0x0; //uint8
-        // GenSensorData.generic_sensors[0].data = 0x0; //uint64
-        // // Publishes msg
-        // publisherGenericSensors_->publish(GenSensorData);
+        // ** Generic Sensors **
+        auto HelperGenSensorData = custom_interfaces::msg::HelperGenericSensor();
+        auto GenSensorData = custom_interfaces::msg::GenericSensors();
+        HelperGenSensorData.id = 0x0; //uint8
+        HelperGenSensorData.data = 0x0; //uint64
+        RCLCPP_INFO(this->get_logger(), "Gen Sen Pub: '%u' '%lu'",
+        HelperGenSensorData.id,  HelperGenSensorData.data);
+        // Publishes msg
+        GenSensorData.generic_sensors.push_back(HelperGenSensorData);
+        publisherGenericSensors_->publish( GenSensorData );
 
         //I think '%lu' is causing seg err since data is uint64, and id is uint8. Removed print for now.
-        // Debug why segmentation error for this. Guessing .id and .data cannot be done like this.
+        //Debug why segmentation error for this. Guessing .id and .data cannot be done like this.
 
     }
 
