@@ -12,6 +12,7 @@ constexpr auto COLLECTION_BATTERIES    = "batteries";
 constexpr auto COLLECTION_DATA_SENSORS = "data_sensors";
 constexpr auto COLLECTION_GPS          = "gps";
 constexpr auto COLLECTION_WIND_SENSORS = "wind_sensors";
+constexpr auto COLLECTION_PATH         = "path";
 
 template <typename T>
 using ProtoList = google::protobuf::RepeatedPtrField<T>;
@@ -84,5 +85,5 @@ private:
     bool storeGenericSensor(const ProtoList<Polaris::Sensors::Generic> & generic_pb);
     bool storeBatteries(const ProtoList<Polaris::Sensors::Battery> & battery_pb);
     bool storeWindSensor(const ProtoList<Polaris::Sensors::Wind> & wind_pb);
-
+    //bool storePathSensor(const ProtoList<Polaris::Sensors:: )
 };
