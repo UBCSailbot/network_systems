@@ -1,12 +1,12 @@
 # Create module library
 function(make_lib module srcs link_libs inc_dirs compile_defs)
-    add_library(${module} ${srcs})
-    target_compile_definitions(${module} PUBLIC ${compile_defs})
-    target_link_libraries(${module} PUBLIC ${link_libs})
+    add_library(${module} INTERFACE ${srcs})
+    target_compile_definitions(${module} INTERFACE ${compile_defs})
+    target_link_libraries(${module} INTERFACE ${link_libs})
     target_include_directories(
-        ${module} PUBLIC
+        ${module} INTERFACE
         ${CMAKE_CURRENT_LIST_DIR}/inc
-        ${CMN_HDRS_INC_PATH}
+        ${CMAKE_SOURCE_DIR}/lib
         ${inc_dirs}
     )
     add_dependencies(${module} ${AUTOGEN_TARGETS})
@@ -22,7 +22,7 @@ function(make_exe module srcs link_libs inc_dirs ${compile_defs})
     target_include_directories(
         ${bin_module} PUBLIC
         ${CMAKE_CURRENT_LIST_DIR}/inc
-        ${CMN_HDRS_INC_PATH}
+        ${CMAKE_SOURCE_DIR}/lib
         ${inc_dirs}
     )
     add_dependencies(${bin_module} ${AUTOGEN_TARGETS})
@@ -41,7 +41,7 @@ function(make_unit_test module srcs link_libs inc_dirs compile_defs)
         target_include_directories(
             ${test_module} PRIVATE
             ${CMAKE_CURRENT_LIST_DIR}/inc
-            ${CMN_HDRS_INC_PATH}
+            ${CMAKE_SOURCE_DIR}/lib
             ${inc_dirs}
         )
         target_link_libraries(${test_module} PUBLIC ${GTEST_LINK_LIBS} ${link_libs})

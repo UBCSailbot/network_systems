@@ -26,7 +26,16 @@ public:
      *
      * @param rsp_string string of format "+SBDIX:<MO status>,<MOMSN>,<MT status>,<MTMSN>,<MT length>,<MTqueued>""
      */
-    explicit SBDStatusResponse(const std::string & rsp_string);
+    explicit SBDStatusResponse(const std::string & rsp_string)
+    {
+        (void)rsp_string;
+        MO_status_ = 0;
+        MOMSN_     = 0;
+        MT_status_ = 0;
+        MTMSN_     = 0;
+        MT_len_    = 0;
+        MT_queued_ = 0;
+    };
 
     /**
      * @brief Check if last Mobile Originated (i.e. transmitted sensors) transaction was successful
@@ -34,7 +43,7 @@ public:
      * @return true  on success
      * @return false on failure
      */
-    inline bool MOSuccess() const { return MO_status_ < MO_SUCCESS_END; }
+    bool MOSuccess() const { return MO_status_ < MO_SUCCESS_END; }
 
 private:
     static constexpr uint8_t MO_SUCCESS_START = 0;

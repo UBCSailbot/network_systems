@@ -2,12 +2,12 @@
 #include <random>
 
 #include "bsoncxx/builder/basic/document.hpp"
+#include "cmn_hdrs/shared_constants.h"
 #include "gtest/gtest.h"
 #include "mongocxx/collection.hpp"
 #include "mongocxx/cursor.hpp"
 #include "sailbot_db.h"
 #include "sensors.pb.h"
-#include "shared_constants.h"
 
 static constexpr int  NUM_AIS_SHIPS       = 15;  // arbitrary number
 static constexpr int  NUM_GENERIC_SENSORS = 5;   //arbitrary number

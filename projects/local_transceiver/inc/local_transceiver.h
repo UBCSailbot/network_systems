@@ -60,11 +60,18 @@ class LocalTransceiver
 
 public:
     /**
-     * @brief Construct a new Local Transceiver object
+     * @brief Construct a new Local Transceiver object and connect it to a serial port
      *
-     * @param serial_id  serial port (ex. /dev/ttyS0)
+     * @param port_name serial port (ex. /dev/ttyS0)
+     * @param baud_rate baud rate of the serial port
      */
-    explicit LocalTransceiver(const std::string & serial_id);
+    explicit LocalTransceiver(const std::string & port_name, uint32_t baud_rate);
+
+    /**
+     * @brief Destroy the Local Transceiver object and close the serial port
+     *
+     */
+    ~LocalTransceiver();
 
     /**
      * @brief Callback function for when new sensor data is received from the ROS network on Polaris

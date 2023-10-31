@@ -1,12 +1,13 @@
 #include <chrono>
 #include <memory>
 
+#include "cmn_hdrs/ros_info.h"
+#include "cmn_hdrs/shared_constants.h"
 #include "local_transceiver.h"
 #include "rclcpp/publisher.hpp"
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp/subscription.hpp"
 #include "rclcpp/timer.hpp"
-#include "ros_info.h"
 #include "std_msgs/msg/string.hpp"
 
 /**
@@ -58,7 +59,7 @@ private:
 int main(int argc, char * argv[])
 {
     rclcpp::init(argc, argv);
-    std::shared_ptr<LocalTransceiver> lcl_trns = std::make_shared<LocalTransceiver>("PLACEHOLDER");
+    std::shared_ptr<LocalTransceiver> lcl_trns = std::make_shared<LocalTransceiver>("PLACEHOLDER", SATELLITE_BAUD_RATE);
     rclcpp::spin(std::make_shared<LocalTransceiverIntf>(lcl_trns));
     rclcpp::shutdown();
     return 0;

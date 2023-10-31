@@ -3,6 +3,7 @@
 #include <boost/asio/read.hpp>
 #include <boost/asio/read_until.hpp>
 #include <boost/asio/serial_port.hpp>
+#include <boost/asio/serial_port_base.hpp>
 #include <boost/asio/streambuf.hpp>
 #include <boost/asio/write.hpp>
 #include <exception>
@@ -11,13 +12,14 @@
 #include <string>
 
 #include "at_cmds.h"
+#include "cmn_hdrs/ros_info.h"
+#include "cmn_hdrs/shared_constants.h"
 #include "custom_interfaces/msg/ais_ships.hpp"
 #include "custom_interfaces/msg/gps.hpp"
-#include "ros_info.h"
 #include "sensors.pb.h"
-#include "shared_constants.h"
 
 using Polaris::Sensors;
+namespace bio = boost::asio;
 
 LocalTransceiver::SensorBuf::SensorBuf(){};
 
@@ -50,7 +52,12 @@ Sensors LocalTransceiver::SensorBuf::sensors()
     return sensors_;
 }
 
-LocalTransceiver::LocalTransceiver(const std::string & serial_id) : serial_(io_) { serial_.open(serial_id); };
+LocalTransceiver::LocalTransceiver(const std::string & port_name, const uint32_t baud_rate) : serial_(io_, port_name)
+{
+    serial_.set_option(bio::serial_port_base::baud_rate(baud_rate));
+};
+
+LocalTransceiver::~LocalTransceiver() { serial_.close(); }
 
 template <typename T>
 void LocalTransceiver::onNewSensorData(T sensor)
@@ -120,10 +127,7 @@ std::string LocalTransceiver::receive()
     return msg;
 }
 
-void LocalTransceiver::send(const std::string & cmd)
-{
-    boost::asio::write(serial_, boost::asio::buffer(cmd, cmd.size()));
-}
+void LocalTransceiver::send(const std::string & cmd) { bio::write(serial_, bio::buffer(cmd, cmd.size())); }
 
 std::string LocalTransceiver::createOutMsg(const std::string & data)
 {
@@ -143,9 +147,10 @@ std::string LocalTransceiver::parseInMsg(const std::string & msg)
 
 std::string LocalTransceiver::readLine()
 {
-    boost::asio::streambuf buf;
-    boost::asio::read_until(serial_, buf, AT::DELIMITER);
-    return std::string(buf.data().begin(), buf.data().begin() + buf.data().size());
+    bio::streambuf buf;
+    bio::read_until(serial_, buf, AT::DELIMITER);
+    return std::string(
+      bio::buffers_begin(buf.data()), bio::buffers_begin(buf.data()) + static_cast<int64_t>(buf.data().size()));
 }
 
 bool LocalTransceiver::checkOK()
