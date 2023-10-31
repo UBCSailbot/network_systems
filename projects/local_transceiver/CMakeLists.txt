@@ -1,6 +1,7 @@
 set(module local_transceiver)
 
 set(link_libs
+    # virtual_iridium_server
     ${PROTOBUF_LINK_LIBS}
 )
 

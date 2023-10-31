@@ -60,7 +60,6 @@ class LocalTransceiver
 
 public:
     /**
-
      * @brief Construct a new Local Transceiver object and connect it to a serial port
      *
      * @param port_name serial port (ex. /dev/ttyS0)
@@ -85,6 +84,7 @@ public:
      *
      */
     void stop();
+
 
     /**
      * @brief Callback function for when new sensor data is received from the ROS network on Polaris

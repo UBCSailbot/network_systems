@@ -36,7 +36,7 @@ struct SBDStatusResponse  // TODO(Jng468): Implement this class
      *
      * @param rsp_string string of format "+SBDIX:<MO status>,<MOMSN>,<MT status>,<MTMSN>,<MT length>,<MTqueued>""
      */
-
+    explicit SBDStatusResponse(const std::string & rsp_string)
     {
         (void)rsp_string;
         MO_status_ = 0;
@@ -47,14 +47,12 @@ struct SBDStatusResponse  // TODO(Jng468): Implement this class
         MT_queued_ = 0;
     };
 
-
     /**
      * @brief Check if last Mobile Originated (i.e. transmitted sensors) transaction was successful
      *
      * @return true  on success
      * @return false on failure
      */
-
     bool MOSuccess() const { return MO_status_ < MO_SUCCESS_END; }
 };
 

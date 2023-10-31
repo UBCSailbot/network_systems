@@ -1,10 +1,10 @@
 # Create module library
 function(make_lib module srcs link_libs inc_dirs compile_defs)
-    add_library(${module} ${srcs})
-    target_compile_definitions(${module} PUBLIC ${compile_defs})
-    target_link_libraries(${module} PUBLIC ${link_libs})
+    add_library(${module} INTERFACE ${srcs})
+    target_compile_definitions(${module} INTERFACE ${compile_defs})
+    target_link_libraries(${module} INTERFACE ${link_libs})
     target_include_directories(
-        ${module} PUBLIC
+        ${module} INTERFACE
         ${CMAKE_CURRENT_LIST_DIR}/inc
         ${CMAKE_SOURCE_DIR}/lib
         ${inc_dirs}

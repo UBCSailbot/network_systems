@@ -1,10 +1,10 @@
 /* IMPORTANT: Make sure only one instance of network_systems/scripts/run_virtual_iridium.sh is running */
 
 #include <boost/system/system_error.hpp>
-
 #include "cmn_hdrs/shared_constants.h"
 #include "gtest/gtest.h"
 #include "local_transceiver.h"
+#include "virtual_iridium_server/virtual_iridium_server.h"
 
 class TestLocalTransceiver : public ::testing::Test
 {
