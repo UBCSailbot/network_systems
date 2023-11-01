@@ -110,81 +110,56 @@ public:
 private:
 
 // Subscriber
-// When moment message is available in queue: prints statement in log
-// Reminder: If publisher node (boat_simulator isn't running, this will not print.)
     void gps_callback(const custom_interfaces::msg::GPS::SharedPtr msg) const
     {
-        RCLCPP_INFO(this->get_logger(), "mock_gps Heading: '%f'", msg->heading.heading); //TO-DO: Combine into 1 print
-        RCLCPP_INFO(this->get_logger(), "mock_gps Lat: '%f'", msg->lat_lon.latitude);
-        RCLCPP_INFO(this->get_logger(), "mock_gps Long: '%f'", msg->lat_lon.longitude);
-        RCLCPP_INFO(this->get_logger(), "mock_gps Speed: '%f'", msg->speed.speed);
+
     }
     void wind_callback(const custom_interfaces::msg::WindSensors::SharedPtr msg) const
     {
-        for(int i=0;i<WIND_SENSOR_BOUND;++i){
-        RCLCPP_INFO(this->get_logger(), "mock_wind_sensor spd: '%f'", msg->wind_sensors[i].speed.speed);
-        RCLCPP_INFO(this->get_logger(), "mock_wind_sensor dir: '%i'", msg->wind_sensors[i].direction);
-        }
+
     }
 
 // Publisher
     void timer_callback()
     {
         // ** GPS **
-        auto gpsPubData = custom_interfaces::msg::GPS();
+        custom_interfaces::msg::GPS gpsPubData = custom_interfaces::msg::GPS();
         gpsPubData.heading.heading = PLACEHOLDER_VALUE;
         gpsPubData.speed.speed = PLACEHOLDER_VALUE;
         gpsPubData.lat_lon.latitude = PLACEHOLDER_VALUE;
         gpsPubData.lat_lon.longitude = PLACEHOLDER_VALUE;
-        // Log
-        RCLCPP_INFO(this->get_logger(), "GPS Pub: '%f' '%f' '%f' '%f' ",
-        gpsPubData.heading.heading, gpsPubData.speed.speed,  gpsPubData.lat_lon.latitude, gpsPubData.lat_lon.longitude);
         // Publishes msg
         publisherGPS_->publish(gpsPubData);
 
         // ** Wind Sensor (WSensor)**
-        auto WSensorData = custom_interfaces::msg::WindSensor();
+        custom_interfaces::msg::WindSensor WSensorData = custom_interfaces::msg::WindSensor();
         WSensorData.speed.speed = PLACEHOLDER_VALUE;
         WSensorData.direction = PLACEHOLDER_VALUE;
-        // Log
-        RCLCPP_INFO(this->get_logger(), "Wind Sensor Pub: '%f' '%d'",
-        WSensorData.speed.speed, WSensorData.direction);
         // Publishes msg
         publisherWindSensor_->publish(WSensorData);
 
         // ** Wind Sensors (WSensors)**
-        auto WSensorsData = custom_interfaces::msg::WindSensors();
-        // Note: for loop causes stuck here, maybe have to do separate timer_callback
-        // OR just hard code [1]. [2], .... etc.
+        custom_interfaces::msg::WindSensors WSensorsData = custom_interfaces::msg::WindSensors();
         WSensorsData.wind_sensors[0].direction = PLACEHOLDER_VALUE;
         WSensorsData.wind_sensors[0].speed.speed = PLACEHOLDER_VALUE;
-        RCLCPP_INFO(this->get_logger(), "Wind Sensors Pub: '%d' '%f'",
-        WSensorsData.wind_sensors[0].direction, WSensorsData.wind_sensors[0].speed.speed);
         // Publishes msg
         publisherWindSensors_->publish(WSensorsData);
 
         // ** Batteries **
-        auto WBatteriesData = custom_interfaces::msg::Batteries();
+        custom_interfaces::msg::Batteries WBatteriesData = custom_interfaces::msg::Batteries();
         WBatteriesData.batteries[0].voltage = PLACEHOLDER_VALUE;
         WBatteriesData.batteries[0].current = PLACEHOLDER_VALUE;
-        RCLCPP_INFO(this->get_logger(), "Batteries Pub: '%f' '%f'",
-        WBatteriesData.batteries[0].voltage, WBatteriesData.batteries[0].current);
         // Publishes msg
         publisherBatteries_->publish(WBatteriesData);
 
         // ** Generic Sensors **
-        auto HelperGenSensorData = custom_interfaces::msg::HelperGenericSensor();
-        auto GenSensorData = custom_interfaces::msg::GenericSensors();
+        custom_interfaces::msg::HelperGenericSensor HelperGenSensorData = custom_interfaces::msg::HelperGenericSensor();
+        custom_interfaces::msg::GenericSensors GenSensorData = custom_interfaces::msg::GenericSensors();
         HelperGenSensorData.id = 0x0; //uint8
         HelperGenSensorData.data = 0x0; //uint64
-        RCLCPP_INFO(this->get_logger(), "Gen Sen Pub: '%u' '%lu'",
-        HelperGenSensorData.id,  HelperGenSensorData.data);
         // Publishes msg
         GenSensorData.generic_sensors.push_back(HelperGenSensorData);
         publisherGenericSensors_->publish( GenSensorData );
-
-        //I think '%lu' is causing seg err since data is uint64, and id is uint8. Removed print for now.
-        //Debug why segmentation error for this. Guessing .id and .data cannot be done like this.
 
     }
 
