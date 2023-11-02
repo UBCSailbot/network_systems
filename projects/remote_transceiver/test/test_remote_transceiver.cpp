@@ -9,11 +9,9 @@
 #include "sensors.pb.h"
 #include "shared_constants.h"
 
-static constexpr int  NUM_AIS_SHIPS       = 15; // arbitrary number
-static constexpr int  NUM_GENERIC_SENSORS = 5;  //arbitrary number
-static constexpr int  NUM_BATTERIES       = 2;
-static constexpr int  NUM_WIND_SENSORS    = 2;
-static constexpr int  NUM_PATH_WAYPOINTS  = 5;  //arbitrary number
+static constexpr int  NUM_AIS_SHIPS       = 15;  // arbitrary number
+static constexpr int  NUM_GENERIC_SENSORS = 5;   //arbitrary number
+static constexpr int  NUM_PATH_WAYPOINTS  = 5;   //arbitrary number
 static constexpr auto MONGODB_CONN_STR    = "mongodb://localhost:27017";
 
 using Polaris::Sensors;
@@ -251,48 +249,6 @@ void genRandPathData(Sensors::Path * path_data)
 
     path_data->set_latitude(latitude_path(g_mt));
     path_data->set_longitude(longitude_path(g_mt));
-}
-
-/**
- * @brief generate random generic sensor data
- *
- * @param generic_sensor pointer to generated generic sensor data
- */
-void genRandGenericSensorData(Sensors::Generic * generic_sensor)
-{
-    std::uniform_int_distribution<uint8_t>  id_generic(0, UINT8_MAX);
-    std::uniform_int_distribution<uint64_t> data_generic(0, UINT64_MAX);
-
-    generic_sensor->set_id(id_generic(g_mt));
-    generic_sensor->set_data(data_generic(g_mt));
-}
-
-/**
- * @brief generate random battery data
- *
- * @param battery pointer to generated battery data
- */
-void genRandBatteriesData(Sensors::Battery * battery)
-{
-    std::uniform_real_distribution<float> voltage_battery(VOLT_LBND, VOLT_UBND);
-    std::uniform_real_distribution<float> current_battery(CURRENT_LBND, CURRENT_UBND);
-
-    battery->set_voltage(voltage_battery(g_mt));
-    battery->set_current(current_battery(g_mt));
-}
-
-/**
- * @brief generate random wind sensors data
- *
- * @param wind_data pointer to generated wind sensors data
- */
-void genRandWindData(Sensors::Wind * wind_data)
-{
-    std::uniform_real_distribution<float> speed_wind(SPEED_LBND, SPEED_UBND);
-    std::uniform_int_distribution<int>    direction_wind(DIRECTION_LBND, DIRECTION_UBND);
-
-    wind_data->set_speed(speed_wind(g_mt));
-    wind_data->set_direction(direction_wind(g_mt));
 }
 
 /**
