@@ -9,7 +9,7 @@
 #include "sensors.pb.h"
 #include "shared_constants.h"
 
-static constexpr int  NUM_AIS_SHIPS       = 15;
+static constexpr int  NUM_AIS_SHIPS       = 15; // arbitrary number
 static constexpr int  NUM_GENERIC_SENSORS = 5;  //arbitrary number
 static constexpr int  NUM_BATTERIES       = 2;
 static constexpr int  NUM_WIND_SENSORS    = 2;
@@ -174,7 +174,7 @@ Sensors::Gps * genRandGpsData()
 /**
  * @brief generate random ais ships data
  *
- * @return pointer to generated ais data
+ * @param ais_ship pointer to generated ais data
  */
 void genRandAisData(Sensors::Ais * ais_ship)
 {
@@ -251,6 +251,48 @@ void genRandPathData(Sensors::Path * path_data)
 
     path_data->set_latitude(latitude_path(g_mt));
     path_data->set_longitude(longitude_path(g_mt));
+}
+
+/**
+ * @brief generate random generic sensor data
+ *
+ * @param generic_sensor pointer to generated generic sensor data
+ */
+void genRandGenericSensorData(Sensors::Generic * generic_sensor)
+{
+    std::uniform_int_distribution<uint8_t>  id_generic(0, UINT8_MAX);
+    std::uniform_int_distribution<uint64_t> data_generic(0, UINT64_MAX);
+
+    generic_sensor->set_id(id_generic(g_mt));
+    generic_sensor->set_data(data_generic(g_mt));
+}
+
+/**
+ * @brief generate random battery data
+ *
+ * @param battery pointer to generated battery data
+ */
+void genRandBatteriesData(Sensors::Battery * battery)
+{
+    std::uniform_real_distribution<float> voltage_battery(VOLT_LBND, VOLT_UBND);
+    std::uniform_real_distribution<float> current_battery(CURRENT_LBND, CURRENT_UBND);
+
+    battery->set_voltage(voltage_battery(g_mt));
+    battery->set_current(current_battery(g_mt));
+}
+
+/**
+ * @brief generate random wind sensors data
+ *
+ * @param wind_data pointer to generated wind sensors data
+ */
+void genRandWindData(Sensors::Wind * wind_data)
+{
+    std::uniform_real_distribution<float> speed_wind(SPEED_LBND, SPEED_UBND);
+    std::uniform_int_distribution<int>    direction_wind(DIRECTION_LBND, DIRECTION_UBND);
+
+    wind_data->set_speed(speed_wind(g_mt));
+    wind_data->set_direction(direction_wind(g_mt));
 }
 
 /**
@@ -364,5 +406,29 @@ TEST_F(TestRemoteTransceiver, TestStoreSensors)
         const Sensors::Path & rand_path_waypoints   = rand_sensors.local_path_data(i);
         EXPECT_EQ(dumped_path_waypoints.latitude(), rand_path_waypoints.latitude());
         EXPECT_EQ(dumped_path_waypoints.longitude(), rand_path_waypoints.longitude());
+    }
+
+    // generic sensors
+    for (int i = 0; i < NUM_GENERIC_SENSORS; i++) {
+        const Sensors::Generic & dumped_data_sensors = dumped_sensors.data_sensors(i);
+        const Sensors::Generic & rand_data_sensors   = rand_sensors.data_sensors(i);
+        EXPECT_EQ(dumped_data_sensors.id(), rand_data_sensors.id());
+        EXPECT_EQ(dumped_data_sensors.data(), rand_data_sensors.data());
+    }
+
+    // batteries
+    for (int i = 0; i < NUM_BATTERIES; i++) {
+        const Sensors::Battery & dumped_batteries = dumped_sensors.batteries(i);
+        const Sensors::Battery & rand_batteries   = rand_sensors.batteries(i);
+        EXPECT_EQ(dumped_batteries.voltage(), rand_batteries.voltage());
+        EXPECT_EQ(dumped_batteries.current(), rand_batteries.current());
+    }
+
+    // wind sensors
+    for (int i = 0; i < NUM_WIND_SENSORS; i++) {
+        const Sensors::Wind & dumped_wind_sensors = dumped_sensors.wind_sensors(i);
+        const Sensors::Wind & rand_wind_sensors   = rand_sensors.wind_sensors(i);
+        EXPECT_EQ(dumped_wind_sensors.speed(), rand_wind_sensors.speed());
+        EXPECT_EQ(dumped_wind_sensors.direction(), rand_wind_sensors.direction());
     }
 }

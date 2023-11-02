@@ -83,33 +83,6 @@ private:
     bool storeAis(const ProtoList<Polaris::Sensors::Ais> & ais_ships_pb);
 
     /**
-     * @brief Write generic sensor data to the database
-     *
-     * @param generic_pb Protobuf list of generic sensor objects, where the size of the list is the number of sensors
-     * @return true  if successful
-     * @return false on failure
-     */
-    bool storeGenericSensor(const ProtoList<Polaris::Sensors::Generic> & generic_pb);
-
-    /**
-     * @brief Write batteries data to the database
-     *
-     * @param battery_pb Protobuf list of battery objects, where the size of the list is the number of batteries
-     * @return true  if successful
-     * @return false on failure
-     */
-    bool storeBatteries(const ProtoList<Polaris::Sensors::Battery> & battery_pb);
-
-    /**
-     * @brief Write wind sensor data to the database
-     *
-     * @param generic_pb Protobuf list of wind sensor objects, where the size of the list is the number of wind sensors
-     * @return true  if successful
-     * @return false on failure
-     */
-    bool storeWindSensor(const ProtoList<Polaris::Sensors::Wind> & wind_pb);
-
-    /**
      * @brief Write path sensor data to the database
      *
      * @param generic_pb Protobuf list of path sensor objects, where the size of the list is the number of path sensors
@@ -117,4 +90,26 @@ private:
      * @return false on failure
      */
     bool storePathSensor(const ProtoList<Polaris::Sensors::Path> & path_pb);
+
+    /**
+    * @brief Adds a generic sensor to the database flow
+    *
+    * @return True if sensor is added, false otherwise
+    */
+    bool storeGenericSensor(const ProtoList<Polaris::Sensors::Generic> & generic_pb);
+
+    /**
+    * @brief Adds a battery sensor to the database flow
+    *
+    * @return True if sensor is added, false otherwise
+    */
+    bool storeBatteries(const ProtoList<Polaris::Sensors::Battery> & battery_pb);
+
+    /**
+    * @brief Adds a wind sensor to the database flow
+    *
+    * @return True if sensor is added, false otherwise
+    */
+    bool storeWindSensor(const ProtoList<Polaris::Sensors::Wind> & wind_pb);
+
 };
