@@ -12,6 +12,7 @@ constexpr auto COLLECTION_BATTERIES    = "batteries";
 constexpr auto COLLECTION_DATA_SENSORS = "data_sensors";
 constexpr auto COLLECTION_GPS          = "gps";
 constexpr auto COLLECTION_WIND_SENSORS = "wind_sensors";
+constexpr auto COLLECTION_PATH         = "path";
 
 template <typename T>
 using ProtoList = google::protobuf::RepeatedPtrField<T>;
@@ -82,6 +83,15 @@ private:
     bool storeAis(const ProtoList<Polaris::Sensors::Ais> & ais_ships_pb);
 
     /**
+     * @brief Write path sensor data to the database
+     *
+     * @param generic_pb Protobuf list of path sensor objects, where the size of the list is the number of path sensors
+     * @return true  if successful
+     * @return false on failure
+     */
+    bool storePathSensor(const ProtoList<Polaris::Sensors::Path> & path_pb);
+
+    /**
     * @brief Adds a generic sensor to the database flow
     *
     * @return True if sensor is added, false otherwise
@@ -101,4 +111,5 @@ private:
     * @return True if sensor is added, false otherwise
     */
     bool storeWindSensor(const ProtoList<Polaris::Sensors::Wind> & wind_pb);
+
 };

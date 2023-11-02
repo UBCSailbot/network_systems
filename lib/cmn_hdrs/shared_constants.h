@@ -22,11 +22,19 @@ constexpr float SPEED_UBND = 10.0;   // Placeholder number
 constexpr float HEADING_LBND = 0.0;
 constexpr float HEADING_UBND = 360.0;
 
+// boat rotation
+constexpr float ROT_LBND = -360.0;
+constexpr float ROT_UBND = 360;
+// boat dimension
+constexpr float DIMENSION_LBND = 0;
+constexpr float DIMENSION_UBND = 650.0;
+
 /***** Bounds for Battery ******/
 constexpr float VOLT_LBND    = 0.5;     // Placeholder number
 constexpr float VOLT_UBND    = 250.0;   // Placeholder number
 constexpr float CURRENT_LBND = -200.0;  // Placeholder number
 constexpr float CURRENT_UBND = 200.0;   // Placeholder number
+
 
 /***** Bounds for Wind Sensor ******/
 constexpr int DIRECTION_LBND = -180;

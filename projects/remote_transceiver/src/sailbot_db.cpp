@@ -44,13 +44,18 @@ bool SailbotDB::storeSensors(const Sensors & sensors_pb)
 {
     return storeGps(sensors_pb.gps()) && storeAis(sensors_pb.ais_ships()) &&
            storeGenericSensor(sensors_pb.data_sensors()) && storeBatteries(sensors_pb.batteries()) &&
-           storeWindSensor(sensors_pb.wind_sensors());
+           storeWindSensor(sensors_pb.wind_sensors()) && storePathSensor(sensors_pb.local_path_data());
 }
 
 // END PUBLIC
 
 // PRIVATE
 
+/**
+ * @brief Adds a gps sensor to the database flow
+ *
+ * @return True if sensor is added, false otherwise
+ */
 bool SailbotDB::storeGps(const Sensors::Gps & gps_pb)
 {
     mongocxx::collection gps_coll = db_[COLLECTION_GPS];
@@ -60,6 +65,11 @@ bool SailbotDB::storeGps(const Sensors::Gps & gps_pb)
     return static_cast<bool>(gps_coll.insert_one(gps_doc.view()));
 }
 
+/**
+ * @brief Adds a ais ship sensor to the database flow
+ *
+ * @return True if sensor is added, false otherwise
+ */
 bool SailbotDB::storeAis(const ProtoList<Sensors::Ais> & ais_ships_pb)
 {
     mongocxx::collection ais_coll = db_[COLLECTION_AIS_SHIPS];
@@ -67,14 +77,16 @@ bool SailbotDB::storeAis(const ProtoList<Sensors::Ais> & ais_ships_pb)
     auto                 ais_ships_doc_arr = doc_builder << "ais_ships" << bstream::open_array;
     for (const Sensors::Ais & ais_ship : ais_ships_pb) {
         // The BSON spec does not allow unsigned integers (throws exception), so cast our uint32s to sint64s
-        ais_ships_doc_arr = ais_ships_doc_arr << bstream::open_document << "id" << static_cast<int64_t>(ais_ship.id())
-                                              << "latitude" << ais_ship.latitude() << "longitude"
-                                              << ais_ship.longitude() << "speed" << ais_ship.speed() << "heading"
-                                              << ais_ship.heading() << bstream::close_document;
+        ais_ships_doc_arr = ais_ships_doc_arr
+                            << bstream::open_document << "id" << static_cast<int64_t>(ais_ship.id()) << "latitude"
+                            << ais_ship.latitude() << "longitude" << ais_ship.longitude() << "speed" << ais_ship.speed()
+                            << "heading" << ais_ship.heading() << "rot" << ais_ship.rot() << "width" << ais_ship.width()
+                            << "length" << ais_ship.length() << bstream::close_document;
     }
     DocVal ais_ships_doc = ais_ships_doc_arr << bstream::close_array << bstream::finalize;
     return static_cast<bool>(ais_coll.insert_one(ais_ships_doc.view()));
 }
+
 
 bool SailbotDB::storeGenericSensor(const ProtoList<Sensors::Generic> & generic_pb)
 {
@@ -89,6 +101,7 @@ bool SailbotDB::storeGenericSensor(const ProtoList<Sensors::Generic> & generic_p
     return static_cast<bool>(generic_coll.insert_one(generic_doc.view()));
 }
 
+
 bool SailbotDB::storeBatteries(const ProtoList<Sensors::Battery> & battery_pb)
 {
     mongocxx::collection batteries_coll = db_[COLLECTION_BATTERIES];
@@ -102,6 +115,7 @@ bool SailbotDB::storeBatteries(const ProtoList<Sensors::Battery> & battery_pb)
     return static_cast<bool>(batteries_coll.insert_one(batteries_doc.view()));
 }
 
+
 bool SailbotDB::storeWindSensor(const ProtoList<Sensors::Wind> & wind_pb)
 {
     mongocxx::collection wind_coll = db_[COLLECTION_WIND_SENSORS];
@@ -113,6 +127,20 @@ bool SailbotDB::storeWindSensor(const ProtoList<Sensors::Wind> & wind_pb)
     }
     DocVal wind_doc = wind_doc_arr << bstream::close_array << bstream::finalize;
     return static_cast<bool>(wind_coll.insert_one(wind_doc.view()));
+}
+
+
+bool SailbotDB::storePathSensor(const ProtoList<Sensors::Path> & path_pb)
+{
+    mongocxx::collection path_coll = db_[COLLECTION_PATH];
+    bstream::document    doc_builder{};
+    auto                 path_doc_arr = doc_builder << "local_path_data" << bstream::open_array;
+    for (const Sensors::Path & local_path : path_pb) {
+        path_doc_arr = path_doc_arr << bstream::open_document << "latitude" << local_path.latitude() << "longitude"
+                                    << local_path.longitude() << bstream::close_document;
+    }
+    DocVal path_doc = path_doc_arr << bstream::close_array << bstream::finalize;
+    return static_cast<bool>(path_coll.insert_one(path_doc.view()));
 }
 
 // END PRIVATE
