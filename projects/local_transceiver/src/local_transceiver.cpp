@@ -3,7 +3,6 @@
 #include <boost/asio/read.hpp>
 #include <boost/asio/read_until.hpp>
 #include <boost/asio/serial_port.hpp>
-#include <boost/asio/serial_port_base.hpp>
 #include <boost/asio/streambuf.hpp>
 #include <boost/asio/write.hpp>
 #include <exception>
