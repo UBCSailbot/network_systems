@@ -65,7 +65,7 @@ public:
      * @param port_name serial port (ex. /dev/ttyS0)
      * @param baud_rate baud rate of the serial port
      */
-    explicit LocalTransceiver(const std::string & port_name, uint32_t baud_rate);
+    LocalTransceiver(const std::string & port_name, uint32_t baud_rate);
 
     /**
      * @brief Destroy the Local Transceiver object and close the serial port
