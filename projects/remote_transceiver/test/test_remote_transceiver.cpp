@@ -74,8 +74,8 @@ public:
             ais_ship->set_id(static_cast<uint32_t>(ais_ships_doc["id"].get_int64().value));
             ais_ship->set_latitude(static_cast<float>(ais_ships_doc["latitude"].get_double().value));
             ais_ship->set_longitude(static_cast<float>(ais_ships_doc["longitude"].get_double().value));
-            ais_ship->set_speed(static_cast<float>(ais_ships_doc["speed"].get_double().value));
-            ais_ship->set_heading(static_cast<float>(ais_ships_doc["heading"].get_double().value));
+            ais_ship->set_sog(static_cast<float>(ais_ships_doc["sog"].get_double().value));
+            ais_ship->set_cog(static_cast<float>(ais_ships_doc["cog"].get_double().value));
             ais_ship->set_rot(static_cast<float>(ais_ships_doc["rot"].get_double().value));
             ais_ship->set_width(static_cast<float>(ais_ships_doc["width"].get_double().value));
             ais_ship->set_length(static_cast<float>(ais_ships_doc["length"].get_double().value));
@@ -188,8 +188,8 @@ void genRandAisData(Sensors::Ais * ais_ship)
     ais_ship->set_id(id_dist(g_mt));
     ais_ship->set_latitude(lat_dist(g_mt));
     ais_ship->set_longitude(lon_dist(g_mt));
-    ais_ship->set_speed(speed_dist(g_mt));
-    ais_ship->set_heading(heading_dist(g_mt));
+    ais_ship->set_sog(speed_dist(g_mt));
+    ais_ship->set_cog(heading_dist(g_mt));
     ais_ship->set_rot(rot_dist(g_mt));
     ais_ship->set_width(width_dist(g_mt));
     ais_ship->set_length(length_dist(g_mt));
@@ -325,8 +325,8 @@ TEST_F(TestRemoteTransceiver, TestStoreSensors)
         EXPECT_EQ(dumped_ais_ships.id(), rand_ais_ships.id());
         EXPECT_FLOAT_EQ(dumped_ais_ships.latitude(), rand_ais_ships.latitude());
         EXPECT_FLOAT_EQ(dumped_ais_ships.longitude(), rand_ais_ships.longitude());
-        EXPECT_FLOAT_EQ(dumped_ais_ships.speed(), rand_ais_ships.speed());
-        EXPECT_FLOAT_EQ(dumped_ais_ships.heading(), rand_ais_ships.heading());
+        EXPECT_FLOAT_EQ(dumped_ais_ships.sog(), rand_ais_ships.sog());
+        EXPECT_FLOAT_EQ(dumped_ais_ships.cog(), rand_ais_ships.cog());
         EXPECT_FLOAT_EQ(dumped_ais_ships.rot(), rand_ais_ships.rot());
         EXPECT_FLOAT_EQ(dumped_ais_ships.width(), rand_ais_ships.width());
         EXPECT_FLOAT_EQ(dumped_ais_ships.length(), rand_ais_ships.length());

@@ -9,7 +9,6 @@
 class TestLocalTransceiver : public ::testing::Test
 {
 protected:
-    // TestLocalTransceiver() : lcl_trns_(LocalTransceiver(LOCAL_TRANSCEIVER_TEST_PORT, SATELLITE_BAUD_RATE)) {}
     TestLocalTransceiver()
     {
         try {

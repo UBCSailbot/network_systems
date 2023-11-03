@@ -38,10 +38,13 @@ void LocalTransceiver::SensorBuf::updateSensor(msg::AISShips ships)
     for (const msg::HelperAISShip & ship : ships.ships) {
         Sensors::Ais * new_ship = sensors_.add_ais_ships();
         new_ship->set_id(ship.id);
-        new_ship->set_heading(ship.heading.heading);
+        new_ship->set_cog(ship.cog.heading);
         new_ship->set_latitude(ship.lat_lon.latitude);
         new_ship->set_longitude(ship.lat_lon.longitude);
-        new_ship->set_speed(ship.speed.speed);
+        new_ship->set_sog(ship.sog.speed);
+        new_ship->set_rot(ship.rot.rot);
+        new_ship->set_width(ship.width.dimension);
+        new_ship->set_length(ship.length.dimension);
     }
 }
 
