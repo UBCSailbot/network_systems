@@ -4,8 +4,8 @@ WEBHOOK_SERVER_ENDPOINT=${1:-127.0.0.1:8081}
 VIRTUAL_IRIDIUM_HTTP_SERVER_PORT=${2:-8080}
 
 # Make sure everything is killed on exit
-trap "exit" INT TERM
-trap "kill 0" EXIT
+trap 'exit' INT TERM
+trap 'kill %; exit 0' EXIT
 
 # Port environment variables are defined in $ROS_WORKSPACE/.devcontainer/base-dev/base-dev.Dockerfile
 touch $LOCAL_TRANSCEIVER_TEST_PORT
