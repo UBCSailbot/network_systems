@@ -24,8 +24,8 @@ protected:
         lcl_trns_->stop();
         delete lcl_trns_;
     }
-    ~TestLocalTransceiver() override { delete lcl_trns_; }
 
+    ~TestLocalTransceiver() override { delete lcl_trns_; }
     LocalTransceiver * lcl_trns_;
 };
 

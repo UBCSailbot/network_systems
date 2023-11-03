@@ -85,7 +85,6 @@ public:
      */
     void stop();
 
-
     /**
      * @brief Callback function for when new sensor data is received from the ROS network on Polaris
      *
