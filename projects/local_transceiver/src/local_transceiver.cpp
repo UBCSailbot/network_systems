@@ -5,6 +5,7 @@
 #include <boost/asio/serial_port.hpp>
 #include <boost/asio/streambuf.hpp>
 #include <boost/asio/write.hpp>
+#include <boost/system/error_code.hpp>
 #include <exception>
 #include <mutex>
 #include <stdexcept>
@@ -59,7 +60,17 @@ LocalTransceiver::LocalTransceiver(const std::string & port_name, const uint32_t
     serial_.set_option(bio::serial_port_base::baud_rate(baud_rate));
 };
 
-LocalTransceiver::~LocalTransceiver() { serial_.close(); }
+LocalTransceiver::~LocalTransceiver()
+{
+    // Intentionally left blank
+}
+
+void LocalTransceiver::stop()
+{
+    std::lock_guard<std::mutex> lock(serial_mtx_);
+    // TODO(Jng468): Flush the serial port
+    serial_.close();  // Can throw an exception so cannot be put in the destructor
+}
 
 template <typename T>
 void LocalTransceiver::onNewSensorData(T sensor)

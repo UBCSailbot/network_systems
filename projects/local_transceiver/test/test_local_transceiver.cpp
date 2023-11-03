@@ -18,7 +18,11 @@ protected:
                       << RUN_VIRTUAL_IRIDIUM_SCRIPT_PATH << "\" running?" << std::endl;
         }
     }
-    ~TestLocalTransceiver() override { delete lcl_trns_; }
+    ~TestLocalTransceiver() override
+    {
+        lcl_trns_->stop();
+        delete lcl_trns_;
+    }
 
     LocalTransceiver * lcl_trns_;
 };

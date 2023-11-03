@@ -68,10 +68,20 @@ public:
     LocalTransceiver(const std::string & port_name, uint32_t baud_rate);
 
     /**
-     * @brief Destroy the Local Transceiver object and close the serial port
+     * @brief Destroy the Local Transceiver object
+     *
+     * @note must call stop() to properly cleanup the object
      *
      */
     ~LocalTransceiver();
+
+    /**
+     * @brief Cleanup the Local Transceiver object by closing the serial port
+     *
+     * @note must be called before the object is destroyed
+     *
+     */
+    void stop();
 
     /**
      * @brief Callback function for when new sensor data is received from the ROS network on Polaris
