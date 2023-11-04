@@ -30,7 +30,6 @@ struct SBDStatusResponse  // TODO(Jng468): Implement this class
     uint8_t  MT_len_;
     uint8_t  MT_queued_;
 
-
     /**
      * @brief Construct a new Status Response object
      *
