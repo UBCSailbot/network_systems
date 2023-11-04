@@ -1,12 +1,13 @@
 #include <chrono>
 #include <memory>
 
+#include "cmn_hdrs/ros_info.h"
+#include "cmn_hdrs/shared_constants.h"
 #include "local_transceiver.h"
 #include "rclcpp/publisher.hpp"
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp/subscription.hpp"
 #include "rclcpp/timer.hpp"
-#include "ros_info.h"
 #include "std_msgs/msg/string.hpp"
 
 /**
@@ -38,40 +39,27 @@ private:
     // Publishing timer
     rclcpp::TimerBase::SharedPtr timer_;
     // String is a placeholder pub and sub msg type - we will definitely define custom message types
-    rclcpp::Publisher<std_msgs::msg::String>::SharedPtr    pub_;
+    rclcpp::Publisher<std_msgs::msg::String>::SharedPtr pub_;
+    // Placeholder subscriber object
     rclcpp::Subscription<std_msgs::msg::String>::SharedPtr sub_;
 
     /**
      * @brief Callback function to publish to onboard ROS network
      *
      */
-    void pub_cb(/* placeholder */)
-    {
-        std::string some_msg_content = lcl_trns_->getRemoteData();
-        auto        msg              = std_msgs::msg::String();
-        msg.data                     = some_msg_content;
-        pub_->publish(msg);
-    }
+    void pub_cb(/* placeholder */) {}
 
     /**
      * @brief Callback function to subscribe to the onboard ROS network
      *
      */
-    void sub_cb(std_msgs::msg::String /* placeholder */) { lcl_trns_->onNewSensorData(); }
+    void sub_cb(std_msgs::msg::String /* placeholder */) {}
 };
 
 int main(int argc, char * argv[])
 {
     rclcpp::init(argc, argv);
-    std::shared_ptr<LocalTransceiver> lcl_trns;
-    constexpr bool                    IS_HW_RUN = true;  // placeholder
-    if (IS_HW_RUN) {
-        std::shared_ptr<HwLocalTransceiver> hw_lcl_trns = std::make_shared<HwLocalTransceiver>("PLACEHOLDER");
-        lcl_trns                                        = hw_lcl_trns;
-    } else {
-        std::shared_ptr<MockLocalTransceiver> mck_lcl_trns = std::make_shared<MockLocalTransceiver>();
-        lcl_trns                                           = mck_lcl_trns;
-    }
+    std::shared_ptr<LocalTransceiver> lcl_trns = std::make_shared<LocalTransceiver>("PLACEHOLDER", SATELLITE_BAUD_RATE);
     rclcpp::spin(std::make_shared<LocalTransceiverIntf>(lcl_trns));
     rclcpp::shutdown();
     return 0;

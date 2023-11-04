@@ -1,10 +1,10 @@
 #include "can_frame_parser.h"
 #include "can_transceiver.h"
+#include "cmn_hdrs/ros_info.h"
 #include "rclcpp/publisher.hpp"
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp/subscription.hpp"
 #include "rclcpp/timer.hpp"
-#include "ros_info.h"
 #include "std_msgs/msg/string.hpp"
 
 class CanTransceiverIntf : public rclcpp::Node
@@ -43,7 +43,7 @@ private:
 
     /**
      * @brief Callback function to subscribe to the onboard ROS network
-     * 
+     *
      */
     void sub_cb(std_msgs::msg::String /* placeholder */) { can_trns_->onNewCmd(Placeholder0); }
 };

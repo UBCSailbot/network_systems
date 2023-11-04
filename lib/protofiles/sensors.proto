@@ -29,8 +29,8 @@ message Sensors
         uint32 id        = 1;
         float  latitude  = 2;
         float  longitude = 3;
-        float  speed     = 4;
-        float  heading   = 5;
+        float  sog       = 4;
+        float  cog       = 5;
         float  rot       = 6;
         float  width     = 7;
         float  length    = 8;
@@ -49,10 +49,10 @@ message Sensors
         float longitude = 2;
     }
 
-    Gps              gps          = 1;
-    repeated Wind    wind_sensors = 2;
-    repeated Battery batteries    = 3;
-    repeated Ais     ais_ships    = 4;
-    repeated Generic data_sensors = 5;
+    Gps              gps             = 1;
+    repeated Wind    wind_sensors    = 2;
+    repeated Battery batteries       = 3;
+    repeated Ais     ais_ships       = 4;
+    repeated Generic data_sensors    = 5;
     repeated Path    local_path_data = 6;
 }
