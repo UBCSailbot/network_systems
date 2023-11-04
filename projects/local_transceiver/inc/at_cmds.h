@@ -15,12 +15,21 @@ const std::string CHECK_CONN  = "AT" + DELIMITER;
 const std::string SBD_SESSION = "AT+SBDIX" + DELIMITER;  // 5.144
 
 /**
- * Class representing the response to the CHECK_STATUS command
+ * Struct representing the response to the CHECK_STATUS command
  * 5.144
  */
-class SBDStatusResponse  // TODO(Jng468): Implement this class
+struct SBDStatusResponse  // TODO(Jng468): Implement this class
 {
-public:
+    static constexpr uint8_t MO_SUCCESS_START = 0;
+    static constexpr uint8_t MO_SUCCESS_END   = 5;
+
+    uint8_t  MO_status_;
+    uint16_t MOMSN_;
+    uint8_t  MT_status_;
+    uint16_t MTMSN_;
+    uint8_t  MT_len_;
+    uint8_t  MT_queued_;
+
     /**
      * @brief Construct a new Status Response object
      *
@@ -44,16 +53,6 @@ public:
      * @return false on failure
      */
     bool MOSuccess() const { return MO_status_ < MO_SUCCESS_END; }
-
-private:
-    static constexpr uint8_t MO_SUCCESS_START = 0;
-    static constexpr uint8_t MO_SUCCESS_END   = 5;
-    uint8_t                  MO_status_;
-    uint16_t                 MOMSN_;
-    uint8_t                  MT_status_;
-    uint16_t                 MTMSN_;
-    uint8_t                  MT_len_;
-    uint8_t                  MT_queued_;
 };
 
 }  // namespace AT
