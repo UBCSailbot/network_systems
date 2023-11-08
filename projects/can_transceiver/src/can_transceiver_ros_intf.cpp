@@ -6,6 +6,7 @@
 
 #include "can_frame_parser.h"
 #include "can_transceiver.h"
+#include "cmn_hdrs/ros_info.h"
 #include "custom_interfaces/msg/batteries.hpp"
 #include "custom_interfaces/msg/generic_sensors.hpp"
 #include "custom_interfaces/msg/gps.hpp"
@@ -81,20 +82,21 @@ public:
         // There is no timer because subscriber will respond to whatever data is published to the topic /Simulator
         // Topic: mock_gps
         subscriptionGPS_ = this->create_subscription<custom_interfaces::msg::GPS>(
-          "mock_gps", QUEUE_SIZE, std::bind(&CanSimIntf::gps_callback, this, std::placeholders::_1));
+          MOCK_GPS_TOPIC, QUEUE_SIZE, std::bind(&CanSimIntf::gps_callback, this, std::placeholders::_1));
 
         // Topic: mock_wind_sensors
         subscriptionWindSensor_ = this->create_subscription<custom_interfaces::msg::WindSensors>(
-          "mock_wind_sensors", QUEUE_SIZE, std::bind(&CanSimIntf::wind_callback, this, std::placeholders::_1));
+          MOCK_WIND_SENSORS_TOPIC, QUEUE_SIZE, std::bind(&CanSimIntf::wind_callback, this, std::placeholders::_1));
 
         // Publisher
-        publisherWindSensors_ = this->create_publisher<custom_interfaces::msg::WindSensors>("wind_sensors", QUEUE_SIZE);
+        publisherWindSensors_ =
+          this->create_publisher<custom_interfaces::msg::WindSensors>(WIND_SENSORS_TOPIC, QUEUE_SIZE);
         publisherWindSensor_ =
-          this->create_publisher<custom_interfaces::msg::WindSensor>("filtered_wind_sensor", QUEUE_SIZE);
-        publisherGPS_ = this->create_publisher<custom_interfaces::msg::GPS>("gps", QUEUE_SIZE);
+          this->create_publisher<custom_interfaces::msg::WindSensor>(FILTERED_WIND_SENSOR_TOPIC, QUEUE_SIZE);
+        publisherGPS_ = this->create_publisher<custom_interfaces::msg::GPS>(GPS_TOPIC, QUEUE_SIZE);
         publisherGenericSensors_ =
-          this->create_publisher<custom_interfaces::msg::GenericSensors>("data_sensors", QUEUE_SIZE);
-        publisherBatteries_ = this->create_publisher<custom_interfaces::msg::Batteries>("batteries", QUEUE_SIZE);
+          this->create_publisher<custom_interfaces::msg::GenericSensors>(DATA_SENSORS_TOPIC, QUEUE_SIZE);
+        publisherBatteries_ = this->create_publisher<custom_interfaces::msg::Batteries>(BATTERIES_TOPIC, QUEUE_SIZE);
         // Timer with 500ms delay
         timer_ = this->create_wall_timer(500ms, std::bind(&CanSimIntf::timer_callback, this));
     }
