@@ -1,25 +1,17 @@
-#include <cstdio>
-#include <custom_interfaces/msg/detail/batteries__struct.hpp>
-#include <custom_interfaces/msg/detail/generic_sensors__struct.hpp>
-#include <custom_interfaces/msg/detail/gps__struct.hpp>
-#include <custom_interfaces/msg/detail/wind_sensor__struct.hpp>
-#include <custom_interfaces/msg/detail/wind_sensors__struct.hpp>
-#include <memory>
 #include <chrono>
 #include <functional>
+#include <memory>
 #include <string>
 #include <thread>
 
 #include "can_frame_parser.h"
 #include "can_transceiver.h"
-
-#include "custom_interfaces/msg/gps.hpp"
-#include "custom_interfaces/msg/wind_sensors.hpp"
 #include "custom_interfaces/msg/batteries.hpp"
 #include "custom_interfaces/msg/generic_sensors.hpp"
+#include "custom_interfaces/msg/gps.hpp"
 #include "custom_interfaces/msg/helper_generic_sensor.hpp"
 #include "custom_interfaces/msg/wind_sensor.hpp"
-
+#include "custom_interfaces/msg/wind_sensors.hpp"
 #include "rclcpp/publisher.hpp"
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp/subscription.hpp"
@@ -29,9 +21,8 @@
 
 using namespace std::chrono_literals;
 
-#define QUEUE_SIZE 10
-#define WIND_SENSOR_BOUND 2
-#define PLACEHOLDER_VALUE 42 // Placeholder value for debugging or testing
+constexpr int QUEUE_SIZE        = 10;
+constexpr int PLACEHOLDER_VALUE = 42;  // Placeholder value for debugging or testing
 
 class CanTransceiverIntf : public rclcpp::Node
 {
@@ -74,7 +65,6 @@ private:
     void sub_cb(std_msgs::msg::String /* placeholder */) { can_trns_->onNewCmd(Placeholder0); }
 };
 
-
 //===========================================================================================
 // Simulation Interface
 //===========================================================================================
@@ -87,8 +77,8 @@ public:
     CanSimIntf()  //Our node which subs to topics
     : Node("CanSimIntf")
     {
-    // Subscriber
-    // There is no timer because subscriber will respond to whatever data is published to the topic /Simulator
+        // Subscriber
+        // There is no timer because subscriber will respond to whatever data is published to the topic /Simulator
         // Topic: mock_gps
         subscriptionGPS_ = this->create_subscription<custom_interfaces::msg::GPS>(
           "mock_gps", QUEUE_SIZE, std::bind(&CanSimIntf::gps_callback, this, std::placeholders::_1));
@@ -97,93 +87,82 @@ public:
         subscriptionWindSensor_ = this->create_subscription<custom_interfaces::msg::WindSensors>(
           "mock_wind_sensors", QUEUE_SIZE, std::bind(&CanSimIntf::wind_callback, this, std::placeholders::_1));
 
-    // Publisher
+        // Publisher
         publisherWindSensors_ = this->create_publisher<custom_interfaces::msg::WindSensors>("wind_sensors", QUEUE_SIZE);
-        publisherWindSensor_ = this->create_publisher<custom_interfaces::msg::WindSensor>("filtered_wind_sensor", QUEUE_SIZE);
+        publisherWindSensor_ =
+          this->create_publisher<custom_interfaces::msg::WindSensor>("filtered_wind_sensor", QUEUE_SIZE);
         publisherGPS_ = this->create_publisher<custom_interfaces::msg::GPS>("gps", QUEUE_SIZE);
-        publisherGenericSensors_ = this->create_publisher<custom_interfaces::msg::GenericSensors>("data_sensors", QUEUE_SIZE);
+        publisherGenericSensors_ =
+          this->create_publisher<custom_interfaces::msg::GenericSensors>("data_sensors", QUEUE_SIZE);
         publisherBatteries_ = this->create_publisher<custom_interfaces::msg::Batteries>("batteries", QUEUE_SIZE);
         // Timer with 500ms delay
-        timer_     = this->create_wall_timer(500ms, std::bind(&CanSimIntf::timer_callback, this));
+        timer_ = this->create_wall_timer(500ms, std::bind(&CanSimIntf::timer_callback, this));
     }
 
 private:
+    // Subscriber
+    void gps_callback(const custom_interfaces::msg::GPS::SharedPtr msg) const {}
+    void wind_callback(const custom_interfaces::msg::WindSensors::SharedPtr msg) const {}
 
-// Subscriber
-    void gps_callback(const custom_interfaces::msg::GPS::SharedPtr msg) const
-    {
-
-    }
-    void wind_callback(const custom_interfaces::msg::WindSensors::SharedPtr msg) const
-    {
-
-    }
-
-// Publisher
+    // Publisher
     void timer_callback()
     {
         // ** GPS **
-        custom_interfaces::msg::GPS gpsPubData = custom_interfaces::msg::GPS();
-        gpsPubData.heading.heading = PLACEHOLDER_VALUE;
-        gpsPubData.speed.speed = PLACEHOLDER_VALUE;
-        gpsPubData.lat_lon.latitude = PLACEHOLDER_VALUE;
+        custom_interfaces::msg::GPS gpsPubData;
+        gpsPubData.heading.heading   = PLACEHOLDER_VALUE;
+        gpsPubData.speed.speed       = PLACEHOLDER_VALUE;
+        gpsPubData.lat_lon.latitude  = PLACEHOLDER_VALUE;
         gpsPubData.lat_lon.longitude = PLACEHOLDER_VALUE;
         // Publishes msg
         publisherGPS_->publish(gpsPubData);
 
         // ** Wind Sensor (WSensor)**
-        custom_interfaces::msg::WindSensor WSensorData = custom_interfaces::msg::WindSensor();
+        custom_interfaces::msg::WindSensor WSensorData;
         WSensorData.speed.speed = PLACEHOLDER_VALUE;
-        WSensorData.direction = PLACEHOLDER_VALUE;
+        WSensorData.direction   = PLACEHOLDER_VALUE;
         // Publishes msg
         publisherWindSensor_->publish(WSensorData);
 
         // ** Wind Sensors (WSensors)**
-        custom_interfaces::msg::WindSensors WSensorsData = custom_interfaces::msg::WindSensors();
-        WSensorsData.wind_sensors[0].direction = PLACEHOLDER_VALUE;
+        custom_interfaces::msg::WindSensors WSensorsData;
+        WSensorsData.wind_sensors[0].direction   = PLACEHOLDER_VALUE;
         WSensorsData.wind_sensors[0].speed.speed = PLACEHOLDER_VALUE;
         // Publishes msg
         publisherWindSensors_->publish(WSensorsData);
 
         // ** Batteries **
-        custom_interfaces::msg::Batteries WBatteriesData = custom_interfaces::msg::Batteries();
+        custom_interfaces::msg::Batteries WBatteriesData;
         WBatteriesData.batteries[0].voltage = PLACEHOLDER_VALUE;
         WBatteriesData.batteries[0].current = PLACEHOLDER_VALUE;
         // Publishes msg
         publisherBatteries_->publish(WBatteriesData);
 
         // ** Generic Sensors **
-        custom_interfaces::msg::HelperGenericSensor HelperGenSensorData = custom_interfaces::msg::HelperGenericSensor();
-        custom_interfaces::msg::GenericSensors GenSensorData = custom_interfaces::msg::GenericSensors();
-        HelperGenSensorData.id = 0x0; //uint8
-        HelperGenSensorData.data = 0x0; //uint64
+        custom_interfaces::msg::HelperGenericSensor HelperGenSensorData;
+        custom_interfaces::msg::GenericSensors      GenSensorData;
+        HelperGenSensorData.id   = 0x0;  //uint8
+        HelperGenSensorData.data = 0x0;  //uint64
         // Publishes msg
         GenSensorData.generic_sensors.push_back(HelperGenSensorData);
-        publisherGenericSensors_->publish( GenSensorData );
-
+        publisherGenericSensors_->publish(GenSensorData);
     }
 
-// Field Operations
+    // Field Operations
 
     // Publisher Field Declarations
-    rclcpp::Publisher<custom_interfaces::msg::WindSensors>::SharedPtr publisherWindSensors_;
-    rclcpp::Publisher<custom_interfaces::msg::WindSensor>::SharedPtr publisherWindSensor_;
-    rclcpp::Publisher<custom_interfaces::msg::GPS>::SharedPtr publisherGPS_;
+    rclcpp::Publisher<custom_interfaces::msg::WindSensors>::SharedPtr    publisherWindSensors_;
+    rclcpp::Publisher<custom_interfaces::msg::WindSensor>::SharedPtr     publisherWindSensor_;
+    rclcpp::Publisher<custom_interfaces::msg::GPS>::SharedPtr            publisherGPS_;
     rclcpp::Publisher<custom_interfaces::msg::GenericSensors>::SharedPtr publisherGenericSensors_;
-    rclcpp::Publisher<custom_interfaces::msg::Batteries>::SharedPtr publisherBatteries_;
+    rclcpp::Publisher<custom_interfaces::msg::Batteries>::SharedPtr      publisherBatteries_;
 
     // Subscriber Field Declarations
-    rclcpp::Subscription<custom_interfaces::msg::GPS>::SharedPtr subscriptionGPS_;
+    rclcpp::Subscription<custom_interfaces::msg::GPS>::SharedPtr         subscriptionGPS_;
     rclcpp::Subscription<custom_interfaces::msg::WindSensors>::SharedPtr subscriptionWindSensor_;
 
-    // Variable to count number of msgs published
-    //size_t                                              count_;
-
     // Timer object to allow our CamSimIntfFeedback node to perform action at x rate
-    rclcpp::TimerBase::SharedPtr                        timer_;
-
+    rclcpp::TimerBase::SharedPtr timer_;
 };
-
 
 //===========================================================================================
 // Main

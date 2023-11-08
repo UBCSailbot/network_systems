@@ -16,7 +16,7 @@ static std::array<std::string, CanId::CAN_ID_MAX> CAN_DEVICE_NAMES = {"Placehold
 
 /**
  * Custom exception for when an attempt is made to construct a CAN object with a mismatched ID
- * 
+ *
  */
 class CanIdMismatchException : public std::runtime_error
 {
@@ -33,7 +33,7 @@ public:
 
 /**
  * Placeholder CAN device
- * 
+ *
  */
 struct Placeholder0
 {
@@ -58,21 +58,21 @@ public:
 
     /**
      * @brief Construct the object from a CAN frame
-     * 
+     *
      * @param frame CAN frame
      */
     explicit Placeholder0(const CanFrame & frame);
 
     /**
      * @brief Construct the object from a ROS msg
-     * 
+     *
      */
     Placeholder0(/* Placeholder0 ROS msg */);
 };
 
 /**
  * Placeholder CAN device
- * 
+ *
  */
 struct Placeholder1
 {
@@ -93,14 +93,14 @@ public:
 
     /**
      * @brief Construct the object from a CAN frame
-     * 
+     *
      * @param frame CAN frame
      */
     explicit Placeholder1(const CanFrame & frame);
 
     /**
      * @brief Construct the object from a ROS msg
-     * 
+     *
      */
     Placeholder1(/* Placeholder1 ROS msg */);
 
@@ -115,7 +115,7 @@ private:
 
 /**
  * Rudder Command Frame
- * 
+ *
  */
 struct RudderCmd
 {
@@ -140,7 +140,7 @@ public:
 
     /**
      * @brief Convert this object into a standard Linux CAN frame and return it
-     * 
+     *
      * @return Rudder command as a standard Linux CAN frame object
      */
     CanFrame toLinuxCan();

@@ -23,7 +23,6 @@ using IFreq       = struct ifreq;
 using SockAddr    = struct sockaddr;
 using SockAddrCan = struct sockaddr_can;
 
-#define QUEUE_SIZE 10
 namespace
 {
 
