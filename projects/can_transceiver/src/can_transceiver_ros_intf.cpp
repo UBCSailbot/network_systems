@@ -16,7 +16,6 @@
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp/subscription.hpp"
 #include "rclcpp/timer.hpp"
-#include "ros_info.h"
 #include "std_msgs/msg/string.hpp"
 
 using namespace std::chrono_literals;
@@ -60,6 +59,7 @@ private:
 
     /**
      * @brief Callback function to subscribe to the onboard ROS network
+     *
      *
      */
     void sub_cb(std_msgs::msg::String /* placeholder */) { can_trns_->onNewCmd(Placeholder0); }

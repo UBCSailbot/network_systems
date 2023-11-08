@@ -1,52 +1,58 @@
 syntax = "proto3";
 
-package Placeholder;  // TODO replace with new project name
+package Polaris;
 
 message Sensors
 {
     message Gps
     {
-        float  lat          = 1;
-        float  lon          = 2;
-        float  spd          = 3;
-        float  tmg          = 4;
-        uint32 true_heading = 5;
-        uint32 timestamp    = 6;
+        float  latitude  = 1;
+        float  longitude = 2;
+        float  speed     = 3;
+        float  heading   = 4;
     }
 
     message Wind
     {
-        float  spd       = 1;
-        uint32 angle     = 2;
-        uint32 timestamp = 3;
+        float  speed     = 1;
+        int32  direction = 2;
     }
 
     message Battery
     {
-        float  volt      = 1;
-        float  curr      = 2;
-        uint32 timestamp = 3;
-    }
-
-    message Generic
-    {
-        uint32 id        = 1;
-        uint32 timestamp = 2;
-        uint64 data      = 3;
+        float  voltage = 1;
+        float  current = 2;
     }
 
     message Ais
     {
-        uint32 mmsi         = 1;
-        float  lat          = 2;
-        float  lon          = 3;
-        uint32 true_heading = 4;
-        uint32 timestampe   = 5;
+        uint32 id        = 1;
+        float  latitude  = 2;
+        float  longitude = 3;
+        float  sog       = 4;
+        float  cog       = 5;
+        float  rot       = 6;
+        float  width     = 7;
+        float  length    = 8;
     }
 
-    Gps              gps          = 1;
-    repeated Wind    wind_sensors = 2;
-    repeated Battery batteries    = 3;
-    repeated Generic gen_sensors  = 4;
-    repeated Ais     boats        = 5;
+    message Generic
+    {
+        uint32 id   = 1;
+        uint64 data = 2;
+    }
+
+
+    message Path
+    {
+        float latitude  = 1;
+        float longitude = 2;
+    }
+
+    Gps              gps             = 1;
+    repeated Wind    wind_sensors    = 2;
+    repeated Battery batteries       = 3;
+    repeated Ais     ais_ships       = 4;
+    repeated Generic data_sensors    = 5;
+    repeated Path    local_path_data = 6;
 }
