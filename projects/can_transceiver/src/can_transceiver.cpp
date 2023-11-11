@@ -5,17 +5,11 @@
 #include <sys/ioctl.h>
 #include <sys/socket.h>
 
-#include <chrono>
 #include <cstring>
-#include <functional>
-#include <memory>
 #include <stdexcept>
-#include <string>
 #include <thread>
 
 #include "can_frame_parser.h"
-
-using namespace std::chrono_literals;
 
 using IFreq       = struct ifreq;
 using SockAddr    = struct sockaddr;
