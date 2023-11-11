@@ -173,7 +173,7 @@ protected:
     std::unique_ptr<mongocxx::pool> pool_;     // pool of clients for thread safety
 
 private:
-    mongocxx::instance inst_;  // MongoDB instance (must be present - there can only ever be one)
+    static mongocxx::instance inst_;  // MongoDB instance (must be present - there can only ever be one)
 
     /**
      * @brief Write GPS data to the database

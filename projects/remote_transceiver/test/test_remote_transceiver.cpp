@@ -2,7 +2,9 @@
 
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/ip/address.hpp>
+#include <boost/beast/http/status.hpp>
 #include <bsoncxx/builder/basic/document.hpp>
+#include <chrono>
 #include <cstdint>
 #include <mongocxx/client.hpp>
 #include <mongocxx/collection.hpp>
@@ -10,6 +12,7 @@
 #include <mongocxx/database.hpp>
 #include <random>
 #include <string>
+#include <thread>
 
 #include "cmn_hdrs/shared_constants.h"
 #include "remote_transceiver.h"
@@ -103,7 +106,7 @@ public:
         bsoncxx::document::view generic_doc = *(generic_sensor_docs.begin());
         for (bsoncxx::array::element generic_doc : generic_doc["genericSensors"].get_array().value) {
             Sensors::Generic * generic = sensors.add_data_sensors();
-            generic->set_id(static_cast<uint8_t>(generic_doc["id"].get_int32().value));
+            generic->set_id(static_cast<uint32_t>(generic_doc["id"].get_int64().value));
             generic->set_data(static_cast<uint64_t>(generic_doc["data"].get_int64().value));
         }
         EXPECT_EQ(generic_doc["timestamp"].get_utf8().value.to_string(), timestamp)
@@ -335,72 +338,48 @@ void verifyDBWrite(Sensors expected_sensors, SailbotDB::RcvdMsgInfo expected_msg
     // ais ships
     // Array size checking done in dumpSensors
     for (int i = 0; i < NUM_AIS_SHIPS; i++) {
-        const Sensors::Ais & dumped_ais_ships   = dumped_sensors.ais_ships(i);
-        const Sensors::Ais & expected_ais_ships = expected_sensors.ais_ships(i);
-        EXPECT_EQ(dumped_ais_ships.id(), expected_ais_ships.id());
-        EXPECT_FLOAT_EQ(dumped_ais_ships.latitude(), expected_ais_ships.latitude());
-        EXPECT_FLOAT_EQ(dumped_ais_ships.longitude(), expected_ais_ships.longitude());
-        EXPECT_FLOAT_EQ(dumped_ais_ships.sog(), expected_ais_ships.sog());
-        EXPECT_FLOAT_EQ(dumped_ais_ships.cog(), expected_ais_ships.cog());
-        EXPECT_FLOAT_EQ(dumped_ais_ships.rot(), expected_ais_ships.rot());
-        EXPECT_FLOAT_EQ(dumped_ais_ships.width(), expected_ais_ships.width());
-        EXPECT_FLOAT_EQ(dumped_ais_ships.length(), expected_ais_ships.length());
+        const Sensors::Ais & dumped_ais_ship   = dumped_sensors.ais_ships(i);
+        const Sensors::Ais & expected_ais_ship = expected_sensors.ais_ships(i);
+        EXPECT_EQ(dumped_ais_ship.id(), expected_ais_ship.id());
+        EXPECT_FLOAT_EQ(dumped_ais_ship.latitude(), expected_ais_ship.latitude());
+        EXPECT_FLOAT_EQ(dumped_ais_ship.longitude(), expected_ais_ship.longitude());
+        EXPECT_FLOAT_EQ(dumped_ais_ship.sog(), expected_ais_ship.sog());
+        EXPECT_FLOAT_EQ(dumped_ais_ship.cog(), expected_ais_ship.cog());
+        EXPECT_FLOAT_EQ(dumped_ais_ship.rot(), expected_ais_ship.rot());
+        EXPECT_FLOAT_EQ(dumped_ais_ship.width(), expected_ais_ship.width());
+        EXPECT_FLOAT_EQ(dumped_ais_ship.length(), expected_ais_ship.length());
     }
 
     // generic sensors
     for (int i = 0; i < NUM_GENERIC_SENSORS; i++) {
-        const Sensors::Generic & dumped_data_sensors   = dumped_sensors.data_sensors(i);
-        const Sensors::Generic & expected_data_sensors = expected_sensors.data_sensors(i);
-        EXPECT_EQ(dumped_data_sensors.id(), expected_data_sensors.id());
-        EXPECT_EQ(dumped_data_sensors.data(), expected_data_sensors.data());
+        const Sensors::Generic & dumped_data_sensor   = dumped_sensors.data_sensors(i);
+        const Sensors::Generic & expected_data_sensor = expected_sensors.data_sensors(i);
+        EXPECT_EQ(dumped_data_sensor.id(), expected_data_sensor.id());
+        EXPECT_EQ(dumped_data_sensor.data(), expected_data_sensor.data());
     }
 
     // batteries
     for (int i = 0; i < NUM_BATTERIES; i++) {
-        const Sensors::Battery & dumped_batteries   = dumped_sensors.batteries(i);
-        const Sensors::Battery & expected_batteries = expected_sensors.batteries(i);
-        EXPECT_EQ(dumped_batteries.voltage(), expected_batteries.voltage());
-        EXPECT_EQ(dumped_batteries.current(), expected_batteries.current());
+        const Sensors::Battery & dumped_battery   = dumped_sensors.batteries(i);
+        const Sensors::Battery & expected_battery = expected_sensors.batteries(i);
+        EXPECT_EQ(dumped_battery.voltage(), expected_battery.voltage());
+        EXPECT_EQ(dumped_battery.current(), expected_battery.current());
     }
 
     // wind sensors
     for (int i = 0; i < NUM_WIND_SENSORS; i++) {
-        const Sensors::Wind & dumped_wind_sensors   = dumped_sensors.wind_sensors(i);
-        const Sensors::Wind & expected_wind_sensors = expected_sensors.wind_sensors(i);
-        EXPECT_EQ(dumped_wind_sensors.speed(), expected_wind_sensors.speed());
-        EXPECT_EQ(dumped_wind_sensors.direction(), expected_wind_sensors.direction());
+        const Sensors::Wind & dumped_wind_sensor   = dumped_sensors.wind_sensors(i);
+        const Sensors::Wind & expected_wind_sensor = expected_sensors.wind_sensors(i);
+        EXPECT_EQ(dumped_wind_sensor.speed(), expected_wind_sensor.speed());
+        EXPECT_EQ(dumped_wind_sensor.direction(), expected_wind_sensor.direction());
     }
 
     // path waypoints
     for (int i = 0; i < NUM_PATH_WAYPOINTS; i++) {
-        const Polaris::Waypoint & dumped_path_waypoints   = dumped_sensors.local_path_data(i);
-        const Polaris::Waypoint & expected_path_waypoints = expected_sensors.local_path_data(i);
-        EXPECT_EQ(dumped_path_waypoints.latitude(), expected_path_waypoints.latitude());
-        EXPECT_EQ(dumped_path_waypoints.longitude(), expected_path_waypoints.longitude());
-    }
-
-    // generic sensors
-    for (int i = 0; i < NUM_GENERIC_SENSORS; i++) {
-        const Sensors::Generic & dumped_data_sensors   = dumped_sensors.data_sensors(i);
-        const Sensors::Generic & expected_data_sensors = expected_sensors.data_sensors(i);
-        EXPECT_EQ(dumped_data_sensors.id(), expected_data_sensors.id());
-        EXPECT_EQ(dumped_data_sensors.data(), expected_data_sensors.data());
-    }
-
-    // batteries
-    for (int i = 0; i < NUM_BATTERIES; i++) {
-        const Sensors::Battery & dumped_batteries   = dumped_sensors.batteries(i);
-        const Sensors::Battery & expected_batteries = expected_sensors.batteries(i);
-        EXPECT_EQ(dumped_batteries.voltage(), expected_batteries.voltage());
-        EXPECT_EQ(dumped_batteries.current(), expected_batteries.current());
-    }
-
-    // wind sensors
-    for (int i = 0; i < NUM_WIND_SENSORS; i++) {
-        const Sensors::Wind & dumped_wind_sensors   = dumped_sensors.wind_sensors(i);
-        const Sensors::Wind & expected_wind_sensors = expected_sensors.wind_sensors(i);
-        EXPECT_EQ(dumped_wind_sensors.speed(), expected_wind_sensors.speed());
-        EXPECT_EQ(dumped_wind_sensors.direction(), expected_wind_sensors.direction());
+        const Polaris::Waypoint & dumped_path_waypoint   = dumped_sensors.local_path_data(i);
+        const Polaris::Waypoint & expected_path_waypoint = expected_sensors.local_path_data(i);
+        EXPECT_EQ(dumped_path_waypoint.latitude(), expected_path_waypoint.latitude());
+        EXPECT_EQ(dumped_path_waypoint.longitude(), expected_path_waypoint.longitude());
     }
 }
 
@@ -424,21 +403,25 @@ TEST_F(TestSailbotDB, TestStoreSensors)
     verifyDBWrite(rand_sensors, randInfo);
 }
 
-class TestRemoteTransceiver : public ::testing::Test
+class TestHTTP : public ::testing::Test
 {
 protected:
+    static constexpr int WAIT_SECONDS = 3;
+
     static bio::io_context * io_;
     static tcp::acceptor *   acceptor_;
     static tcp::socket *     socket_;
     static std::thread *     io_thread_;
+    static SailbotDB *       server_db_;
 
     static void SetUpTestSuite()
     {
-        io_       = new bio::io_context;
-        acceptor_ = new tcp::acceptor{*io_, {bio::ip::make_address(TESTING_HOST), TESTING_PORT}};
-        socket_   = new tcp::socket{*io_};
+        io_        = new bio::io_context;
+        acceptor_  = new tcp::acceptor{*io_, {bio::ip::make_address(TESTING_HOST), TESTING_PORT}};
+        socket_    = new tcp::socket{*io_};
+        server_db_ = new TestDB();
 
-        HTTPServer::runServer(*acceptor_, *socket_, g_test_db);
+        HTTPServer::runServer(*acceptor_, *socket_, *server_db_);
 
         io_thread_ = new std::thread([]() { io_->run(); });
     }
@@ -452,27 +435,58 @@ protected:
         delete acceptor_;
         delete socket_;
         delete io_thread_;
+        delete server_db_;
     }
 
-    TestRemoteTransceiver() { g_test_db.cleanDB(); }
+    TestHTTP() { g_test_db.cleanDB(); }
 
-    ~TestRemoteTransceiver() override {}
+    ~TestHTTP() override {}
 };
 
-bio::io_context * TestRemoteTransceiver::io_        = nullptr;
-tcp::acceptor *   TestRemoteTransceiver::acceptor_  = nullptr;
-tcp::socket *     TestRemoteTransceiver::socket_    = nullptr;
-std::thread *     TestRemoteTransceiver::io_thread_ = nullptr;
+bio::io_context * TestHTTP::io_        = nullptr;
+tcp::acceptor *   TestHTTP::acceptor_  = nullptr;
+tcp::socket *     TestHTTP::socket_    = nullptr;
+std::thread *     TestHTTP::io_thread_ = nullptr;
+SailbotDB *       TestHTTP::server_db_ = nullptr;
 
-TEST_F(TestRemoteTransceiver, TestGet)
+TEST_F(TestHTTP, TestGet)
 {
-    auto [status, result] = http_client::get(TESTING_HOST, std::to_string(TESTING_PORT), "/");
+    auto [status, result] = http_client::get({TESTING_HOST, std::to_string(TESTING_PORT), "/"});
     EXPECT_EQ(status, http::status::ok);
     EXPECT_EQ(result, "PLACEHOLDER\r\n");
 }
 
-TEST_F(TestRemoteTransceiver, TestPost)
+std::string createPostBody(remote_transceiver::MOMsgParams::Params params)
+{
+    std::ostringstream s;
+    s << "imei=" << params.imei_ << "&serial=" << params.serial_ << "&momsn=" << params.momsn_
+      << "&transmit_time=" << params.transmit_time_ << "&iridium_latitude=" << params.lat_
+      << "&iridium_longitude=" << params.lon_ << "&iridium_cep=" << params.cep_ << "&data=" << params.data_;
+    return s.str();
+}
+
+TEST_F(TestHTTP, TestPost)
 {
     SCOPED_TRACE("Seed: " + std::to_string(g_rand_seed));  // Print seed on any failure
     auto [rand_sensors, randInfo] = genRandData();
+
+    std::string rand_sensors_str;
+    ASSERT_TRUE(rand_sensors.SerializeToString(&rand_sensors_str));
+    Polaris::Sensors test;
+    test.ParseFromString(rand_sensors_str);
+    std::string query = createPostBody(
+      {.imei_          = 0,
+       .serial_        = 0,
+       .momsn_         = 1,
+       .transmit_time_ = "",
+       .lat_           = 0.0,
+       .lon_           = 0.0,
+       .cep_           = 1,
+       .data_          = rand_sensors_str});
+    http::status status =
+      http_client::post({TESTING_HOST, std::to_string(TESTING_PORT), "/"}, "application/x-www-form-urlencoded", query);
+
+    EXPECT_EQ(status, http::status::ok);
+    std::this_thread::sleep_for(std::chrono::seconds(WAIT_SECONDS));
+    verifyDBWrite(rand_sensors, {.lat_ = 0.0, .lon_ = 0.0, .cep_ = 1, .timestamp_ = ""});
 }

@@ -1,7 +1,7 @@
 #include "remote_transceiver.h"
 
+#include <boost/algorithm/string.hpp>
 #include <boost/asio.hpp>
-#include <boost/asio/io_context.hpp>
 #include <boost/beast.hpp>
 #include <boost/beast/core/buffers_to_string.hpp>
 #include <boost/beast/core/error.hpp>
@@ -22,6 +22,33 @@
 using remote_transceiver::HTTPServer;
 namespace http_client = remote_transceiver::http_client;
 
+remote_transceiver::MOMsgParams::MOMsgParams(const std::string & query_string)
+{
+    static const std::string DATA_KEY = "&data=";
+
+    size_t      data_key_idx  = query_string.find(DATA_KEY);
+    std::string iridium_mdata = query_string.substr(0, data_key_idx);
+    params_.data_             = query_string.substr(data_key_idx + DATA_KEY.size(), query_string.size());
+
+    std::vector<std::string> split_strings;
+    boost::algorithm::split(split_strings, iridium_mdata, boost::is_any_of("?=&"));
+
+    constexpr uint8_t IMEI_IDX   = 1;
+    constexpr uint8_t SERIAL_IDX = 3;
+    constexpr uint8_t MOMSN_IDX  = 5;
+    constexpr uint8_t TIME_IDX   = 7;
+    constexpr uint8_t LAT_IDX    = 9;
+    constexpr uint8_t LON_IDX    = 11;
+    constexpr uint8_t CEP_IDX    = 13;
+
+    params_.imei_          = std::stoi(split_strings[IMEI_IDX]);
+    params_.serial_        = std::stoi(split_strings[SERIAL_IDX]);
+    params_.momsn_         = std::stoi(split_strings[MOMSN_IDX]);
+    params_.transmit_time_ = split_strings[TIME_IDX];
+    params_.lat_           = std::stof(split_strings[LAT_IDX]);
+    params_.lon_           = std::stof(split_strings[LON_IDX]);
+    params_.cep_           = std::stoi(split_strings[CEP_IDX]);
+}
 HTTPServer::HTTPServer(tcp::socket socket, SailbotDB db) : socket_(std::move(socket)), db_(std::move(db)) {}
 
 void HTTPServer::run() { readReq(); }
@@ -42,6 +69,9 @@ void HTTPServer::readReq()
     http::async_read(socket_, buf_, req_, [self](beast::error_code e, std::size_t /*bytesTransferred*/) {
         if (!e) {
             self->processReq();
+        } else {
+            std::cerr << "Error: " << e.value() << " " << e.message() << std::endl;
+            std::cerr << self->req_ << std::endl;
         }
     });
 }
@@ -80,8 +110,8 @@ void HTTPServer::doPost()
         res_.result(http::status::ok);
         std::shared_ptr<HTTPServer> self = shared_from_this();
         std::thread                 post_thread([self]() {
-            std::string query_string = beast::buffers_to_string(self->req_.body().data());
-            MOMsgParams params       = MOMsgParams(query_string);
+            std::string         query_string = beast::buffers_to_string(self->req_.body().data());
+            MOMsgParams::Params params       = MOMsgParams(query_string).params_;
             if (!params.data_.empty()) {
                 Polaris::Sensors       sensors;
                 SailbotDB::RcvdMsgInfo info = {params.lat_, params.lon_, params.cep_, params.transmit_time_};
@@ -117,12 +147,13 @@ void HTTPServer::writeRes()
     });
 }
 
-std::pair<http::status, std::string> http_client::get(
-  const std::string & host, const std::string & port, const std::string & target)
+std::pair<http::status, std::string> http_client::get(ConnectionInfo info)
 {
     bio::io_context io;
     tcp::socket     socket{io};
     tcp::resolver   resolver{io};
+
+    auto [host, port, target] = info.get();
 
     tcp::resolver::results_type const results = resolver.resolve(host, port);
     bio::connect(socket, results.begin(), results.end());
@@ -146,4 +177,37 @@ std::pair<http::status, std::string> http_client::get(
         return {status, result};
     }
     return {status, ""};
+}
+
+http::status http_client::post(ConnectionInfo info, std::string content_type, const std::string & body)
+{
+    bio::io_context io;
+    tcp::socket     socket{io};
+    tcp::resolver   resolver{io};
+
+    auto [host, port, target] = info.get();
+
+    tcp::resolver::results_type const results = resolver.resolve(host, port);
+    bio::connect(socket, results.begin(), results.end());
+
+    http::request<http::string_body> req{http::verb::post, target, HTTP_VERSION};
+    req.set(http::field::host, host);
+    req.set(http::field::user_agent, BOOST_BEAST_VERSION_STRING);
+    req.set(http::field::content_type, content_type);
+    req.set(http::field::content_length, std::to_string(body.size()));
+    req.body() = body;
+
+    req.prepare_payload();
+    http::write(socket, req);
+
+    beast::flat_buffer buf;
+
+    http::response<http::dynamic_body> res;
+    http::read(socket, buf, res);
+
+    boost::system::error_code e;
+    socket.shutdown(tcp::socket::shutdown_both, e);
+
+    http::status status = res.base().result();
+    return status;
 }

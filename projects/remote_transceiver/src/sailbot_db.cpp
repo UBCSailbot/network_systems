@@ -4,6 +4,7 @@
 #include <bsoncxx/builder/stream/document.hpp>
 #include <bsoncxx/builder/stream/helpers.hpp>
 #include <bsoncxx/json.hpp>
+#include <cstdint>
 #include <iostream>
 #include <memory>
 #include <mongocxx/client.hpp>
@@ -15,6 +16,8 @@
 
 namespace bstream = bsoncxx::builder::stream;
 using Polaris::Sensors;
+
+mongocxx::instance SailbotDB::inst_{};  // staticallly initialize instance
 
 // PUBLIC
 
@@ -96,7 +99,7 @@ bool SailbotDB::storeGenericSensors(
     bstream::document    doc_builder{};
     auto                 generic_doc_arr = doc_builder << "genericSensors" << bstream::open_array;
     for (const Sensors::Generic & generic : generic_pb) {
-        generic_doc_arr = generic_doc_arr << bstream::open_document << "id" << static_cast<int16_t>(generic.id())
+        generic_doc_arr = generic_doc_arr << bstream::open_document << "id" << static_cast<int64_t>(generic.id())
                                           << "data" << static_cast<int64_t>(generic.data()) << bstream::close_document;
     }
     DocVal generic_doc = generic_doc_arr << bstream::close_array << "timestamp" << timestamp << bstream::finalize;
