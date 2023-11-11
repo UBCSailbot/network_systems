@@ -1,14 +1,18 @@
+#include <gtest/gtest.h>
+
+#include <boost/asio/io_context.hpp>
+#include <boost/asio/ip/address.hpp>
+#include <bsoncxx/builder/basic/document.hpp>
 #include <cstdint>
 #include <mongocxx/client.hpp>
+#include <mongocxx/collection.hpp>
+#include <mongocxx/cursor.hpp>
 #include <mongocxx/database.hpp>
 #include <random>
 #include <string>
 
-#include "bsoncxx/builder/basic/document.hpp"
 #include "cmn_hdrs/shared_constants.h"
-#include "gtest/gtest.h"
-#include "mongocxx/collection.hpp"
-#include "mongocxx/cursor.hpp"
+#include "remote_transceiver.h"
 #include "sailbot_db.h"
 #include "sensors.pb.h"
 
@@ -17,6 +21,8 @@ constexpr int NUM_GENERIC_SENSORS = 5;   // arbitrary number
 constexpr int NUM_PATH_WAYPOINTS  = 5;   // arbitrary number
 
 using Polaris::Sensors;
+using remote_transceiver::HTTPServer;
+namespace http_client = remote_transceiver::http_client;
 
 //Child class of SailbotDB that includes additional database utility functions to help testing
 class TestDB : public SailbotDB
@@ -154,11 +160,11 @@ static std::random_device g_rd        = std::random_device();  // random number 
 static uint32_t           g_rand_seed = g_rd();                // seed used for random number generation
 static std::mt19937       g_mt(g_rand_seed);                   // initialize random number generator with seed
 
-class TestRemoteTransceiver : public ::testing::Test
+class TestSailbotDB : public ::testing::Test
 {
 protected:
-    TestRemoteTransceiver() { g_test_db.cleanDB(); }
-    ~TestRemoteTransceiver() override {}
+    TestSailbotDB() { g_test_db.cleanDB(); }
+    ~TestSailbotDB() override {}
 };
 
 /**
@@ -270,7 +276,6 @@ void genRandPathData(Polaris::Waypoint * path_data)
 Sensors genRandSensors()
 {
     Sensors sensors;
-    // Protobuf handles freeing of dynamically allocated objects automatically
 
     // gps
     genRandGpsData(sensors.mutable_gps());
@@ -303,20 +308,8 @@ Sensors genRandSensors()
     return sensors;
 }
 
-/**
- * @brief Check that MongoDB is running
- */
-TEST_F(TestRemoteTransceiver, TestConnection)
+std::pair<Sensors, SailbotDB::RcvdMsgInfo> genRandData()
 {
-    ASSERT_TRUE(g_test_db.testConnection()) << "MongoDB not running - remember to connect!";
-}
-
-/**
- * @brief Write random sensor data to the TestDB - read and verify said data
- */
-TEST_F(TestRemoteTransceiver, TestStoreSensors)
-{
-    SCOPED_TRACE("Seed: " + std::to_string(g_rand_seed));  // Print seed on any failure
     Sensors                rand_sensors = genRandSensors();
     SailbotDB::RcvdMsgInfo randInfo{
       .lat_       = 0,                           // Not processed yet, so just set to 0
@@ -324,85 +317,162 @@ TEST_F(TestRemoteTransceiver, TestStoreSensors)
       .cep_       = 0,                           // Not processed yet, so just set to 0
       .timestamp_ = std::to_string(g_rand_seed)  // Any random string works for testing
     };
-    ASSERT_TRUE(g_test_db.storeNewSensors(rand_sensors, randInfo));
+    return {rand_sensors, randInfo};
+}
+
+void verifyDBWrite(Sensors expected_sensors, SailbotDB::RcvdMsgInfo expected_msg_info)
+{
     auto [dumped_sensors, dumped_timestamp] = g_test_db.dumpSensors();
 
-    EXPECT_EQ(dumped_timestamp, randInfo.timestamp_);
+    EXPECT_EQ(dumped_timestamp, expected_msg_info.timestamp_);
 
     // gps
-    EXPECT_FLOAT_EQ(dumped_sensors.gps().latitude(), rand_sensors.gps().latitude());
-    EXPECT_FLOAT_EQ(dumped_sensors.gps().longitude(), rand_sensors.gps().longitude());
-    EXPECT_FLOAT_EQ(dumped_sensors.gps().speed(), rand_sensors.gps().speed());
-    EXPECT_FLOAT_EQ(dumped_sensors.gps().heading(), rand_sensors.gps().heading());
+    EXPECT_FLOAT_EQ(dumped_sensors.gps().latitude(), expected_sensors.gps().latitude());
+    EXPECT_FLOAT_EQ(dumped_sensors.gps().longitude(), expected_sensors.gps().longitude());
+    EXPECT_FLOAT_EQ(dumped_sensors.gps().speed(), expected_sensors.gps().speed());
+    EXPECT_FLOAT_EQ(dumped_sensors.gps().heading(), expected_sensors.gps().heading());
 
     // ais ships
     // Array size checking done in dumpSensors
     for (int i = 0; i < NUM_AIS_SHIPS; i++) {
-        const Sensors::Ais & dumped_ais_ships = dumped_sensors.ais_ships(i);
-        const Sensors::Ais & rand_ais_ships   = rand_sensors.ais_ships(i);
-        EXPECT_EQ(dumped_ais_ships.id(), rand_ais_ships.id());
-        EXPECT_FLOAT_EQ(dumped_ais_ships.latitude(), rand_ais_ships.latitude());
-        EXPECT_FLOAT_EQ(dumped_ais_ships.longitude(), rand_ais_ships.longitude());
-        EXPECT_FLOAT_EQ(dumped_ais_ships.sog(), rand_ais_ships.sog());
-        EXPECT_FLOAT_EQ(dumped_ais_ships.cog(), rand_ais_ships.cog());
-        EXPECT_FLOAT_EQ(dumped_ais_ships.rot(), rand_ais_ships.rot());
-        EXPECT_FLOAT_EQ(dumped_ais_ships.width(), rand_ais_ships.width());
-        EXPECT_FLOAT_EQ(dumped_ais_ships.length(), rand_ais_ships.length());
+        const Sensors::Ais & dumped_ais_ships   = dumped_sensors.ais_ships(i);
+        const Sensors::Ais & expected_ais_ships = expected_sensors.ais_ships(i);
+        EXPECT_EQ(dumped_ais_ships.id(), expected_ais_ships.id());
+        EXPECT_FLOAT_EQ(dumped_ais_ships.latitude(), expected_ais_ships.latitude());
+        EXPECT_FLOAT_EQ(dumped_ais_ships.longitude(), expected_ais_ships.longitude());
+        EXPECT_FLOAT_EQ(dumped_ais_ships.sog(), expected_ais_ships.sog());
+        EXPECT_FLOAT_EQ(dumped_ais_ships.cog(), expected_ais_ships.cog());
+        EXPECT_FLOAT_EQ(dumped_ais_ships.rot(), expected_ais_ships.rot());
+        EXPECT_FLOAT_EQ(dumped_ais_ships.width(), expected_ais_ships.width());
+        EXPECT_FLOAT_EQ(dumped_ais_ships.length(), expected_ais_ships.length());
     }
 
     // generic sensors
     for (int i = 0; i < NUM_GENERIC_SENSORS; i++) {
-        const Sensors::Generic & dumped_data_sensors = dumped_sensors.data_sensors(i);
-        const Sensors::Generic & rand_data_sensors   = rand_sensors.data_sensors(i);
-        EXPECT_EQ(dumped_data_sensors.id(), rand_data_sensors.id());
-        EXPECT_EQ(dumped_data_sensors.data(), rand_data_sensors.data());
+        const Sensors::Generic & dumped_data_sensors   = dumped_sensors.data_sensors(i);
+        const Sensors::Generic & expected_data_sensors = expected_sensors.data_sensors(i);
+        EXPECT_EQ(dumped_data_sensors.id(), expected_data_sensors.id());
+        EXPECT_EQ(dumped_data_sensors.data(), expected_data_sensors.data());
     }
 
     // batteries
     for (int i = 0; i < NUM_BATTERIES; i++) {
-        const Sensors::Battery & dumped_batteries = dumped_sensors.batteries(i);
-        const Sensors::Battery & rand_batteries   = rand_sensors.batteries(i);
-        EXPECT_EQ(dumped_batteries.voltage(), rand_batteries.voltage());
-        EXPECT_EQ(dumped_batteries.current(), rand_batteries.current());
+        const Sensors::Battery & dumped_batteries   = dumped_sensors.batteries(i);
+        const Sensors::Battery & expected_batteries = expected_sensors.batteries(i);
+        EXPECT_EQ(dumped_batteries.voltage(), expected_batteries.voltage());
+        EXPECT_EQ(dumped_batteries.current(), expected_batteries.current());
     }
 
     // wind sensors
     for (int i = 0; i < NUM_WIND_SENSORS; i++) {
-        const Sensors::Wind & dumped_wind_sensors = dumped_sensors.wind_sensors(i);
-        const Sensors::Wind & rand_wind_sensors   = rand_sensors.wind_sensors(i);
-        EXPECT_EQ(dumped_wind_sensors.speed(), rand_wind_sensors.speed());
-        EXPECT_EQ(dumped_wind_sensors.direction(), rand_wind_sensors.direction());
+        const Sensors::Wind & dumped_wind_sensors   = dumped_sensors.wind_sensors(i);
+        const Sensors::Wind & expected_wind_sensors = expected_sensors.wind_sensors(i);
+        EXPECT_EQ(dumped_wind_sensors.speed(), expected_wind_sensors.speed());
+        EXPECT_EQ(dumped_wind_sensors.direction(), expected_wind_sensors.direction());
     }
 
     // path waypoints
     for (int i = 0; i < NUM_PATH_WAYPOINTS; i++) {
-        const Polaris::Waypoint & dumped_path_waypoints = dumped_sensors.local_path_data(i);
-        const Polaris::Waypoint & rand_path_waypoints   = rand_sensors.local_path_data(i);
-        EXPECT_EQ(dumped_path_waypoints.latitude(), rand_path_waypoints.latitude());
-        EXPECT_EQ(dumped_path_waypoints.longitude(), rand_path_waypoints.longitude());
+        const Polaris::Waypoint & dumped_path_waypoints   = dumped_sensors.local_path_data(i);
+        const Polaris::Waypoint & expected_path_waypoints = expected_sensors.local_path_data(i);
+        EXPECT_EQ(dumped_path_waypoints.latitude(), expected_path_waypoints.latitude());
+        EXPECT_EQ(dumped_path_waypoints.longitude(), expected_path_waypoints.longitude());
     }
 
     // generic sensors
     for (int i = 0; i < NUM_GENERIC_SENSORS; i++) {
-        const Sensors::Generic & dumped_data_sensors = dumped_sensors.data_sensors(i);
-        const Sensors::Generic & rand_data_sensors   = rand_sensors.data_sensors(i);
-        EXPECT_EQ(dumped_data_sensors.id(), rand_data_sensors.id());
-        EXPECT_EQ(dumped_data_sensors.data(), rand_data_sensors.data());
+        const Sensors::Generic & dumped_data_sensors   = dumped_sensors.data_sensors(i);
+        const Sensors::Generic & expected_data_sensors = expected_sensors.data_sensors(i);
+        EXPECT_EQ(dumped_data_sensors.id(), expected_data_sensors.id());
+        EXPECT_EQ(dumped_data_sensors.data(), expected_data_sensors.data());
     }
 
     // batteries
     for (int i = 0; i < NUM_BATTERIES; i++) {
-        const Sensors::Battery & dumped_batteries = dumped_sensors.batteries(i);
-        const Sensors::Battery & rand_batteries   = rand_sensors.batteries(i);
-        EXPECT_EQ(dumped_batteries.voltage(), rand_batteries.voltage());
-        EXPECT_EQ(dumped_batteries.current(), rand_batteries.current());
+        const Sensors::Battery & dumped_batteries   = dumped_sensors.batteries(i);
+        const Sensors::Battery & expected_batteries = expected_sensors.batteries(i);
+        EXPECT_EQ(dumped_batteries.voltage(), expected_batteries.voltage());
+        EXPECT_EQ(dumped_batteries.current(), expected_batteries.current());
     }
 
     // wind sensors
     for (int i = 0; i < NUM_WIND_SENSORS; i++) {
-        const Sensors::Wind & dumped_wind_sensors = dumped_sensors.wind_sensors(i);
-        const Sensors::Wind & rand_wind_sensors   = rand_sensors.wind_sensors(i);
-        EXPECT_EQ(dumped_wind_sensors.speed(), rand_wind_sensors.speed());
-        EXPECT_EQ(dumped_wind_sensors.direction(), rand_wind_sensors.direction());
+        const Sensors::Wind & dumped_wind_sensors   = dumped_sensors.wind_sensors(i);
+        const Sensors::Wind & expected_wind_sensors = expected_sensors.wind_sensors(i);
+        EXPECT_EQ(dumped_wind_sensors.speed(), expected_wind_sensors.speed());
+        EXPECT_EQ(dumped_wind_sensors.direction(), expected_wind_sensors.direction());
     }
+}
+
+/**
+ * @brief Check that MongoDB is running
+ */
+TEST_F(TestSailbotDB, TestConnection)
+{
+    ASSERT_TRUE(g_test_db.testConnection()) << "MongoDB not running - remember to connect!";
+}
+
+/**
+ * @brief Write random sensor data to the TestDB - read and verify said data
+ */
+TEST_F(TestSailbotDB, TestStoreSensors)
+{
+    SCOPED_TRACE("Seed: " + std::to_string(g_rand_seed));  // Print seed on any failure
+    auto [rand_sensors, randInfo] = genRandData();
+    ASSERT_TRUE(g_test_db.storeNewSensors(rand_sensors, randInfo));
+
+    verifyDBWrite(rand_sensors, randInfo);
+}
+
+class TestRemoteTransceiver : public ::testing::Test
+{
+protected:
+    static bio::io_context * io_;
+    static tcp::acceptor *   acceptor_;
+    static tcp::socket *     socket_;
+    static std::thread *     io_thread_;
+
+    static void SetUpTestSuite()
+    {
+        io_       = new bio::io_context;
+        acceptor_ = new tcp::acceptor{*io_, {bio::ip::make_address(TESTING_HOST), TESTING_PORT}};
+        socket_   = new tcp::socket{*io_};
+
+        HTTPServer::runServer(*acceptor_, *socket_, g_test_db);
+
+        io_thread_ = new std::thread([]() { io_->run(); });
+    }
+
+    static void TearDownTestSuite()
+    {
+        io_->stop();
+        io_thread_->join();
+
+        delete io_;
+        delete acceptor_;
+        delete socket_;
+        delete io_thread_;
+    }
+
+    TestRemoteTransceiver() { g_test_db.cleanDB(); }
+
+    ~TestRemoteTransceiver() override {}
+};
+
+bio::io_context * TestRemoteTransceiver::io_        = nullptr;
+tcp::acceptor *   TestRemoteTransceiver::acceptor_  = nullptr;
+tcp::socket *     TestRemoteTransceiver::socket_    = nullptr;
+std::thread *     TestRemoteTransceiver::io_thread_ = nullptr;
+
+TEST_F(TestRemoteTransceiver, TestGet)
+{
+    auto [status, result] = http_client::get(TESTING_HOST, std::to_string(TESTING_PORT), "/");
+    EXPECT_EQ(status, http::status::ok);
+    EXPECT_EQ(result, "PLACEHOLDER\r\n");
+}
+
+TEST_F(TestRemoteTransceiver, TestPost)
+{
+    SCOPED_TRACE("Seed: " + std::to_string(g_rand_seed));  // Print seed on any failure
+    auto [rand_sensors, randInfo] = genRandData();
 }
