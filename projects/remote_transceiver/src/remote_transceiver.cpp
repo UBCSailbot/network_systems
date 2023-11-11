@@ -2,16 +2,12 @@
 
 #include <boost/algorithm/string.hpp>
 #include <boost/asio.hpp>
-#include <boost/asio/io_context.hpp>
-#include <boost/asio/ip/address.hpp>
 #include <boost/beast.hpp>
 #include <boost/beast/core/buffers_to_string.hpp>
 #include <boost/beast/core/error.hpp>
 #include <boost/beast/core/flat_buffer.hpp>
 #include <boost/beast/core/string_type.hpp>
 #include <boost/beast/http.hpp>
-#include <boost/beast/http/field.hpp>
-#include <boost/beast/http/write.hpp>
 #include <boost/core/ignore_unused.hpp>
 #include <iostream>
 #include <memory>
@@ -19,6 +15,7 @@
 
 #include "cmn_hdrs/shared_constants.h"
 #include "sailbot_db.h"
+#include "sensors.pb.h"
 
 namespace beast = boost::beast;
 namespace http  = beast::http;
@@ -28,17 +25,16 @@ using tcp       = boost::asio::ip::tcp;
 class HTTPServer : public std::enable_shared_from_this<HTTPServer>
 {
 public:
-    explicit HTTPServer(tcp::socket socket) : socket_(std::move(socket)) {}
+    explicit HTTPServer(tcp::socket socket, SailbotDB db) : socket_(std::move(socket)), db_(std::move(db)) {}
     void run() { readReq(); }
 
 private:
     struct MOMsgParams
     {
-        uint64_t imei_;
-        uint32_t serial_;  // Don't know the max size
-        uint16_t momsn_;
-        // Date and time. Ex: "21-10-31 10:41:50" - make Date and Time objects if we end up needing this.
-        std::string transmit_time_;
+        uint64_t    imei_;
+        uint32_t    serial_;  // Don't know the max size
+        uint16_t    momsn_;
+        std::string transmit_time_;  // UTC date and time. Ex: "21-10-31 10:41:50"
         float       lat_;
         float       lon_;
         uint32_t    cep_;   // estimate of the accuracy (in km) of the reported lat_ lon_ fields
@@ -79,12 +75,14 @@ private:
     tcp::socket                        socket_;
     http::request<http::dynamic_body>  req_;
     http::response<http::dynamic_body> res_;
+    SailbotDB                          db_;
 
     void readReq()
     {
-        http::async_read(socket_, buf_, req_, [this](beast::error_code ec, std::size_t /*bytesTransferred*/) {
-            if (!ec) {
-                processReq();
+        std::shared_ptr<HTTPServer> self = shared_from_this();
+        http::async_read(socket_, buf_, req_, [self](beast::error_code e, std::size_t /*bytesTransferred*/) {
+            if (!e) {
+                self->processReq();
             }
         });
     }
@@ -99,60 +97,100 @@ private:
                 doPost();
                 break;
             case http::verb::get:
-            default:;
+                doGet();
+                break;
+            default:
+                doBadReq();
         }
+        writeRes();
+    }
+
+    void doBadReq()
+    {
+        res_.result(http::status::bad_request);
+        res_.set(http::field::content_type, "text/plain");
+        beast::ostream(res_.body()) << "Invalid request method: " << req_.method_string();
     }
 
     // https://docs.rockblock.rock7.com/reference/receiving-mo-messages-via-http-webhook
-    // IMPORTANT: Have 3 seconds to send HTTP status 200
+    // IMPORTANT: Have 3 seconds to send HTTP status 200, so do not process data on same thread before responding
     void doPost()
     {
         beast::string_view content_type = req_["content-type"];
         if (content_type == "application/x-www-form-urlencoded") {
             res_.result(http::status::ok);
-            writeRes();  // non-blocking
-            std::string query_string = beast::buffers_to_string(req_.body().data());
-            MOMsgParams params       = MOMsgParams(query_string);
+            std::shared_ptr<HTTPServer> self = shared_from_this();
+            std::thread                 post_thread([self]() {
+                std::string query_string = beast::buffers_to_string(self->req_.body().data());
+                MOMsgParams params       = MOMsgParams(query_string);
+                if (!params.data_.empty()) {
+                    Polaris::Sensors       sensors;
+                    SailbotDB::RcvdMsgInfo info = {params.lat_, params.lon_, params.cep_, params.transmit_time_};
+                    sensors.ParseFromString(params.data_);
+                    if (!self->db_.storeNewSensors(sensors, info)) {
+                        std::cerr << "Error, failed to store data received from:\n" << info << std::endl;
+                    };
+                }
+            });
+            post_thread.detach();
+        } else {
+            res_.result(http::status::unsupported_media_type);
+            res_.set(http::field::content_type, "text/plain");
+            beast::ostream(res_.body()) << "Server does not support POST requests of type: " << content_type;
         }
+    }
+
+    void doGet()
+    {
+        res_.result(http::status::ok);
+        res_.set(http::field::server, "Sailbot Remote Transceiver");
+        res_.set(http::field::content_type, "text/plain");
+        beast::ostream(res_.body()) << "PLACEHOLDER\r\n";
     }
 
     void writeRes()
     {
-        http::async_write(socket_, res_, [this](beast::error_code ec, std::size_t /*bytesWritten*/) {
-            socket_.shutdown(tcp::socket::shutdown_send, ec);
+        res_.set(http::field::content_length, std::to_string(res_.body().size()));
+
+        std::shared_ptr<HTTPServer> self = shared_from_this();
+        http::async_write(socket_, res_, [self](beast::error_code e, std::size_t /*bytesWritten*/) {
+            self->socket_.shutdown(tcp::socket::shutdown_send, e);
         });
     }
 };
 
-void listen(tcp::acceptor & acceptor, tcp::socket & socket)
+void listen(tcp::acceptor & acceptor, tcp::socket & socket, SailbotDB & db)
 {
-    acceptor.async_accept(socket, [&](beast::error_code ec) {
-        if (!ec) {
-            std::make_shared<HTTPServer>(std::move(socket))->run();
+    acceptor.async_accept(socket, [&](beast::error_code e) {
+        if (!e) {
+            std::make_shared<HTTPServer>(std::move(socket), std::move(db))->run();
         }
-        listen(acceptor, socket);
+        listen(acceptor, socket, db);
     });
 }
 
 int main()
 {
     // TODO(): Run parameters not clearly defined yet.
-    // will need to switch "admin" with the relevant db and
-    // make the connection string an input parameter to differentiate
-    // between local testing and deployment at runtime
-    SailbotDB sailbot_db("admin", "mongodb://localhost:27017");
+    // will need to switch "admin" with the relevant db
+    SailbotDB sailbot_db("admin", MONGODB_CONN_STR);
     if (!sailbot_db.testConnection()) {
         std::cout << "Failed to connect to database, exiting" << std::endl;
         return -1;
     }
 
-    bio::ip::address address = bio::ip::make_address("127.0.0.1");
-    const uint32_t   port    = 8081;
-    bio::io_context  io;
-    tcp::acceptor    acceptor{io, {address, port}};
-    tcp::socket      socket{io};
+    static const std::string TESTING_ADDR = "127.0.0.1";
+    constexpr uint32_t       TESTING_PORT = 8081;
 
-    listen(acceptor, socket);
+    // TODO(): Need to distinguish between test and deployment address + port
+    bio::ip::address addr = bio::ip::make_address(TESTING_ADDR);
+    const uint32_t   port = TESTING_PORT;
+
+    bio::io_context io;
+    tcp::acceptor   acceptor{io, {addr, port}};
+    tcp::socket     socket{io};
+
+    listen(acceptor, socket, sailbot_db);
 
     io.run();
 
