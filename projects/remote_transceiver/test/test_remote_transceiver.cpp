@@ -25,6 +25,8 @@ constexpr int NUM_PATH_WAYPOINTS  = 5;   // arbitrary number
 
 using Polaris::Sensors;
 using remote_transceiver::HTTPServer;
+using remote_transceiver::TESTING_HOST;
+using remote_transceiver::TESTING_PORT;
 namespace http_client = remote_transceiver::http_client;
 
 //Child class of SailbotDB that includes additional database utility functions to help testing
@@ -311,6 +313,11 @@ Sensors genRandSensors()
     return sensors;
 }
 
+/**
+ * @brief Generate random sensors and Iridium msg info
+ *
+ * @return std::pair<Sensors, SailbotDB::RcvdMsgInfo>
+ */
 std::pair<Sensors, SailbotDB::RcvdMsgInfo> genRandData()
 {
     Sensors                rand_sensors = genRandSensors();
@@ -323,6 +330,12 @@ std::pair<Sensors, SailbotDB::RcvdMsgInfo> genRandData()
     return {rand_sensors, randInfo};
 }
 
+/**
+ * @brief Query the database and check that the sensor and message are correct
+ *
+ * @param expected_sensors
+ * @param expected_msg_info
+ */
 void verifyDBWrite(Sensors expected_sensors, SailbotDB::RcvdMsgInfo expected_msg_info)
 {
     auto [dumped_sensors, dumped_timestamp] = g_test_db.dumpSensors();
@@ -406,8 +419,10 @@ TEST_F(TestSailbotDB, TestStoreSensors)
 class TestHTTP : public ::testing::Test
 {
 protected:
-    static constexpr int WAIT_SECONDS = 3;
+    // Need to wait after receiving an HTTP response from the server
+    static constexpr auto WAIT_AFTER_RES = std::chrono::milliseconds(20);
 
+    // Network objects that are shared amongst all HTTP test suites
     static bio::io_context * io_;
     static tcp::acceptor *   acceptor_;
     static tcp::socket *     socket_;
@@ -443,19 +458,32 @@ protected:
     ~TestHTTP() override {}
 };
 
+// Initialize static objects
 bio::io_context * TestHTTP::io_        = nullptr;
 tcp::acceptor *   TestHTTP::acceptor_  = nullptr;
 tcp::socket *     TestHTTP::socket_    = nullptr;
 std::thread *     TestHTTP::io_thread_ = nullptr;
 SailbotDB *       TestHTTP::server_db_ = nullptr;
 
+/**
+ * @brief Test HTTP GET request sending and handling. Currently just retrieves a placeholder string.
+ *
+ */
 TEST_F(TestHTTP, TestGet)
 {
-    auto [status, result] = http_client::get({TESTING_HOST, std::to_string(TESTING_PORT), "/"});
+    auto [status, result] =
+      http_client::get({TESTING_HOST, std::to_string(TESTING_PORT), remote_transceiver::targets::ROOT});
     EXPECT_EQ(status, http::status::ok);
     EXPECT_EQ(result, "PLACEHOLDER\r\n");
 }
 
+/**
+ * @brief Create a formatted string that matches the body of POST requests from Iridium
+ *        https://docs.rockblock.rock7.com/reference/receiving-mo-messages-via-http-webhook
+ *
+ * @param params Params structure
+ * @return formatted request body
+ */
 std::string createPostBody(remote_transceiver::MOMsgParams::Params params)
 {
     std::ostringstream s;
@@ -465,7 +493,11 @@ std::string createPostBody(remote_transceiver::MOMsgParams::Params params)
     return s.str();
 }
 
-TEST_F(TestHTTP, TestPost)
+/**
+ * @brief Test that we can POST sensor data to the server
+ *
+ */
+TEST_F(TestHTTP, TestPostSensors)
 {
     SCOPED_TRACE("Seed: " + std::to_string(g_rand_seed));  // Print seed on any failure
     auto [rand_sensors, randInfo] = genRandData();
@@ -474,6 +506,7 @@ TEST_F(TestHTTP, TestPost)
     ASSERT_TRUE(rand_sensors.SerializeToString(&rand_sensors_str));
     Polaris::Sensors test;
     test.ParseFromString(rand_sensors_str);
+    // This query is comprised entirely of arbitrary values exccept for .data_
     std::string query = createPostBody(
       {.imei_          = 0,
        .serial_        = 0,
@@ -483,10 +516,11 @@ TEST_F(TestHTTP, TestPost)
        .lon_           = 0.0,
        .cep_           = 1,
        .data_          = rand_sensors_str});
-    http::status status =
-      http_client::post({TESTING_HOST, std::to_string(TESTING_PORT), "/"}, "application/x-www-form-urlencoded", query);
+    http::status status = http_client::post(
+      {TESTING_HOST, std::to_string(TESTING_PORT), remote_transceiver::targets::SENSORS},
+      "application/x-www-form-urlencoded", query);
 
     EXPECT_EQ(status, http::status::ok);
-    std::this_thread::sleep_for(std::chrono::seconds(WAIT_SECONDS));
+    std::this_thread::sleep_for(WAIT_AFTER_RES);
     verifyDBWrite(rand_sensors, {.lat_ = 0.0, .lon_ = 0.0, .cep_ = 1, .timestamp_ = ""});
 }

@@ -57,7 +57,6 @@ bool SailbotDB::storeNewSensors(const Sensors & sensors_pb, RcvdMsgInfo new_info
 }
 
 // END PUBLIC
-// END PROTECTED
 
 // PRIVATE
 

@@ -14,8 +14,8 @@ int main()
     }
 
     // TODO(): Need to distinguish between test and deployment address + port
-    bio::ip::address addr = bio::ip::make_address(TESTING_HOST);
-    const uint32_t   port = TESTING_PORT;
+    bio::ip::address addr = bio::ip::make_address(remote_transceiver::TESTING_HOST);
+    const uint32_t   port = remote_transceiver::TESTING_PORT;
 
     bio::io_context io;
     tcp::acceptor   acceptor{io, {addr, port}};
