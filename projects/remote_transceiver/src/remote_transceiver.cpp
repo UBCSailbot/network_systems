@@ -49,7 +49,7 @@ remote_transceiver::MOMsgParams::MOMsgParams(const std::string & query_string)
     params_.lon_           = std::stof(split_strings[LON_IDX]);
     params_.cep_           = std::stoi(split_strings[CEP_IDX]);
 }
-HTTPServer::HTTPServer(tcp::socket socket, SailbotDB db) : socket_(std::move(socket)), db_(std::move(db)) {}
+HTTPServer::HTTPServer(tcp::socket socket, SailbotDB db) : socket_(std::move(socket)), db_(db) {}
 
 void HTTPServer::run() { readReq(); }
 
@@ -57,7 +57,7 @@ void HTTPServer::runServer(tcp::acceptor & acceptor, tcp::socket & socket, Sailb
 {
     acceptor.async_accept(socket, [&](beast::error_code e) {
         if (!e) {
-            std::make_shared<HTTPServer>(std::move(socket), std::move(db))->run();
+            std::make_shared<HTTPServer>(std::move(socket), db)->run();
         }
         runServer(acceptor, socket, db);
     });
