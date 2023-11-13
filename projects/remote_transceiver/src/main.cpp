@@ -13,15 +13,21 @@ int main()
         return -1;
     }
 
-    // TODO(): Need to distinguish between test and deployment address + port
-    bio::ip::address addr = bio::ip::make_address(remote_transceiver::TESTING_HOST);
-    const uint32_t   port = remote_transceiver::TESTING_PORT;
-
     bio::io_context io;
-    tcp::acceptor   acceptor{io, {addr, port}};
-    tcp::socket     socket{io};
 
-    remote_transceiver::HTTPServer::runServer(acceptor, socket, sailbot_db);
+    try {
+        // TODO(): Need to distinguish between test and deployment address + port
+        bio::ip::address addr = bio::ip::make_address(remote_transceiver::TESTING_HOST);
+        const uint32_t   port = remote_transceiver::TESTING_PORT;
+        tcp::acceptor    acceptor{io, {addr, port}};
+        tcp::socket      socket{io};
+
+        remote_transceiver::HTTPServer::runServer(acceptor, socket, sailbot_db);
+    } catch (std::exception & e) {
+        std::cerr << "Failed to run remote transceiver" << std::endl;
+        std::cerr << e.what() << std::endl;
+        return -1;
+    }
 
     io.run();
 

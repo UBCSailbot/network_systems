@@ -60,9 +60,14 @@ public:
     }
 
     /**
+     * @brief Retrieve all sensors from the database
+     *
+     * @param num_docs expected number of documents for each collection, default 1
+     *
      * @return Sensors objects: gps, ais, generic, batteries, wind, local path
+     * @return timestamp
      */
-    std::pair<Sensors, std::string> dumpSensors()
+    std::pair<Sensors, std::string> dumpSensors(int num_docs = 1)
     {
         Sensors               sensors;
         std::string           timestamp;
@@ -72,7 +77,8 @@ public:
         // gps
         mongocxx::collection gps_coll = db[COLLECTION_GPS];
         mongocxx::cursor     gps_docs = gps_coll.find({});
-        EXPECT_EQ(gps_coll.count_documents({}), 1) << "Error: TestDB should only have one document per collection";
+        EXPECT_EQ(gps_coll.count_documents({}), num_docs)
+          << "Error: TestDB should only have " << num_docs << " documents per collection";
         Sensors::Gps *          gps     = sensors.mutable_gps();
         bsoncxx::document::view gps_doc = *(gps_docs.begin());
         gps->set_latitude(static_cast<float>(gps_doc["latitude"].get_double().value));
@@ -84,7 +90,8 @@ public:
         // ais ships
         mongocxx::collection ais_coll = db[COLLECTION_AIS_SHIPS];
         mongocxx::cursor     ais_docs = ais_coll.find({});
-        EXPECT_EQ(ais_coll.count_documents({}), 1) << "Error: TestDB should only have one document per collection";
+        EXPECT_EQ(ais_coll.count_documents({}), num_docs)
+          << "Error: TestDB should only have " << num_docs << " documents per collection";
         bsoncxx::document::view ais_ships_doc = *(ais_docs.begin());
         for (bsoncxx::array::element ais_ships_doc : ais_ships_doc["ships"].get_array().value) {
             Sensors::Ais * ais_ship = sensors.add_ais_ships();
@@ -104,7 +111,8 @@ public:
         // generic sensor
         mongocxx::collection generic_coll        = db[COLLECTION_DATA_SENSORS];
         mongocxx::cursor     generic_sensor_docs = generic_coll.find({});
-        EXPECT_EQ(generic_coll.count_documents({}), 1) << "Error: TestDB should only have one document per collection";
+        EXPECT_EQ(generic_coll.count_documents({}), num_docs)
+          << "Error: TestDB should only have " << num_docs << " documents per collection";
         bsoncxx::document::view generic_doc = *(generic_sensor_docs.begin());
         for (bsoncxx::array::element generic_doc : generic_doc["genericSensors"].get_array().value) {
             Sensors::Generic * generic = sensors.add_data_sensors();
@@ -117,8 +125,8 @@ public:
         // battery
         mongocxx::collection batteries_coll      = db[COLLECTION_BATTERIES];
         mongocxx::cursor     batteries_data_docs = batteries_coll.find({});
-        EXPECT_EQ(batteries_coll.count_documents({}), 1)
-          << "Error: TestDB should only have one document per collection";
+        EXPECT_EQ(batteries_coll.count_documents({}), num_docs)
+          << "Error: TestDB should only have " << num_docs << " documents per collection";
         bsoncxx::document::view batteries_doc = *(batteries_data_docs.begin());
         for (bsoncxx::array::element batteries_doc : batteries_doc["batteries"].get_array().value) {
             Sensors::Battery * battery = sensors.add_batteries();
@@ -132,7 +140,8 @@ public:
         // wind sensor
         mongocxx::collection wind_coll         = db[COLLECTION_WIND_SENSORS];
         mongocxx::cursor     wind_sensors_docs = wind_coll.find({});
-        EXPECT_EQ(wind_coll.count_documents({}), 1) << "Error: TestDB should only have one document per collection";
+        EXPECT_EQ(wind_coll.count_documents({}), num_docs)
+          << "Error: TestDB should only have " << num_docs << " documents per collection";
         bsoncxx::document::view wind_doc = *(wind_sensors_docs.begin());
         for (bsoncxx::array::element wind_doc : wind_doc["windSensors"].get_array().value) {
             Sensors::Wind * wind = sensors.add_wind_sensors();
@@ -145,7 +154,8 @@ public:
         // local path
         mongocxx::collection path_coll       = db[COLLECTION_LOCAL_PATH];
         mongocxx::cursor     local_path_docs = path_coll.find({});
-        EXPECT_EQ(path_coll.count_documents({}), 1) << "Error: Test DB should only have one document per collection";
+        EXPECT_EQ(path_coll.count_documents({}), num_docs)
+          << "Error: TestDB should only have " << num_docs << " documents per collection";
         bsoncxx::document::view path_doc = *(local_path_docs.begin());
         for (bsoncxx::array::element path_doc : path_doc["waypoints"].get_array().value) {
             Polaris::Waypoint * path = sensors.add_local_path_data();
@@ -335,10 +345,11 @@ std::pair<Sensors, SailbotDB::RcvdMsgInfo> genRandData()
  *
  * @param expected_sensors
  * @param expected_msg_info
+ * @param num_docs          Expected number of documents in each collection, default 1
  */
-void verifyDBWrite(Sensors expected_sensors, SailbotDB::RcvdMsgInfo expected_msg_info)
+void verifyDBWrite(Sensors expected_sensors, SailbotDB::RcvdMsgInfo expected_msg_info, int num_docs = 1)
 {
-    auto [dumped_sensors, dumped_timestamp] = g_test_db.dumpSensors();
+    auto [dumped_sensors, dumped_timestamp] = g_test_db.dumpSensors(num_docs);
 
     EXPECT_EQ(dumped_timestamp, expected_msg_info.timestamp_);
 
@@ -511,10 +522,10 @@ TEST_F(TestHTTP, TestPostSensors)
       {.imei_          = 0,
        .serial_        = 0,
        .momsn_         = 1,
-       .transmit_time_ = "",
-       .lat_           = 0.0,
-       .lon_           = 0.0,
-       .cep_           = 1,
+       .transmit_time_ = randInfo.timestamp_,
+       .lat_           = randInfo.lat_,
+       .lon_           = randInfo.lon_,
+       .cep_           = randInfo.cep_,
        .data_          = rand_sensors_str});
     http::status status = http_client::post(
       {TESTING_HOST, std::to_string(TESTING_PORT), remote_transceiver::targets::SENSORS},
@@ -522,5 +533,63 @@ TEST_F(TestHTTP, TestPostSensors)
 
     EXPECT_EQ(status, http::status::ok);
     std::this_thread::sleep_for(WAIT_AFTER_RES);
-    verifyDBWrite(rand_sensors, {.lat_ = 0.0, .lon_ = 0.0, .cep_ = 1, .timestamp_ = ""});
+    verifyDBWrite(rand_sensors, randInfo);
+}
+
+/**
+ * @brief Test that the server can multiple POST requests at once
+ *
+ */
+TEST_F(TestHTTP, TestPostSensorsMult)
+{
+    SCOPED_TRACE("Seed: " + std::to_string(g_rand_seed));  // Print seed on any failure
+
+    constexpr int                                                             NUM_REQS = 10;
+    std::array<std::string, NUM_REQS>                                         queries;
+    std::array<std::thread, NUM_REQS>                                         req_threads;
+    std::array<http::status, NUM_REQS>                                        res_statuses;
+    std::array<std::pair<Polaris::Sensors, SailbotDB::RcvdMsgInfo>, NUM_REQS> expected_values;
+
+    // Prepare all queries
+    for (int i = 0; i < NUM_REQS; i++) {
+        auto [rand_sensors, randInfo] = genRandData();
+        expected_values[i]            = {rand_sensors, randInfo};
+        std::string rand_sensors_str;
+        ASSERT_TRUE(rand_sensors.SerializeToString(&rand_sensors_str));
+        Polaris::Sensors test;
+        test.ParseFromString(rand_sensors_str);
+        // This query is comprised entirely of arbitrary values exccept for .data_
+        queries[i] = createPostBody(
+          {.imei_          = 0,
+           .serial_        = 0,
+           .momsn_         = 1,
+           .transmit_time_ = randInfo.timestamp_,
+           .lat_           = randInfo.lat_,
+           .lon_           = randInfo.lon_,
+           .cep_           = randInfo.cep_,
+           .data_          = rand_sensors_str});
+    }
+
+    // Send all requests at once
+    for (int i = 0; i < NUM_REQS; i++) {
+        req_threads[i] = std::thread([&queries, &res_statuses, i]() {
+            std::string query = queries[i];
+            res_statuses[i]   = http_client::post(
+                {TESTING_HOST, std::to_string(TESTING_PORT), remote_transceiver::targets::SENSORS},
+                "application/x-www-form-urlencoded", query);
+        });
+    }
+
+    // Wait for all requests to finish
+    for (int i = 0; i < NUM_REQS; i++) {
+        req_threads[i].join();
+        EXPECT_EQ(res_statuses[i], http::status::ok);
+    }
+    std::this_thread::sleep_for(WAIT_AFTER_RES);
+
+    // Check that DB is updated properly for all requests
+    for (int i = 0; i < NUM_REQS; i++) {
+        auto [expected_sensors, expected_info] = expected_values[i];
+        verifyDBWrite(expected_sensors, expected_info, NUM_REQS);
+    }
 }
