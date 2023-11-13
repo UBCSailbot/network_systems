@@ -85,7 +85,7 @@ public:
     void doAccept();
 
     /**
-     * @brief Run an HTTPServer
+     * @brief Asynchronously run an HTTPServer
      *
      * @param acceptor TCP acceptor
      * @param socket   TCP socket
