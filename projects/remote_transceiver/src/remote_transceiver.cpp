@@ -32,9 +32,6 @@ remote_transceiver::MOMsgParams::MOMsgParams(const std::string & query_string)
     std::string iridium_mdata = query_string.substr(0, data_key_idx);
     params_.data_             = query_string.substr(data_key_idx + DATA_KEY.size(), query_string.size());
 
-    std::vector<std::string> split_strings;
-    boost::algorithm::split(split_strings, iridium_mdata, boost::is_any_of("?=&"));
-
     constexpr uint8_t IMEI_IDX   = 1;
     constexpr uint8_t SERIAL_IDX = 3;
     constexpr uint8_t MOMSN_IDX  = 5;
@@ -42,6 +39,9 @@ remote_transceiver::MOMsgParams::MOMsgParams(const std::string & query_string)
     constexpr uint8_t LAT_IDX    = 9;
     constexpr uint8_t LON_IDX    = 11;
     constexpr uint8_t CEP_IDX    = 13;
+
+    std::vector<std::string> split_strings(CEP_IDX + 1);  // Minimally sized vector is size CEP_IDX + 1
+    boost::algorithm::split(split_strings, iridium_mdata, boost::is_any_of("?=&"));
 
     params_.imei_          = std::stoi(split_strings[IMEI_IDX]);
     params_.serial_        = std::stoi(split_strings[SERIAL_IDX]);

@@ -102,7 +102,7 @@ const std::string MONGODB_CONN_STR        = "mongodb://localhost:27017";
 
 template <typename T>
 using ProtoList = google::protobuf::RepeatedPtrField<T>;
-using DocVal    = bsoncxx::document::value;
+using DocVal    = bsoncxx::document::view_or_value;
 
 /**
  * Thread-safe class that encapsulates a Sailbot MongoDB database
