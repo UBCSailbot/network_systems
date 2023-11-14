@@ -18,7 +18,7 @@ jobs:
   test-definitions:
     # sailbot_workspace: use locally-defined file
     # other repositories: set to UBCSailbot/sailbot_workspace/.github/workflows/test_definitions.yml@<release>
-    uses: UBCSailbot/sailbot_workspace/.github/workflows/test_definitions.yml@v1.4.5
+    uses: UBCSailbot/sailbot_workspace/.github/workflows/test_definitions.yml@v1.5.1
     # see https://github.com/UBCSailbot/sailbot_workspace/blob/main/.github/workflows/test_definitions.yml
     # for documentation on the inputs and secrets below
     with:
@@ -30,4 +30,4 @@ jobs:
     # 1. Create the repository secret PAT_TOKEN (copy from Bitwarden)
     # 2. Uncomment the 2 lines below
     secrets:
-      gh-token: ${{ secrets.PAT_TOKEN }}
+      PAT_TOKEN: ${{ secrets.PAT_TOKEN }}
