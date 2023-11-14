@@ -51,6 +51,7 @@
 //       latitude: decimal,
 //       longitude: decimal,
 //       cog: decimal,
+//       rot: decimal,
 //       sog: decimal,
 //       width: decimal,
 //       length: decimal
