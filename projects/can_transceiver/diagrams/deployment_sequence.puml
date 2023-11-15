@@ -1,0 +1,13 @@
+@startuml Deployment Sequence
+
+title Deployment Sequence
+
+!includesub common_sequence.puml!PARTICIPANTS
+
+-> can : Sensors from ELEC [CAN]
+
+!includesub common_sequence.puml!SEQUENCE
+
+<- can -- : Transmit Command(s) to ELEC [CAN]
+
+@enduml
