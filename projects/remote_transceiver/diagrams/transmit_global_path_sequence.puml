@@ -18,7 +18,11 @@ end
 loop For Each Waypoint Message
     server --> handler ++ : Transmit Waypoints
     <- handler -- : POST Waypoints to Iridium
-    deactivate server
+    note over handler, server
+        To prevent out of order transmissions, POSTING
+        to Iridium should be a blocking operation.
+    end note
 end
+deactivate server
 
 @enduml
