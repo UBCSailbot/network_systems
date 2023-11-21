@@ -1,6 +1,9 @@
 @startuml Deployment Sequence
-
 title Deployment Sequence
+
+!include %getenv("PLANTUML_TEMPLATE_PATH")
+
+autonumber
 
 !includesub common_sequence.puml!PARTICIPANTS
 

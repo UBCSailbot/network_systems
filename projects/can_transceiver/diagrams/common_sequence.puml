@@ -1,18 +1,11 @@
 @startuml Common Sequence
 title Common Sequence
 
-!startsub PARTICIPANTS
-' TODO: Move parameters to a general template
-autonumber
-!$MAX_MESSAGE_SIZE = 100
-skinparam {
-    BoxPadding 10
-    MaxMessageSize $MAX_MESSAGE_SIZE
-    ParticipantPadding 20
-    SequenceMessageAlign center
-    wrapWidth $MAX_MESSAGE_SIZE
-}
+!include %getenv("PLANTUML_TEMPLATE_PATH")
 
+autonumber
+
+!startsub PARTICIPANTS
 box "Common Sequence"
 participant CanTransceiver as can
 participant CanTransceiverRosIntf as ros_intf

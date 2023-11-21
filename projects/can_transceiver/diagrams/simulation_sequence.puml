@@ -1,6 +1,9 @@
 @startuml Simulation Sequence
-
 title Simulation Sequence
+
+!include %getenv("PLANTUML_TEMPLATE_PATH")
+
+autonumber
 
 box "Simulation Sequence"
 participant CanSimIntf as sim_intf
