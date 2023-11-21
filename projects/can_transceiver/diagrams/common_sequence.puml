@@ -1,5 +1,5 @@
 @startuml Common Sequence
-title Common Sequence
+title Local Transceiver Common Sequence
 
 !include %getenv("PLANTUML_TEMPLATE_PATH")
 

@@ -1,5 +1,5 @@
 @startuml Deployment Sequence
-title Deployment Sequence
+title Local Transceiver Deployment Sequence
 
 !include %getenv("PLANTUML_TEMPLATE_PATH")
 

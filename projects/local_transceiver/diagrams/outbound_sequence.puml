@@ -1,8 +1,8 @@
 @startuml Outbound Sequence
-title Outbound Sequence
+title Local Transceiver Outbound Sequence
 
 !include %getenv("PLANTUML_TEMPLATE_PATH")
-!include participants.puml
+!include common.puml
 
 autonumber
 

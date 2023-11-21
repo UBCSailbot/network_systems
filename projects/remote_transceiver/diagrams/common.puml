@@ -1,0 +1,15 @@
+@startuml common
+
+box Modules
+participant "HTTP Handler" as handler
+participant "HTTP Server" as server
+participant SailbotDB as db
+end box
+
+note over handler, server
+    Part of the same class. The handler is separated from the
+    server in the diagram to illustrate that the server does
+    not block on requests, and multiple can be handled simultaneously.
+end note
+
+@endmul
