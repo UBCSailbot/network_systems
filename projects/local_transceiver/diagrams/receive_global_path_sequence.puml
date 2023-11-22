@@ -1,5 +1,5 @@
-@startuml Inbound Sequence
-title Local Transceiver Inbound Sequence
+@startuml receive_global_path_sequence
+title Local Transceiver Receive Global Path Sequence
 
 !include %getenv("PLANTUML_TEMPLATE_PATH")
 !include common.puml

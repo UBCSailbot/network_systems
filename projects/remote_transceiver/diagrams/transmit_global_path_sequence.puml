@@ -1,4 +1,4 @@
-@startuml Transmit Global Path Sequence
+@startuml transmit_global_path_sequence
 title Remote Transceiver Transmit Global Path Sequence
 
 !include %getenv("PLANTUML_TEMPLATE_PATH")

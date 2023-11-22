@@ -1,5 +1,5 @@
-@startuml Outbound Sequence
-title Local Transceiver Outbound Sequence
+@startuml transmit_sensors_sequence
+title Local Transceiver Transmit Sensors Sequence
 
 !include %getenv("PLANTUML_TEMPLATE_PATH")
 !include common.puml

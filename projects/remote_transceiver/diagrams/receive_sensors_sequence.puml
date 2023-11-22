@@ -1,4 +1,4 @@
-@startuml Receive Sensors Sequence
+@startuml receive_sensors_sequence
 title Remote Transceiver Receive Sensors Sequence
 
 !include %getenv("PLANTUML_TEMPLATE_PATH")
