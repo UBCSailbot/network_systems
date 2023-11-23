@@ -1,5 +1,5 @@
 @startuml simulation_sequence
-title Local Transceiver Simulation Sequence
+title CAN Transceiver Simulation Sequence
 
 !include %getenv("PLANTUML_TEMPLATE_PATH")
 
