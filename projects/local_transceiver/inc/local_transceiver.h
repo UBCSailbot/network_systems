@@ -1,5 +1,6 @@
 #pragma once
 
+#include <custom_interfaces/msg/detail/gps__struct.hpp>
 #include <mutex>
 #include <string>
 
@@ -91,8 +92,7 @@ public:
      * @tparam T of type custom_interfaces::msg::T
      * @param sensor new sensor data
      */
-    template <typename T>
-    void onNewSensorData(T sensor);
+    void onNewSensorData(custom_interfaces::msg::GPS sensor);
 
     /**
      * @brief Send current data to the serial port and to the remote server
@@ -135,14 +135,6 @@ private:
     void send(const std::string & cmd);
 
     /**
-     * @brief Formats binary data to be sent to the satellite according to the AT command specification
-     *
-     * @param data data binary string to be sent
-     * @return Formatted message to be written to serial
-     */
-    static std::string createOutMsg(const std::string & data);
-
-    /**
      * @brief Parse the message received from the remote server
      *
      * @param msg message received from the remote server
@@ -164,4 +156,12 @@ private:
      * @return false if invalid
      */
     bool checkOK();
+
+    /**
+     * @brief Compute a checksum
+     *
+     * @param data data string
+     * @return checksum as a string
+     */
+    static std::string checksum(const std::string & data);
 };
