@@ -516,7 +516,6 @@ protected:
 
     static void SetUpTestSuite()
     {
-        // HTTPServer::runServer(acceptor_, socket_, server_db_);
         listener_.run();
 
         io_thread_ = std::thread([]() { io_.run(); });

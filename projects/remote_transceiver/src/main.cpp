@@ -9,7 +9,7 @@
 class RemoteTransceiverNode : public rclcpp::Node
 {
 public:
-    explicit RemoteTransceiverNode(bio::io_context & io) : Node("RemoteTransceiver"), io_(io)
+    RemoteTransceiverNode() : Node("remote_transceiver")
     {
         this->declare_parameter("db_name", "test");
         this->declare_parameter("host", remote_transceiver::TESTING_HOST);
@@ -30,7 +30,6 @@ public:
         }
 
         try {
-            bio::io_context  io_;
             bio::ip::address addr = bio::ip::make_address(host_param.as_string());
             const uint16_t   port = port_param.as_int();
 
@@ -40,7 +39,7 @@ public:
             listener_ = std::make_shared<remote_transceiver::Listener>(io_, std::move(acceptor), std::move(sailbot_db));
             listener_->run();
 
-            io_thread_ = std::thread(io_.run());
+            io_thread_ = std::thread([&io_ = io_]() { io_.run(); });
         } catch (std::exception & e) {
             std::string msg = "Failed to run HTTP Server\n";
             msg += std::string(e.what());
@@ -55,7 +54,7 @@ public:
     }
 
 private:
-    bio::io_context &                             io_;
+    bio::io_context                               io_;
     std::thread                                   io_thread_;
     std::shared_ptr<remote_transceiver::Listener> listener_;
 };
@@ -64,8 +63,7 @@ int main(int argc, char ** argv)
 {
     rclcpp::init(argc, argv);
     try {
-        bio::io_context io;
-        rclcpp::spin(std::make_shared<RemoteTransceiverNode>(io));
+        rclcpp::spin(std::make_shared<RemoteTransceiverNode>());
     } catch (std::runtime_error & e) {
         std::cerr << e.what() << std::endl;
         return -1;
