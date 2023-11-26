@@ -1,6 +1,8 @@
 #pragma once
 
 #include <boost/asio.hpp>
+#include <boost/asio/io_context.hpp>
+#include <boost/asio/strand.hpp>
 #include <boost/beast.hpp>
 #include <memory>
 
@@ -84,15 +86,6 @@ public:
      */
     void doAccept();
 
-    /**
-     * @brief Asynchronously run an HTTPServer
-     *
-     * @param acceptor TCP acceptor
-     * @param socket   TCP socket
-     * @param db       SailbotDB instance
-     */
-    static void runServer(tcp::acceptor & acceptor, tcp::socket & socket, SailbotDB & db);
-
 private:
     // Buffer to store request data. Double MAX_LOCAL_TO_REMOTE_PAYLOAD_SIZE_BYTES to have room for Iridium metadata
     beast::flat_buffer                 buf_{static_cast<std::size_t>(MAX_LOCAL_TO_REMOTE_PAYLOAD_SIZE_BYTES * 2)};
@@ -142,6 +135,18 @@ private:
      *
      */
     void writeRes();
+};
+
+class Listener : public std::enable_shared_from_this<Listener>
+{
+public:
+    explicit Listener(bio::io_context & io, tcp::acceptor acceptor, SailbotDB db);
+    void run();
+
+private:
+    bio::io_context & io_;
+    tcp::acceptor     acceptor_;
+    SailbotDB         db_;
 };
 
 namespace http_client

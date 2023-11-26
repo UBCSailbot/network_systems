@@ -34,6 +34,7 @@ constexpr int NUM_PATH_WAYPOINTS  = 5;   // arbitrary number
 
 using Polaris::Sensors;
 using remote_transceiver::HTTPServer;
+using remote_transceiver::Listener;
 using remote_transceiver::TESTING_HOST;
 using remote_transceiver::TESTING_PORT;
 namespace http_client = remote_transceiver::http_client;
@@ -506,34 +507,25 @@ protected:
     static constexpr auto WAIT_AFTER_RES = std::chrono::milliseconds(20);
 
     // Network objects that are shared amongst all HTTP test suites
-    static bio::io_context * io_;
-    static tcp::acceptor *   acceptor_;
-    static tcp::socket *     socket_;
-    static std::thread *     io_thread_;
-    static SailbotDB *       server_db_;
+    static bio::io_context io_;
+    static tcp::acceptor   acceptor_;
+    static tcp::socket     socket_;
+    static std::thread     io_thread_;
+    static SailbotDB       server_db_;
+    static ::Listener      listener_;
 
     static void SetUpTestSuite()
     {
-        io_        = new bio::io_context;
-        acceptor_  = new tcp::acceptor{*io_, {bio::ip::make_address(TESTING_HOST), TESTING_PORT}};
-        socket_    = new tcp::socket{*io_};
-        server_db_ = new TestDB();
+        // HTTPServer::runServer(acceptor_, socket_, server_db_);
+        listener_.run();
 
-        HTTPServer::runServer(*acceptor_, *socket_, *server_db_);
-
-        io_thread_ = new std::thread([]() { io_->run(); });
+        io_thread_ = std::thread([]() { io_.run(); });
     }
 
     static void TearDownTestSuite()
     {
-        io_->stop();
-        io_thread_->join();
-
-        delete io_;
-        delete acceptor_;
-        delete socket_;
-        delete io_thread_;
-        delete server_db_;
+        io_.stop();
+        io_thread_.join();
     }
 
     TestHTTP()
@@ -545,11 +537,12 @@ protected:
 };
 
 // Initialize static objects
-bio::io_context * TestHTTP::io_        = nullptr;
-tcp::acceptor *   TestHTTP::acceptor_  = nullptr;
-tcp::socket *     TestHTTP::socket_    = nullptr;
-std::thread *     TestHTTP::io_thread_ = nullptr;
-SailbotDB *       TestHTTP::server_db_ = nullptr;
+bio::io_context TestHTTP::io_        = bio::io_context{};
+tcp::acceptor   TestHTTP::acceptor_  = tcp::acceptor{io_, {bio::ip::make_address(TESTING_HOST), TESTING_PORT}};
+tcp::socket     TestHTTP::socket_    = tcp::socket{io_};
+std::thread     TestHTTP::io_thread_ = std::thread();
+SailbotDB       TestHTTP::server_db_ = TestDB();
+Listener        TestHTTP::listener_  = Listener(io_, std::move(acceptor_), std::move(server_db_));
 
 /**
  * @brief Test HTTP GET request sending and handling. Currently just retrieves a placeholder string.

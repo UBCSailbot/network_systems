@@ -25,7 +25,7 @@ set(bin_srcs
     ${CMAKE_CURRENT_LIST_DIR}/src/main.cpp
 )
 
-# Make executable (not ROS)
+# Make executable
 make_exe(${module} "${bin_srcs}" "${link_libs}" "${inc_dirs}" "${compile_defs}")
 
 # Create unit test

@@ -2,7 +2,10 @@
 
 #include <boost/algorithm/string.hpp>
 #include <boost/asio.hpp>
+#include <boost/asio/io_context.hpp>
+#include <boost/asio/strand.hpp>
 #include <boost/beast.hpp>
+#include <boost/beast/core/bind_handler.hpp>
 #include <boost/beast/core/buffers_to_string.hpp>
 #include <boost/beast/core/error.hpp>
 #include <boost/beast/core/flat_buffer.hpp>
@@ -20,6 +23,7 @@
 #include "sensors.pb.h"
 
 using remote_transceiver::HTTPServer;
+using remote_transceiver::Listener;
 namespace http_client = remote_transceiver::http_client;
 
 // PUBLIC
@@ -56,15 +60,18 @@ HTTPServer::HTTPServer(tcp::socket socket, SailbotDB db) : socket_(std::move(soc
 
 void HTTPServer::doAccept() { readReq(); }
 
-void HTTPServer::runServer(tcp::acceptor & acceptor, tcp::socket & socket, SailbotDB & db)
+Listener::Listener(bio::io_context & io, tcp::acceptor acceptor, SailbotDB db)
+: io_(io), acceptor_(std::move(acceptor)), db_(std::move(db)){};
+
+void Listener::run()
 {
-    acceptor.async_accept(socket, [&](beast::error_code e) {
+    acceptor_.async_accept(bio::make_strand(io_), [&](beast::error_code e, tcp::socket socket) {
         if (!e) {
-            std::make_shared<HTTPServer>(std::move(socket), db)->doAccept();
+            std::make_shared<HTTPServer>(std::move(socket), db_)->doAccept();
         } else {
             std::cerr << "Error: " << e.message() << std::endl;
         }
-        runServer(acceptor, socket, db);
+        run();
     });
 }
 
