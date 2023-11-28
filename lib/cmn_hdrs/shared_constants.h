@@ -1,8 +1,19 @@
 #pragma once
 
+#include <string>
+
+/**
+ * ROS argument value for system mode. An enum would be a better way of representing a binary choice between the two
+ * options, but since strings are not integral types they cannot be made into enums.
+ */
+namespace SYSTEM_MODE
+{
+static const std::string PROD = "production";
+static const std::string DEV  = "development";
+};  // namespace SYSTEM_MODE
+
 constexpr unsigned int MAX_LOCAL_TO_REMOTE_PAYLOAD_SIZE_BYTES = 270;
 constexpr unsigned int MAX_REMOTE_TO_LOCAL_PAYLOAD_SIZE_BYTES = 340;
-constexpr unsigned int SATELLITE_BAUD_RATE                    = 19200;
 
 constexpr int NUM_BATTERIES    = 2;
 constexpr int NUM_WIND_SENSORS = 2;
@@ -35,7 +46,6 @@ constexpr float VOLT_LBND    = 0.5;     // Placeholder number
 constexpr float VOLT_UBND    = 250.0;   // Placeholder number
 constexpr float CURRENT_LBND = -200.0;  // Placeholder number
 constexpr float CURRENT_UBND = 200.0;   // Placeholder number
-
 
 /***** Bounds for Wind Sensor ******/
 constexpr int DIRECTION_LBND = -180;

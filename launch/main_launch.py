@@ -67,6 +67,7 @@ def setup_launch(context: LaunchContext) -> List[Node]:
     """
     launch_description_entities = list()
     launch_description_entities.append(get_cached_fib_description(context))
+    launch_description_entities.append(get_remote_transceiver_description(context))
     return launch_description_entities
 
 
@@ -90,6 +91,37 @@ def get_cached_fib_description(context: LaunchContext) -> Node:
         package=PACKAGE_NAME,
         namespace="example",
         executable="example",
+        name=node_name,
+        parameters=ros_parameters,
+        ros_arguments=ros_arguments,
+    )
+
+    return node
+
+
+def get_remote_transceiver_description(context: LaunchContext) -> Node:
+    """Gets the launch description for the remote_transceiver node.
+
+    Args:
+        context (LaunchContext): The current launch context.
+
+    Returns:
+        Node: The node object that launches the cached_fib node.
+    """
+    node_name = "remote_transceiver"
+    ros_parameters = [
+        LaunchConfiguration("config").perform(context),
+        {"mode": LaunchConfiguration("mode")},
+    ]
+    ros_arguments: List[SomeSubstitutionsType] = [
+        "--log-level",
+        [f"{node_name}:=", LaunchConfiguration("log_level")],
+    ]
+
+    node = Node(
+        package=PACKAGE_NAME,
+        namespace="remote_transceiver",
+        executable="remote_transceiver",
         name=node_name,
         parameters=ros_parameters,
         ros_arguments=ros_arguments,
