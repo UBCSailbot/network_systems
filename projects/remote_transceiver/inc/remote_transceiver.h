@@ -84,7 +84,7 @@ public:
      * @param socket TCP socket
      * @param db     SailbotDB instance
      */
-    explicit HTTPServer(tcp::socket socket, SailbotDB db);
+    explicit HTTPServer(tcp::socket socket, SailbotDB & db);
 
     /**
      * @brief Process an accepted HTTP request
@@ -98,7 +98,7 @@ private:
     tcp::socket                        socket_;  // Socket the server is attached to
     http::request<http::dynamic_body>  req_;     // Current request the server is processing
     http::response<http::dynamic_body> res_;     // Server response
-    SailbotDB                          db_;      // SailbotDB instance
+    SailbotDB &                        db_;      // SailbotDB instance
 
     /**
      * @brief After accepting a request, read its contents into buf_
@@ -143,16 +143,32 @@ private:
     void writeRes();
 };
 
+/**
+ * Listener class to listen for and accept HTTP requests over TCP
+ *
+ */
 class Listener : public std::enable_shared_from_this<Listener>
 {
 public:
-    explicit Listener(bio::io_context & io, tcp::acceptor acceptor, SailbotDB db);
+    /**
+     * @brief Create a new Listener
+     *
+     * @param io       reference to io_context
+     * @param acceptor tcp::acceptor configured with desired host, port, and target
+     * @param db       SailbotDB instance - the Listener requires that it takes ownership of the db
+     */
+    Listener(bio::io_context & io, tcp::acceptor acceptor, SailbotDB && db);
+
+    /**
+     * @brief Run the Listener
+     *
+     */
     void run();
 
 private:
-    bio::io_context & io_;
-    tcp::acceptor     acceptor_;
-    SailbotDB         db_;
+    bio::io_context & io_;        // io_context used by this Listener
+    tcp::acceptor     acceptor_;  //tcp::acceptor configured with desired host, port, and target
+    SailbotDB         db_;        // SailbotDB attached to this Listener
 };
 
 namespace http_client

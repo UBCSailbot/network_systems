@@ -9,10 +9,10 @@
 #include "remote_transceiver.h"
 #include "sailbot_db.h"
 
-class RemoteTransceiverNode : public rclcpp::Node
+class RemoteTransceiverRosIntf : public rclcpp::Node
 {
 public:
-    RemoteTransceiverNode() : Node("remote_transceiver")
+    RemoteTransceiverRosIntf() : Node("remote_transceiver")
     {
         this->declare_parameter("mode", rclcpp::PARAMETER_STRING);
 
@@ -43,19 +43,15 @@ public:
         this->declare_parameter("port", default_port);
         this->declare_parameter("num_threads", default_num_threads);
 
-        std::string       db_name;
-        std::string       host;
-        int64_t           port;
-        int64_t           num_threads;
         rclcpp::Parameter db_name_param     = this->get_parameter("db_name");
         rclcpp::Parameter host_param        = this->get_parameter("host");
         rclcpp::Parameter port_param        = this->get_parameter("port");
         rclcpp::Parameter num_threads_param = this->get_parameter("num_threads");
 
-        db_name     = db_name_param.as_string();
-        host        = host_param.as_string();
-        port        = port_param.as_int();
-        num_threads = num_threads_param.as_int();
+        std::string db_name     = db_name_param.as_string();
+        std::string host        = host_param.as_string();
+        int64_t     port        = port_param.as_int();
+        int64_t     num_threads = num_threads_param.as_int();
 
         RCLCPP_INFO(
           this->get_logger(),
@@ -90,7 +86,7 @@ public:
         }
     }
 
-    ~RemoteTransceiverNode()
+    ~RemoteTransceiverRosIntf()
     {
         io_->stop();
         for (std::thread & io_thread : io_threads_) {
@@ -108,7 +104,7 @@ int main(int argc, char ** argv)
 {
     rclcpp::init(argc, argv);
     try {
-        rclcpp::spin(std::make_shared<RemoteTransceiverNode>());
+        rclcpp::spin(std::make_shared<RemoteTransceiverRosIntf>());
     } catch (std::runtime_error & e) {
         std::cerr << e.what() << std::endl;
         return -1;

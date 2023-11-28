@@ -56,11 +56,11 @@ remote_transceiver::MOMsgParams::MOMsgParams(const std::string & query_string)
     params_.cep_           = std::stoi(split_strings[CEP_IDX]);
 }
 
-HTTPServer::HTTPServer(tcp::socket socket, SailbotDB db) : socket_(std::move(socket)), db_(db) {}
+HTTPServer::HTTPServer(tcp::socket socket, SailbotDB & db) : socket_(std::move(socket)), db_(db) {}
 
 void HTTPServer::doAccept() { readReq(); }
 
-Listener::Listener(bio::io_context & io, tcp::acceptor acceptor, SailbotDB db)
+Listener::Listener(bio::io_context & io, tcp::acceptor acceptor, SailbotDB && db)
 : io_(io), acceptor_(std::move(acceptor)), db_(std::move(db)){};
 
 void Listener::run()
