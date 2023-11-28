@@ -503,28 +503,33 @@ TEST_F(TestSailbotDB, TestStoreSensors)
 class TestHTTP : public TestSailbotDB
 {
 protected:
+    static constexpr int NUM_THREADS = 4;
     // Need to wait after receiving an HTTP response from the server
     static constexpr auto WAIT_AFTER_RES = std::chrono::milliseconds(20);
 
     // Network objects that are shared amongst all HTTP test suites
-    static bio::io_context io_;
-    static tcp::acceptor   acceptor_;
-    static tcp::socket     socket_;
-    static std::thread     io_thread_;
-    static SailbotDB       server_db_;
-    static ::Listener      listener_;
+    static bio::io_context          io_;
+    static tcp::acceptor            acceptor_;
+    static tcp::socket              socket_;
+    static std::vector<std::thread> io_threads_;
+    static SailbotDB                server_db_;
+    static ::Listener               listener_;
 
     static void SetUpTestSuite()
     {
         listener_.run();
 
-        io_thread_ = std::thread([]() { io_.run(); });
+        for (std::thread & io_thread : io_threads_) {
+            io_thread = std::thread([]() { io_.run(); });
+        }
     }
 
     static void TearDownTestSuite()
     {
         io_.stop();
-        io_thread_.join();
+        for (std::thread & io_thread : io_threads_) {
+            io_thread.join();
+        }
     }
 
     TestHTTP()
@@ -536,12 +541,12 @@ protected:
 };
 
 // Initialize static objects
-bio::io_context TestHTTP::io_        = bio::io_context{};
-tcp::acceptor   TestHTTP::acceptor_  = tcp::acceptor{io_, {bio::ip::make_address(TESTING_HOST), TESTING_PORT}};
-tcp::socket     TestHTTP::socket_    = tcp::socket{io_};
-std::thread     TestHTTP::io_thread_ = std::thread();
-SailbotDB       TestHTTP::server_db_ = TestDB();
-Listener        TestHTTP::listener_  = Listener(io_, std::move(acceptor_), std::move(server_db_));
+bio::io_context TestHTTP::io_{TestHTTP::NUM_THREADS};
+tcp::acceptor   TestHTTP::acceptor_{io_, {bio::ip::make_address(TESTING_HOST), TESTING_PORT}};
+tcp::socket     TestHTTP::socket_{io_};
+std::vector     TestHTTP::io_threads_ = std::vector<std::thread>(NUM_THREADS);
+SailbotDB       TestHTTP::server_db_  = TestDB();
+Listener        TestHTTP::listener_   = Listener(io_, std::move(acceptor_), std::move(server_db_));
 
 /**
  * @brief Test HTTP GET request sending and handling. Currently just retrieves a placeholder string.

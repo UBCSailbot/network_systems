@@ -16,6 +16,7 @@ using tcp       = boost::asio::ip::tcp;
 
 namespace remote_transceiver
 {
+constexpr int DEFAULT_NUM_IO_THREADS = 2;  // Default number of HTTP requests that can be accepted in parallel
 
 // TESTING constants should match the webhook server endpoint info found in sailbot_workspace/run_virtual_iridium.sh
 static const std::string TESTING_HOST = "127.0.0.1";
