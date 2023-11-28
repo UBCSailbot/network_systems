@@ -6,7 +6,6 @@
 #include <boost/asio/streambuf.hpp>
 #include <boost/asio/write.hpp>
 #include <boost/system/error_code.hpp>
-#include <custom_interfaces/msg/detail/gps__struct.hpp>
 #include <exception>
 #include <mutex>
 #include <stdexcept>
@@ -134,19 +133,16 @@ void LocalTransceiver::send(const std::string & cmd) { bio::write(serial_, bio::
 
 std::string LocalTransceiver::parseInMsg(const std::string & msg)
 {
-    const std::string header = "AT+SBDWB=";
-    const std::string footer = "\r";
-
-    size_t headerPos = msg.find(header);
-    size_t footerPos = msg.find(footer);
-
-    std::string data = msg.substr(headerPos + header.size(), footerPos - headerPos - header.size());
-    return data;
+    //TODO(jma43): implement function
+    (void)msg;
+    return "placeholder";
 }
 
 std::string LocalTransceiver::readLine()
 {
     bio::streambuf buf;
+
+    // Caution: will hang if another proccess is reading from serial port
     bio::read_until(serial_, buf, AT::DELIMITER);
     return std::string(
       bio::buffers_begin(buf.data()), bio::buffers_begin(buf.data()) + static_cast<int64_t>(buf.data().size()));

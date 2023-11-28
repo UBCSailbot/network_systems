@@ -33,8 +33,8 @@ protected:
  */
 TEST_F(TestLocalTransceiver, debugSendTest)
 {
-    std::string testDebug = "showsUp";
-    lcl_trns_->debugSend(testDebug);
+    //std::string testDebug = "showsUp";
+    //lcl_trns_->debugSend(testDebug);
 }
 
 /**

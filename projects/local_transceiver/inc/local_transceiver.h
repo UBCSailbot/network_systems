@@ -1,6 +1,10 @@
 #pragma once
 
-#include <custom_interfaces/msg/detail/gps__struct.hpp>
+#include <custom_interfaces/msg/detail/ais_ships__struct.hpp>
+#include <custom_interfaces/msg/detail/batteries__struct.hpp>
+#include <custom_interfaces/msg/detail/generic_sensors__struct.hpp>
+#include <custom_interfaces/msg/detail/l_path_data__struct.hpp>
+#include <custom_interfaces/msg/detail/wind_sensors__struct.hpp>
 #include <mutex>
 #include <string>
 
@@ -45,7 +49,33 @@ class LocalTransceiver
          */
         void updateSensor(msg::AISShips ships);
 
-        // TODO(Jng468): Add other sensors
+        /**
+         * @brief Update the buffer with new Wind sensor data
+         *
+         * @param wind custom_interfaces WindSensors object
+         */
+        void updateSensor(msg::WindSensors wind);
+
+        /**
+         * @brief Update the buffer with new battery data
+         *
+         * @param battery custom_interfaces Batteries object
+         */
+        void updateSensor(msg::Batteries battery);
+
+        /**
+         * @brief Update the buffer with new generic sensor data
+         *
+         * @param generic custom_interfaces GenericSensors object
+         */
+        void updateSensor(msg::GenericSensors msg);
+
+        /**
+         * @brief Update the buffer with new local path data
+         *
+         * @param localData custom_interfaces LPathData object
+         */
+        void updateSensor(msg::LPathData localData);
 
         /**
          * @brief Get a copy of the sensors object
@@ -73,7 +103,6 @@ public:
      *
      * @note must call stop() to properly cleanup the object
      *
-     * @tparam T of type custom_interfaces::msg::T
      * @param sensor new sensor data
      */
     ~LocalTransceiver();
@@ -89,7 +118,6 @@ public:
     /**
      * @brief Callback function for when new sensor data is received from the ROS network on Polaris
      *
-     * @tparam T of type custom_interfaces::msg::T
      * @param sensor new sensor data
      */
     void onNewSensorData(custom_interfaces::msg::GPS sensor);

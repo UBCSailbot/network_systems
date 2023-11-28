@@ -1,4 +1,4 @@
-#include "sailbot_db.h"
+ #include "sailbot_db.h"
 
 #include <bsoncxx/builder/stream/helpers.hpp>
 #include <bsoncxx/json.hpp>
