@@ -1,3 +1,0 @@
-# ignore everything in the logs folder + subfolders except logs itself
-*
-!.gitignore
