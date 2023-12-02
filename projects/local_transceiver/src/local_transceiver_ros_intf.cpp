@@ -47,13 +47,19 @@ private:
      * @brief Callback function to publish to onboard ROS network
      *
      */
-    void pub_cb(/* placeholder */) {}
+    void pub_cb(/* placeholder */)
+    {
+        //TODO(jng468)
+    }
 
     /**
      * @brief Callback function to subscribe to the onboard ROS network
      *
      */
-    void sub_cb(std_msgs::msg::String /* placeholder */) {}
+    void sub_cb(std_msgs::msg::String /* placeholder */)
+    {
+        //TODO(jng468)
+    }
 };
 
 int main(int argc, char * argv[])

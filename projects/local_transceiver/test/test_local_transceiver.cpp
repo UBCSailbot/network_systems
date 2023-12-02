@@ -5,6 +5,7 @@
 #include "cmn_hdrs/shared_constants.h"
 #include "gtest/gtest.h"
 #include "local_transceiver.h"
+#include "sensors.pb.h"
 
 class TestLocalTransceiver : public ::testing::Test
 {
@@ -27,6 +28,28 @@ protected:
     LocalTransceiver * lcl_trns_;
 };
 
-TEST_F(TestLocalTransceiver, PlaceholderTest) { std::cout << "PLACEHOLDER" << std::endl; }
+/**
+ * @brief Verify debugSendTest sends something to the terminal
+ */
+TEST_F(TestLocalTransceiver, debugSendTest)
+{
+    //std::string testDebug = "showsUp";
+    //lcl_trns_->debugSend(testDebug);
+}
 
-TEST_F(TestLocalTransceiver, PlaceholderTest2) { std::cout << "PLACEHOLDER" << std::endl; }
+/**
+ * @brief Send a binary string to virtual_iridium and verify it is received
+ *        Uses gps custom interface
+ */
+TEST_F(TestLocalTransceiver, sendGpsTest)
+{
+    constexpr float holder = 14.3;
+
+    custom_interfaces::msg::GPS gps;
+    gps.heading.set__heading(holder);
+    gps.lat_lon.set__latitude(holder);
+    gps.lat_lon.set__longitude(holder);
+    gps.speed.set__speed(holder);
+    lcl_trns_->updateSensor(gps);
+    lcl_trns_->send();
+}

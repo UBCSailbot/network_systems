@@ -6,6 +6,14 @@
 #include <boost/asio/streambuf.hpp>
 #include <boost/asio/write.hpp>
 #include <boost/system/error_code.hpp>
+#include <custom_interfaces/msg/detail/batteries__struct.hpp>
+#include <custom_interfaces/msg/detail/generic_sensors__struct.hpp>
+#include <custom_interfaces/msg/detail/helper_battery__struct.hpp>
+#include <custom_interfaces/msg/detail/helper_generic_sensor__struct.hpp>
+#include <custom_interfaces/msg/detail/helper_lat_lon__struct.hpp>
+#include <custom_interfaces/msg/detail/l_path_data__struct.hpp>
+#include <custom_interfaces/msg/detail/path__struct.hpp>
+#include <custom_interfaces/msg/detail/wind_sensor__struct.hpp>
 #include <exception>
 #include <mutex>
 #include <stdexcept>
@@ -15,26 +23,28 @@
 #include "cmn_hdrs/ros_info.h"
 #include "cmn_hdrs/shared_constants.h"
 #include "custom_interfaces/msg/ais_ships.hpp"
+#include "custom_interfaces/msg/batteries.hpp"
+#include "custom_interfaces/msg/generic_sensors.hpp"
 #include "custom_interfaces/msg/gps.hpp"
+#include "custom_interfaces/msg/l_path_data.hpp"
+#include "custom_interfaces/msg/path.hpp"
+#include "custom_interfaces/msg/wind_sensor.hpp"
 #include "sensors.pb.h"
+#include "waypoint.pb.h"
 
 using Polaris::Sensors;
 namespace bio = boost::asio;
 
-LocalTransceiver::SensorBuf::SensorBuf(){};
-
-void LocalTransceiver::SensorBuf::updateSensor(msg::GPS gps)
+void LocalTransceiver::updateSensor(msg::GPS gps)
 {
-    std::lock_guard<std::mutex> lock(buf_mtx_);
     sensors_.mutable_gps()->set_heading(gps.heading.heading);
     sensors_.mutable_gps()->set_latitude(gps.lat_lon.latitude);
     sensors_.mutable_gps()->set_longitude(gps.lat_lon.longitude);
     sensors_.mutable_gps()->set_speed(gps.speed.speed);
 }
 
-void LocalTransceiver::SensorBuf::updateSensor(msg::AISShips ships)
+void LocalTransceiver::updateSensor(msg::AISShips ships)
 {
-    std::lock_guard<std::mutex> lock(buf_mtx_);
     sensors_.clear_ais_ships();
     for (const msg::HelperAISShip & ship : ships.ships) {
         Sensors::Ais * new_ship = sensors_.add_ais_ships();
@@ -49,11 +59,48 @@ void LocalTransceiver::SensorBuf::updateSensor(msg::AISShips ships)
     }
 }
 
-Sensors LocalTransceiver::SensorBuf::sensors()
+void LocalTransceiver::updateSensor(msg::WindSensors wind)
 {
-    std::lock_guard<std::mutex> lock(buf_mtx_);
-    return sensors_;
+    sensors_.clear_wind_sensors();
+    for (const msg::WindSensor & wind_data : wind.wind_sensors) {
+        Sensors::Wind * new_wind = sensors_.add_wind_sensors();
+        new_wind->set_direction(wind_data.direction);
+        new_wind->set_speed(wind_data.speed.speed);
+    }
 }
+
+void LocalTransceiver::updateSensor(msg::Batteries battery)
+{
+    sensors_.clear_batteries();
+    for (const msg::HelperBattery & battery_info : battery.batteries) {
+        Sensors::Battery * new_battery = sensors_.add_batteries();
+        new_battery->set_current(battery_info.current);
+        new_battery->set_voltage(battery_info.voltage);
+    }
+}
+
+void LocalTransceiver::updateSensor(msg::GenericSensors msg)
+{
+    sensors_.clear_data_sensors();
+    for (const msg::HelperGenericSensor & sensors_data : msg.generic_sensors) {
+        Sensors::Generic * new_sensor = sensors_.add_data_sensors();
+        new_sensor->set_data(sensors_data.data);
+        new_sensor->set_id(sensors_data.id);
+    }
+}
+
+void LocalTransceiver::updateSensor(msg::LPathData localData)
+{
+    sensors_.clear_local_path_data();
+    for (const msg::HelperLatLon & local_data : localData.local_path.waypoints) {
+        Sensors::Path *     new_local = sensors_.mutable_local_path_data();
+        Polaris::Waypoint * waypoint  = new_local->add_waypoints();
+        waypoint->set_latitude(local_data.latitude);
+        waypoint->set_longitude(local_data.longitude);
+    }
+}
+
+Sensors LocalTransceiver::sensors() { return sensors_; }
 
 LocalTransceiver::LocalTransceiver(const std::string & port_name, const uint32_t baud_rate) : serial_(io_, port_name)
 {
@@ -67,22 +114,16 @@ LocalTransceiver::~LocalTransceiver()
 
 void LocalTransceiver::stop()
 {
-    std::lock_guard<std::mutex> lock(serial_mtx_);
-    // TODO(Jng468): Flush the serial port
+    serial_.cancel();
     serial_.close();  // Can throw an exception so cannot be put in the destructor
-}
-
-template <typename T>
-void LocalTransceiver::onNewSensorData(T sensor)
-{
-    sensor_buf_.updateSensor(sensor);
 }
 
 bool LocalTransceiver::send()
 {
     std::string data;
     // Make sure to get a copy of the sensors because repeated calls may give us different results
-    Polaris::Sensors sensors = sensor_buf_.sensors();
+    Polaris::Sensors sensors = sensors_;
+
     if (!sensors.SerializeToString(&data)) {
         std::cerr << "Failed to serialize sensors string" << std::endl;
         std::cerr << sensors.DebugString() << std::endl;
@@ -98,14 +139,14 @@ bool LocalTransceiver::send()
           "No implementation to handle this!";
         throw std::length_error(err_string);
     }
-    std::string msg = createOutMsg(data);
-
-    std::lock_guard<std::mutex> lock(serial_mtx_);
 
     static constexpr int MAX_NUM_RETRIES = 20;
     for (int i = 0; i < MAX_NUM_RETRIES; i++) {
-        // TODO(Jng468): Send the binary data
-        send(msg);
+        std::string sbdwbCommand = "AT+SBDWB=" + std::to_string(data.size()) + "\r";
+        send(sbdwbCommand + data + "\r");
+
+        std::string checksumCommand = std::to_string(data.size()) + checksum(data) + "\r";
+        send(data + "+" + checksumCommand + "\r");
 
         // Check SBD Session status to see if data was sent successfully
         send(AT::SBD_SESSION);
@@ -128,39 +169,32 @@ bool LocalTransceiver::send()
 std::string LocalTransceiver::debugSend(const std::string & cmd)
 {
     send(cmd);
-    // TODO(Jng468): Get the output and return it
-    return "PLACEHOLDER";
+
+    std::string response = readLine();  // Read and capture the response
+    readLine();                         // Check if there is an empty line after respones
+    return response;
 }
 
 std::string LocalTransceiver::receive()
 {
-    // TODO(Jng468)
-    (void)serial_;  // Remove this line when implemented
-    std::string msg = "placeholder";
-    return msg;
+    std::string receivedData = readLine();
+    return receivedData;
 }
 
 void LocalTransceiver::send(const std::string & cmd) { bio::write(serial_, bio::buffer(cmd, cmd.size())); }
 
-std::string LocalTransceiver::createOutMsg(const std::string & data)
-{
-    // TODO(Jng468)
-    std::string msg = "Prepend command header + any others stuff" + data + " Append other stuff";
-    return msg;
-}
-
 std::string LocalTransceiver::parseInMsg(const std::string & msg)
 {
-    // TODO(Jng468)
+    //TODO(jng468): implement function
     (void)msg;
-    // Separate data from payload header and other formatting
-    std::string data = "placeholder";
-    return data;
+    return "placeholder";
 }
 
 std::string LocalTransceiver::readLine()
 {
     bio::streambuf buf;
+
+    // Caution: will hang if another proccess is reading from serial port
     bio::read_until(serial_, buf, AT::DELIMITER);
     return std::string(
       bio::buffers_begin(buf.data()), bio::buffers_begin(buf.data()) + static_cast<int64_t>(buf.data().size()));
@@ -170,4 +204,16 @@ bool LocalTransceiver::checkOK()
 {
     std::string status = readLine();
     return status == AT::STATUS_OK;
+}
+
+std::string LocalTransceiver::checksum(const std::string & data)
+{
+    uint16_t counter = 0;
+    for (char c : data) {
+        counter += static_cast<uint8_t>(c);
+    }
+
+    std::stringstream ss;
+    ss << std::hex << std::setw(4) << std::setfill('0') << counter;
+    return ss.str();
 }
