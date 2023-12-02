@@ -14,6 +14,7 @@ set(inc_dirs
 
 set(srcs
     ${CMAKE_CURRENT_LIST_DIR}/src/sailbot_db.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/src/remote_transceiver.cpp
 )
 
 set(compile_defs
@@ -21,7 +22,7 @@ set(compile_defs
 
 set(bin_srcs
     ${srcs}
-    ${CMAKE_CURRENT_LIST_DIR}/src/remote_transceiver.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/src/main.cpp
 )
 
 # Make executable (not ROS)

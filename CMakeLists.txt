@@ -45,6 +45,7 @@ endforeach()
 find_package(Boost 1.74.0 COMPONENTS REQUIRED
     # Insert desired libraries below (see /usr/include/boost/ for available options)
     serialization
+    system
     thread
 )
 

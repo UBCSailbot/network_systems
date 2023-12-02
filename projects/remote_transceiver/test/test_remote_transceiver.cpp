@@ -1,26 +1,47 @@
-#include <cstdint>
-#include <random>
+#include <gtest/gtest.h>
 
-#include "bsoncxx/builder/basic/document.hpp"
+#include <array>
+#include <boost/asio/io_context.hpp>
+#include <boost/asio/ip/address.hpp>
+#include <boost/beast/http/status.hpp>
+#include <bsoncxx/builder/basic/document.hpp>
+#include <bsoncxx/builder/stream/document.hpp>
+#include <bsoncxx/builder/stream/helpers.hpp>
+#include <bsoncxx/document/value.hpp>
+#include <bsoncxx/document/view.hpp>
+#include <chrono>
+#include <cstddef>
+#include <cstdint>
+#include <mongocxx/client.hpp>
+#include <mongocxx/collection.hpp>
+#include <mongocxx/cursor.hpp>
+#include <mongocxx/database.hpp>
+#include <mongocxx/options/find.hpp>
+#include <random>
+#include <span>
+#include <string>
+#include <thread>
+
 #include "cmn_hdrs/shared_constants.h"
-#include "gtest/gtest.h"
-#include "mongocxx/collection.hpp"
-#include "mongocxx/cursor.hpp"
+#include "remote_transceiver.h"
 #include "sailbot_db.h"
 #include "sensors.pb.h"
 
-static constexpr int  NUM_AIS_SHIPS       = 15;  // arbitrary number
-static constexpr int  NUM_GENERIC_SENSORS = 5;   //arbitrary number
-static constexpr int  NUM_PATH_WAYPOINTS  = 5;   //arbitrary number
-static constexpr auto MONGODB_CONN_STR    = "mongodb://localhost:27017";
+constexpr int NUM_AIS_SHIPS       = 15;  // arbitrary number
+constexpr int NUM_GENERIC_SENSORS = 5;   // arbitrary number
+constexpr int NUM_PATH_WAYPOINTS  = 5;   // arbitrary number
 
 using Polaris::Sensors;
+using remote_transceiver::HTTPServer;
+using remote_transceiver::TESTING_HOST;
+using remote_transceiver::TESTING_PORT;
+namespace http_client = remote_transceiver::http_client;
 
 //Child class of SailbotDB that includes additional database utility functions to help testing
 class TestDB : public SailbotDB
 {
 public:
-    static constexpr const char * TEST_DB = "test";
+    static constexpr auto TEST_DB = "test";
     TestDB() : SailbotDB(TEST_DB, MONGODB_CONN_STR) {}
 
     /**
@@ -28,111 +49,176 @@ public:
      */
     void cleanDB()
     {
-        mongocxx::collection gps_coll       = db_[COLLECTION_GPS];
-        mongocxx::collection ais_coll       = db_[COLLECTION_AIS_SHIPS];
-        mongocxx::collection generic_coll   = db_[COLLECTION_DATA_SENSORS];
-        mongocxx::collection batteries_coll = db_[COLLECTION_BATTERIES];
-        mongocxx::collection wind_coll      = db_[COLLECTION_WIND_SENSORS];
-        mongocxx::collection path_coll      = db_[COLLECTION_PATH];
+        mongocxx::pool::entry entry = pool_->acquire();
+        mongocxx::database    db    = (*entry)[db_name_];
+
+        mongocxx::collection gps_coll        = db[COLLECTION_GPS];
+        mongocxx::collection ais_coll        = db[COLLECTION_AIS_SHIPS];
+        mongocxx::collection generic_coll    = db[COLLECTION_DATA_SENSORS];
+        mongocxx::collection batteries_coll  = db[COLLECTION_BATTERIES];
+        mongocxx::collection wind_coll       = db[COLLECTION_WIND_SENSORS];
+        mongocxx::collection local_path_coll = db[COLLECTION_LOCAL_PATH];
 
         gps_coll.delete_many(bsoncxx::builder::basic::make_document());
         ais_coll.delete_many(bsoncxx::builder::basic::make_document());
         generic_coll.delete_many(bsoncxx::builder::basic::make_document());
         batteries_coll.delete_many(bsoncxx::builder::basic::make_document());
         wind_coll.delete_many(bsoncxx::builder::basic::make_document());
-        path_coll.delete_many(bsoncxx::builder::basic::make_document());
+        local_path_coll.delete_many(bsoncxx::builder::basic::make_document());
     }
 
     /**
-     * @return Sensors objects: gps, ais, generic, batteries, wind, path
+     * @brief Retrieve all sensors from the database sorted by timestamp
+     *
+     * @param num_docs expected number of documents for each collection, default 1
+     *
+     * @return Vector of sensors objects: gps, ais, generic, batteries, wind, local path
+     * @return Vector of timestamps
+     *         both vectors will be num_docs in size
      */
-    Sensors dumpSensors()
+    std::pair<std::vector<Sensors>, std::vector<std::string>> dumpSensors(size_t num_docs = 1)
     {
-        Sensors sensors;
-        // Protobuf handles freeing of dynamically allocated objects automatically
-        // NOLINTBEGIN(clang-analyzer-cplusplus.NewDeleteLeaks)
+        std::vector<Sensors>     sensors_vec(num_docs);
+        std::vector<std::string> timestamp_vec(num_docs);
+        mongocxx::pool::entry    entry = pool_->acquire();
+        mongocxx::database       db    = (*entry)[db_name_];
+        // Set the find options to sort by timestamp
+        bsoncxx::document::value order = bsoncxx::builder::stream::document{} << "timestamp" << 1
+                                                                              << bsoncxx::builder::stream::finalize;
+        mongocxx::options::find opts = mongocxx::options::find{};
+        opts.sort(order.view());
 
         // gps
-        mongocxx::collection gps_coll = db_[COLLECTION_GPS];
-        mongocxx::cursor     gps_docs = gps_coll.find({});
-        EXPECT_EQ(gps_coll.count_documents({}), 1) << "Error: TestDB should only have one document per collection";
-        Sensors::Gps * gps = new Sensors::Gps();
-        sensors.set_allocated_gps(gps);
-        bsoncxx::document::view gps_doc = *(gps_docs.begin());
-        gps->set_latitude(static_cast<float>(gps_doc["latitude"].get_double().value));
-        gps->set_longitude(static_cast<float>(gps_doc["longitude"].get_double().value));
-        gps->set_speed(static_cast<float>(gps_doc["speed"].get_double().value));
-        gps->set_heading(static_cast<float>(gps_doc["heading"].get_double().value));
+        mongocxx::collection gps_coll = db[COLLECTION_GPS];
+        mongocxx::cursor     gps_docs = gps_coll.find({}, opts);
+        EXPECT_EQ(gps_coll.count_documents({}), num_docs)
+          << "Error: TestDB should only have " << num_docs << " documents per collection";
+
+        for (auto [i, gps_docs_it] = std::tuple{size_t{0}, gps_docs.begin()}; i < num_docs; i++, gps_docs_it++) {
+            Sensors &                     sensors   = sensors_vec[i];
+            std::string &                 timestamp = timestamp_vec[i];
+            const bsoncxx::document::view gps_doc   = *gps_docs_it;
+
+            Sensors::Gps * gps = sensors.mutable_gps();
+            gps->set_latitude(static_cast<float>(gps_doc["latitude"].get_double().value));
+            gps->set_longitude(static_cast<float>(gps_doc["longitude"].get_double().value));
+            gps->set_speed(static_cast<float>(gps_doc["speed"].get_double().value));
+            gps->set_heading(static_cast<float>(gps_doc["heading"].get_double().value));
+            timestamp = gps_doc["timestamp"].get_utf8().value.to_string();
+        }
 
         // ais ships
-        mongocxx::collection ais_coll = db_[COLLECTION_AIS_SHIPS];
-        mongocxx::cursor     ais_docs = ais_coll.find({});
-        EXPECT_EQ(ais_coll.count_documents({}), 1) << "Error: TestDB should only have one document per collection";
-        bsoncxx::document::view ais_ships_doc = *(ais_docs.begin());
-        for (bsoncxx::array::element ais_ships_doc : ais_ships_doc["ais_ships"].get_array().value) {
-            Sensors::Ais * ais_ship = sensors.add_ais_ships();
-            ais_ship->set_id(static_cast<uint32_t>(ais_ships_doc["id"].get_int64().value));
-            ais_ship->set_latitude(static_cast<float>(ais_ships_doc["latitude"].get_double().value));
-            ais_ship->set_longitude(static_cast<float>(ais_ships_doc["longitude"].get_double().value));
-            ais_ship->set_sog(static_cast<float>(ais_ships_doc["sog"].get_double().value));
-            ais_ship->set_cog(static_cast<float>(ais_ships_doc["cog"].get_double().value));
-            ais_ship->set_rot(static_cast<float>(ais_ships_doc["rot"].get_double().value));
-            ais_ship->set_width(static_cast<float>(ais_ships_doc["width"].get_double().value));
-            ais_ship->set_length(static_cast<float>(ais_ships_doc["length"].get_double().value));
+        mongocxx::collection ais_coll = db[COLLECTION_AIS_SHIPS];
+        mongocxx::cursor     ais_docs = ais_coll.find({}, opts);
+        EXPECT_EQ(ais_coll.count_documents({}), num_docs)
+          << "Error: TestDB should only have " << num_docs << " documents per collection";
+
+        for (auto [i, ais_docs_it] = std::tuple{size_t{0}, ais_docs.begin()}; i < num_docs; i++, ais_docs_it++) {
+            Sensors &                     sensors       = sensors_vec[i];
+            const std::string &           timestamp     = timestamp_vec[i];
+            const bsoncxx::document::view ais_ships_doc = *ais_docs_it;
+
+            for (bsoncxx::array::element ais_ships_doc : ais_ships_doc["ships"].get_array().value) {
+                Sensors::Ais * ais_ship = sensors.add_ais_ships();
+                ais_ship->set_id(static_cast<uint32_t>(ais_ships_doc["id"].get_int64().value));
+                ais_ship->set_latitude(static_cast<float>(ais_ships_doc["latitude"].get_double().value));
+                ais_ship->set_longitude(static_cast<float>(ais_ships_doc["longitude"].get_double().value));
+                ais_ship->set_sog(static_cast<float>(ais_ships_doc["sog"].get_double().value));
+                ais_ship->set_cog(static_cast<float>(ais_ships_doc["cog"].get_double().value));
+                ais_ship->set_rot(static_cast<float>(ais_ships_doc["rot"].get_double().value));
+                ais_ship->set_width(static_cast<float>(ais_ships_doc["width"].get_double().value));
+                ais_ship->set_length(static_cast<float>(ais_ships_doc["length"].get_double().value));
+            }
+            EXPECT_EQ(sensors.ais_ships().size(), NUM_AIS_SHIPS) << "Size mismatch when reading AIS ships from DB";
+            EXPECT_EQ(ais_ships_doc["timestamp"].get_utf8().value.to_string(), timestamp)
+              << "Document timestamp mismatch";
         }
-        EXPECT_EQ(sensors.ais_ships().size(), NUM_AIS_SHIPS) << "Size mismatch when reading AIS ships from DB";
 
         // generic sensor
-        mongocxx::collection generic_coll       = db_[COLLECTION_DATA_SENSORS];
-        mongocxx::cursor     generic_sensor_doc = generic_coll.find({});
-        EXPECT_EQ(generic_coll.count_documents({}), 1) << "Error: TestDB should only have one document per collection";
-        bsoncxx::document::view generic_doc = *(generic_sensor_doc.begin());
-        for (bsoncxx::array::element generic_doc : generic_doc["data_sensors"].get_array().value) {
-            Sensors::Generic * generic = sensors.add_data_sensors();
-            generic->set_id(static_cast<uint8_t>(generic_doc["id"].get_int32().value));
-            generic->set_data(static_cast<uint64_t>(generic_doc["data"].get_int64().value));
+        mongocxx::collection generic_coll        = db[COLLECTION_DATA_SENSORS];
+        mongocxx::cursor     generic_sensor_docs = generic_coll.find({}, opts);
+        EXPECT_EQ(generic_coll.count_documents({}), num_docs)
+          << "Error: TestDB should only have " << num_docs << " documents per collection";
+
+        for (auto [i, generic_sensor_docs_it] = std::tuple{size_t{0}, generic_sensor_docs.begin()}; i < num_docs;
+             i++, generic_sensor_docs_it++) {
+            Sensors &                     sensors     = sensors_vec[i];
+            const std::string &           timestamp   = timestamp_vec[i];
+            const bsoncxx::document::view generic_doc = *generic_sensor_docs_it;
+
+            for (bsoncxx::array::element generic_doc : generic_doc["genericSensors"].get_array().value) {
+                Sensors::Generic * generic = sensors.add_data_sensors();
+                generic->set_id(static_cast<uint32_t>(generic_doc["id"].get_int64().value));
+                generic->set_data(static_cast<uint64_t>(generic_doc["data"].get_int64().value));
+            }
+            EXPECT_EQ(generic_doc["timestamp"].get_utf8().value.to_string(), timestamp)
+              << "Document timestamp mismatch";
         }
 
         // battery
-        mongocxx::collection batteries_coll     = db_[COLLECTION_BATTERIES];
-        mongocxx::cursor     batteries_data_doc = batteries_coll.find({});
-        EXPECT_EQ(batteries_coll.count_documents({}), 1)
-          << "Error: TestDB should only have one document per collection";
-        bsoncxx::document::view batteries_doc = *(batteries_data_doc.begin());
-        for (bsoncxx::array::element batteries_doc : batteries_doc["batteries"].get_array().value) {
-            Sensors::Battery * battery = sensors.add_batteries();
-            battery->set_voltage(static_cast<float>(batteries_doc["voltage"].get_double().value));
-            battery->set_current(static_cast<float>(batteries_doc["current"].get_double().value));
+        mongocxx::collection batteries_coll      = db[COLLECTION_BATTERIES];
+        mongocxx::cursor     batteries_data_docs = batteries_coll.find({}, opts);
+        EXPECT_EQ(batteries_coll.count_documents({}), num_docs)
+          << "Error: TestDB should only have " << num_docs << " documents per collection";
+
+        for (auto [i, batteries_doc_it] = std::tuple{size_t{0}, batteries_data_docs.begin()}; i < num_docs;
+             i++, batteries_doc_it++) {
+            Sensors &                     sensors       = sensors_vec[i];
+            const std::string &           timestamp     = timestamp_vec[i];
+            const bsoncxx::document::view batteries_doc = *batteries_doc_it;
+
+            for (bsoncxx::array::element batteries_doc : batteries_doc["batteries"].get_array().value) {
+                Sensors::Battery * battery = sensors.add_batteries();
+                battery->set_voltage(static_cast<float>(batteries_doc["voltage"].get_double().value));
+                battery->set_current(static_cast<float>(batteries_doc["current"].get_double().value));
+            }
+            EXPECT_EQ(sensors.batteries().size(), NUM_BATTERIES) << "Size mismatch when reading batteries from DB";
+            EXPECT_EQ(batteries_doc["timestamp"].get_utf8().value.to_string(), timestamp)
+              << "Document timestamp mismatch";
         }
-        EXPECT_EQ(sensors.batteries().size(), NUM_BATTERIES) << "Size mismatch when reading batteries from DB";
 
         // wind sensor
-        mongocxx::collection wind_coll        = db_[COLLECTION_WIND_SENSORS];
-        mongocxx::cursor     wind_sensors_doc = wind_coll.find({});
-        EXPECT_EQ(wind_coll.count_documents({}), 1) << "Error: TestDB should only have one document per collection";
-        bsoncxx::document::view wind_doc = *(wind_sensors_doc.begin());
-        for (bsoncxx::array::element wind_doc : wind_doc["wind_sensors"].get_array().value) {
-            Sensors::Wind * wind = sensors.add_wind_sensors();
-            wind->set_speed(static_cast<float>(wind_doc["speed"].get_double().value));
-            wind->set_direction(static_cast<int16_t>(wind_doc["direction"].get_int32().value));
+        mongocxx::collection wind_coll         = db[COLLECTION_WIND_SENSORS];
+        mongocxx::cursor     wind_sensors_docs = wind_coll.find({}, opts);
+        EXPECT_EQ(wind_coll.count_documents({}), num_docs)
+          << "Error: TestDB should only have " << num_docs << " documents per collection";
+
+        for (auto [i, wind_doc_it] = std::tuple{size_t{0}, wind_sensors_docs.begin()}; i < num_docs;
+             i++, wind_doc_it++) {
+            Sensors &                     sensors   = sensors_vec[i];
+            const std::string &           timestamp = timestamp_vec[i];
+            const bsoncxx::document::view wind_doc  = *wind_doc_it;
+            for (bsoncxx::array::element wind_doc : wind_doc["windSensors"].get_array().value) {
+                Sensors::Wind * wind = sensors.add_wind_sensors();
+                wind->set_speed(static_cast<float>(wind_doc["speed"].get_double().value));
+                wind->set_direction(static_cast<int16_t>(wind_doc["direction"].get_int32().value));
+            }
+            EXPECT_EQ(sensors.wind_sensors().size(), NUM_WIND_SENSORS)
+              << "Size mismatch when reading batteries from DB";
+            EXPECT_EQ(wind_doc["timestamp"].get_utf8().value.to_string(), timestamp) << "Document timestamp mismatch";
         }
-        EXPECT_EQ(sensors.wind_sensors().size(), NUM_WIND_SENSORS) << "Size mismatch when reading batteries from DB";
 
         // local path
-        mongocxx::collection path_coll      = db_[COLLECTION_PATH];
-        mongocxx::cursor     local_path_doc = path_coll.find({});
-        EXPECT_EQ(path_coll.count_documents({}), 1) << "Error: Test DB should only have one document per collection";
-        bsoncxx::document::view path_doc = *(local_path_doc.begin());
-        for (bsoncxx::array::element path_doc : path_doc["local_path_data"].get_array().value) {
-            Sensors::Path * path = sensors.add_local_path_data();
-            path->set_latitude(static_cast<float>(path_doc["latitude"].get_double().value));
-            path->set_longitude(static_cast<float>(path_doc["longitude"].get_double().value));
-        }
-        EXPECT_EQ(sensors.local_path_data().size(), NUM_PATH_WAYPOINTS)
-          << "Size mismatch when reading path waypoints from DB";
+        mongocxx::collection path_coll       = db[COLLECTION_LOCAL_PATH];
+        mongocxx::cursor     local_path_docs = path_coll.find({}, opts);
+        EXPECT_EQ(path_coll.count_documents({}), num_docs)
+          << "Error: TestDB should only have " << num_docs << " documents per collection";
 
-        return sensors;
-        // NOLINTEND(clang-analyzer-cplusplus.NewDeleteLeaks)
+        for (auto [i, path_doc_it] = std::tuple{size_t{0}, local_path_docs.begin()}; i < num_docs; i++, path_doc_it++) {
+            Sensors &                     sensors   = sensors_vec[i];
+            const std::string &           timestamp = timestamp_vec[i];
+            const bsoncxx::document::view path_doc  = *path_doc_it;
+            for (bsoncxx::array::element path_doc : path_doc["waypoints"].get_array().value) {
+                Polaris::Waypoint * path = sensors.add_local_path_data();
+                path->set_latitude(static_cast<float>(path_doc["latitude"].get_double().value));
+                path->set_longitude(static_cast<float>(path_doc["longitude"].get_double().value));
+            }
+            EXPECT_EQ(sensors.local_path_data().size(), NUM_PATH_WAYPOINTS)
+              << "Size mismatch when reading path waypoints from DB";
+            EXPECT_EQ(path_doc["timestamp"].get_utf8().value.to_string(), timestamp) << "Document timestamp mismatch";
+        }
+
+        return {sensors_vec, timestamp_vec};
     }
 };
 
@@ -140,23 +226,32 @@ static TestDB             g_test_db   = TestDB();              // initialize the
 static std::random_device g_rd        = std::random_device();  // random number sampler
 static uint32_t           g_rand_seed = g_rd();                // seed used for random number generation
 static std::mt19937       g_mt(g_rand_seed);                   // initialize random number generator with seed
+// Use a static counter for creating testing timestamps as the internals of the
+// remote transceiver do not care about the format.
+// The counter is of type char because of how strings are sorted in alphabetical order,
+// where a sequence of strings "1", "2", "10" are sorted to "1", "10", "2".
+// Incrementing a char prevents this issue for up to 256 numbers as it increments
+// '0', '1', ..., '9', '<LF>', ...
+static char g_doc_num = '0';
 
-class TestRemoteTransceiver : public ::testing::Test
+class TestSailbotDB : public ::testing::Test
 {
 protected:
-    TestRemoteTransceiver() { g_test_db.cleanDB(); }
-    ~TestRemoteTransceiver() override {}
+    TestSailbotDB()
+    {
+        g_test_db.cleanDB();
+        g_doc_num = '0';
+    }
+    ~TestSailbotDB() override {}
 };
 
 /**
  * @brief generate random GPS data
  *
- * @return pointer to generated GPS data
+ * @param gps_data pointer to generated gps_data
  */
-Sensors::Gps * genRandGpsData()
+void * genRandGpsData(Sensors::Gps * gps_data)
 {
-    Sensors::Gps * gps_data = new Sensors::Gps;
-
     std::uniform_real_distribution<float> lat_dist(LAT_LBND, LAT_UBND);
     std::uniform_real_distribution<float> lon_dist(LON_LBND, LON_UBND);
     std::uniform_real_distribution<float> speed_dist(SPEED_LBND, SPEED_UBND);
@@ -242,7 +337,7 @@ void genRandWindData(Sensors::Wind * wind_data)
  *
  * @return pointer to generated path data
  */
-void genRandPathData(Sensors::Path * path_data)
+void genRandPathData(Polaris::Waypoint * path_data)
 {
     std::uniform_real_distribution<float> latitude_path(LAT_LBND, LAT_UBND);
     std::uniform_real_distribution<float> longitude_path(LON_LBND, LON_UBND);
@@ -259,11 +354,9 @@ void genRandPathData(Sensors::Path * path_data)
 Sensors genRandSensors()
 {
     Sensors sensors;
-    // Protobuf handles freeing of dynamically allocated objects automatically
-    // NOLINTBEGIN(clang-analyzer-cplusplus.NewDeleteLeaks)
 
     // gps
-    sensors.set_allocated_gps(genRandGpsData());
+    genRandGpsData(sensors.mutable_gps());
 
     // ais ships, TODO(): Polaris should be included as one of the AIS ships
     for (int i = 0; i < NUM_AIS_SHIPS; i++) {
@@ -291,13 +384,100 @@ Sensors genRandSensors()
     }
 
     return sensors;
-    // NOLINTEND(clang-analyzer-cplusplus.NewDeleteLeaks)
+}
+
+/**
+ * @brief Generate random sensors and Iridium msg info
+ *
+ * @return std::pair<Sensors, SailbotDB::RcvdMsgInfo>
+ */
+std::pair<Sensors, SailbotDB::RcvdMsgInfo> genRandData()
+{
+    Sensors                rand_sensors = genRandSensors();
+    SailbotDB::RcvdMsgInfo rand_info{
+      .lat_       = 0,                             // Not processed yet, so just set to 0
+      .lon_       = 0,                             // Not processed yet, so just set to 0
+      .cep_       = 0,                             // Not processed yet, so just set to 0
+      .timestamp_ = std::to_string(g_doc_num++)};  // increment counter after converting and storing
+    return {rand_sensors, rand_info};
+}
+
+/**
+ * @brief Query the database and check that the sensor and message are correct
+ *
+ * @param expected_sensors
+ * @param expected_msg_info
+ */
+void verifyDBWrite(std::span<Sensors> expected_sensors, std::span<SailbotDB::RcvdMsgInfo> expected_msg_info)
+{
+    ASSERT_EQ(expected_sensors.size(), expected_msg_info.size()) << "Must have msg info for each set of Sensors";
+    size_t num_docs                          = expected_sensors.size();
+    auto [dumped_sensors, dumped_timestamps] = g_test_db.dumpSensors(num_docs);
+
+    EXPECT_EQ(dumped_sensors.size(), num_docs);
+    EXPECT_EQ(dumped_timestamps.size(), num_docs);
+
+    for (size_t i = 0; i < num_docs; i++) {
+        EXPECT_EQ(dumped_timestamps[i], expected_msg_info[i].timestamp_);
+
+        // gps
+        EXPECT_FLOAT_EQ(dumped_sensors[i].gps().latitude(), expected_sensors[i].gps().latitude());
+        EXPECT_FLOAT_EQ(dumped_sensors[i].gps().longitude(), expected_sensors[i].gps().longitude());
+        EXPECT_FLOAT_EQ(dumped_sensors[i].gps().speed(), expected_sensors[i].gps().speed());
+        EXPECT_FLOAT_EQ(dumped_sensors[i].gps().heading(), expected_sensors[i].gps().heading());
+
+        // ais ships
+        for (int j = 0; j < NUM_AIS_SHIPS; j++) {
+            const Sensors::Ais & dumped_ais_ship   = dumped_sensors[i].ais_ships(j);
+            const Sensors::Ais & expected_ais_ship = expected_sensors[i].ais_ships(j);
+            EXPECT_EQ(dumped_ais_ship.id(), expected_ais_ship.id());
+            EXPECT_FLOAT_EQ(dumped_ais_ship.latitude(), expected_ais_ship.latitude());
+            EXPECT_FLOAT_EQ(dumped_ais_ship.longitude(), expected_ais_ship.longitude());
+            EXPECT_FLOAT_EQ(dumped_ais_ship.sog(), expected_ais_ship.sog());
+            EXPECT_FLOAT_EQ(dumped_ais_ship.cog(), expected_ais_ship.cog());
+            EXPECT_FLOAT_EQ(dumped_ais_ship.rot(), expected_ais_ship.rot());
+            EXPECT_FLOAT_EQ(dumped_ais_ship.width(), expected_ais_ship.width());
+            EXPECT_FLOAT_EQ(dumped_ais_ship.length(), expected_ais_ship.length());
+        }
+
+        // generic sensors
+        for (int j = 0; j < NUM_GENERIC_SENSORS; j++) {
+            const Sensors::Generic & dumped_data_sensor   = dumped_sensors[i].data_sensors(j);
+            const Sensors::Generic & expected_data_sensor = expected_sensors[i].data_sensors(j);
+            EXPECT_EQ(dumped_data_sensor.id(), expected_data_sensor.id());
+            EXPECT_EQ(dumped_data_sensor.data(), expected_data_sensor.data());
+        }
+
+        // batteries
+        for (int j = 0; j < NUM_BATTERIES; j++) {
+            const Sensors::Battery & dumped_battery   = dumped_sensors[i].batteries(j);
+            const Sensors::Battery & expected_battery = expected_sensors[i].batteries(j);
+            EXPECT_EQ(dumped_battery.voltage(), expected_battery.voltage());
+            EXPECT_EQ(dumped_battery.current(), expected_battery.current());
+        }
+
+        // wind sensors
+        for (int j = 0; j < NUM_WIND_SENSORS; j++) {
+            const Sensors::Wind & dumped_wind_sensor   = dumped_sensors[i].wind_sensors(j);
+            const Sensors::Wind & expected_wind_sensor = expected_sensors[i].wind_sensors(j);
+            EXPECT_EQ(dumped_wind_sensor.speed(), expected_wind_sensor.speed());
+            EXPECT_EQ(dumped_wind_sensor.direction(), expected_wind_sensor.direction());
+        }
+
+        // path waypoints
+        for (int j = 0; j < NUM_PATH_WAYPOINTS; j++) {
+            const Polaris::Waypoint & dumped_path_waypoint   = dumped_sensors[i].local_path_data(j);
+            const Polaris::Waypoint & expected_path_waypoint = expected_sensors[i].local_path_data(j);
+            EXPECT_EQ(dumped_path_waypoint.latitude(), expected_path_waypoint.latitude());
+            EXPECT_EQ(dumped_path_waypoint.longitude(), expected_path_waypoint.longitude());
+        }
+    }
 }
 
 /**
  * @brief Check that MongoDB is running
  */
-TEST_F(TestRemoteTransceiver, TestConnection)
+TEST_F(TestSailbotDB, TestConnection)
 {
     ASSERT_TRUE(g_test_db.testConnection()) << "MongoDB not running - remember to connect!";
 }
@@ -305,86 +485,186 @@ TEST_F(TestRemoteTransceiver, TestConnection)
 /**
  * @brief Write random sensor data to the TestDB - read and verify said data
  */
-TEST_F(TestRemoteTransceiver, TestStoreSensors)
+TEST_F(TestSailbotDB, TestStoreSensors)
 {
     SCOPED_TRACE("Seed: " + std::to_string(g_rand_seed));  // Print seed on any failure
-    Sensors rand_sensors = genRandSensors();
-    ASSERT_TRUE(g_test_db.storeSensors(rand_sensors));
-    Sensors dumped_sensors = g_test_db.dumpSensors();
+    auto [rand_sensors, rand_info] = genRandData();
+    ASSERT_TRUE(g_test_db.storeNewSensors(rand_sensors, rand_info));
 
-    EXPECT_FLOAT_EQ(dumped_sensors.gps().latitude(), rand_sensors.gps().latitude());
-    EXPECT_FLOAT_EQ(dumped_sensors.gps().longitude(), rand_sensors.gps().longitude());
-    EXPECT_FLOAT_EQ(dumped_sensors.gps().speed(), rand_sensors.gps().speed());
-    EXPECT_FLOAT_EQ(dumped_sensors.gps().heading(), rand_sensors.gps().heading());
+    std::array<Sensors, 1>                expected_sensors = {rand_sensors};
+    std::array<SailbotDB::RcvdMsgInfo, 1> expected_info    = {rand_info};
 
-    // ais ships
-    // Array size checking done in dumpSensors
-    for (int i = 0; i < NUM_AIS_SHIPS; i++) {
-        const Sensors::Ais & dumped_ais_ships = dumped_sensors.ais_ships(i);
-        const Sensors::Ais & rand_ais_ships   = rand_sensors.ais_ships(i);
-        EXPECT_EQ(dumped_ais_ships.id(), rand_ais_ships.id());
-        EXPECT_FLOAT_EQ(dumped_ais_ships.latitude(), rand_ais_ships.latitude());
-        EXPECT_FLOAT_EQ(dumped_ais_ships.longitude(), rand_ais_ships.longitude());
-        EXPECT_FLOAT_EQ(dumped_ais_ships.sog(), rand_ais_ships.sog());
-        EXPECT_FLOAT_EQ(dumped_ais_ships.cog(), rand_ais_ships.cog());
-        EXPECT_FLOAT_EQ(dumped_ais_ships.rot(), rand_ais_ships.rot());
-        EXPECT_FLOAT_EQ(dumped_ais_ships.width(), rand_ais_ships.width());
-        EXPECT_FLOAT_EQ(dumped_ais_ships.length(), rand_ais_ships.length());
+    verifyDBWrite(expected_sensors, expected_info);
+}
+
+class TestHTTP : public TestSailbotDB
+{
+protected:
+    // Need to wait after receiving an HTTP response from the server
+    static constexpr auto WAIT_AFTER_RES = std::chrono::milliseconds(20);
+
+    // Network objects that are shared amongst all HTTP test suites
+    static bio::io_context * io_;
+    static tcp::acceptor *   acceptor_;
+    static tcp::socket *     socket_;
+    static std::thread *     io_thread_;
+    static SailbotDB *       server_db_;
+
+    static void SetUpTestSuite()
+    {
+        io_        = new bio::io_context;
+        acceptor_  = new tcp::acceptor{*io_, {bio::ip::make_address(TESTING_HOST), TESTING_PORT}};
+        socket_    = new tcp::socket{*io_};
+        server_db_ = new TestDB();
+
+        HTTPServer::runServer(*acceptor_, *socket_, *server_db_);
+
+        io_thread_ = new std::thread([]() { io_->run(); });
     }
 
-    // generic sensors
-    for (int i = 0; i < NUM_GENERIC_SENSORS; i++) {
-        const Sensors::Generic & dumped_data_sensors = dumped_sensors.data_sensors(i);
-        const Sensors::Generic & rand_data_sensors   = rand_sensors.data_sensors(i);
-        EXPECT_EQ(dumped_data_sensors.id(), rand_data_sensors.id());
-        EXPECT_EQ(dumped_data_sensors.data(), rand_data_sensors.data());
+    static void TearDownTestSuite()
+    {
+        io_->stop();
+        io_thread_->join();
+
+        delete io_;
+        delete acceptor_;
+        delete socket_;
+        delete io_thread_;
+        delete server_db_;
     }
 
-    // batteries
-    for (int i = 0; i < NUM_BATTERIES; i++) {
-        const Sensors::Battery & dumped_batteries = dumped_sensors.batteries(i);
-        const Sensors::Battery & rand_batteries   = rand_sensors.batteries(i);
-        EXPECT_EQ(dumped_batteries.voltage(), rand_batteries.voltage());
-        EXPECT_EQ(dumped_batteries.current(), rand_batteries.current());
+    TestHTTP()
+    {
+        // Automatically calls TestSailbotDB's constructor to setup tests
     }
 
-    // wind sensors
-    for (int i = 0; i < NUM_WIND_SENSORS; i++) {
-        const Sensors::Wind & dumped_wind_sensors = dumped_sensors.wind_sensors(i);
-        const Sensors::Wind & rand_wind_sensors   = rand_sensors.wind_sensors(i);
-        EXPECT_EQ(dumped_wind_sensors.speed(), rand_wind_sensors.speed());
-        EXPECT_EQ(dumped_wind_sensors.direction(), rand_wind_sensors.direction());
+    ~TestHTTP() override {}
+};
+
+// Initialize static objects
+bio::io_context * TestHTTP::io_        = nullptr;
+tcp::acceptor *   TestHTTP::acceptor_  = nullptr;
+tcp::socket *     TestHTTP::socket_    = nullptr;
+std::thread *     TestHTTP::io_thread_ = nullptr;
+SailbotDB *       TestHTTP::server_db_ = nullptr;
+
+/**
+ * @brief Test HTTP GET request sending and handling. Currently just retrieves a placeholder string.
+ *
+ */
+TEST_F(TestHTTP, TestGet)
+{
+    auto [status, result] =
+      http_client::get({TESTING_HOST, std::to_string(TESTING_PORT), remote_transceiver::targets::ROOT});
+    EXPECT_EQ(status, http::status::ok);
+    EXPECT_EQ(result, "PLACEHOLDER\r\n");
+}
+
+/**
+ * @brief Create a formatted string that matches the body of POST requests from Iridium
+ *        https://docs.rockblock.rock7.com/reference/receiving-mo-messages-via-http-webhook
+ *
+ * @param params Params structure
+ * @return formatted request body
+ */
+std::string createPostBody(remote_transceiver::MOMsgParams::Params params)
+{
+    std::ostringstream s;
+    s << "imei=" << params.imei_ << "&serial=" << params.serial_ << "&momsn=" << params.momsn_
+      << "&transmit_time=" << params.transmit_time_ << "&iridium_latitude=" << params.lat_
+      << "&iridium_longitude=" << params.lon_ << "&iridium_cep=" << params.cep_ << "&data=" << params.data_;
+    return s.str();
+}
+
+/**
+ * @brief Test that we can POST sensor data to the server
+ *
+ */
+TEST_F(TestHTTP, TestPostSensors)
+{
+    SCOPED_TRACE("Seed: " + std::to_string(g_rand_seed));  // Print seed on any failure
+    auto [rand_sensors, rand_info] = genRandData();
+
+    std::string rand_sensors_str;
+    ASSERT_TRUE(rand_sensors.SerializeToString(&rand_sensors_str));
+    Polaris::Sensors test;
+    test.ParseFromString(rand_sensors_str);
+    // This query is comprised entirely of arbitrary values exccept for .data_
+    std::string query = createPostBody(
+      {.imei_          = 0,
+       .serial_        = 0,
+       .momsn_         = 1,
+       .transmit_time_ = rand_info.timestamp_,
+       .lat_           = rand_info.lat_,
+       .lon_           = rand_info.lon_,
+       .cep_           = rand_info.cep_,
+       .data_          = rand_sensors_str});
+    http::status status = http_client::post(
+      {TESTING_HOST, std::to_string(TESTING_PORT), remote_transceiver::targets::SENSORS},
+      "application/x-www-form-urlencoded", query);
+
+    EXPECT_EQ(status, http::status::ok);
+    std::this_thread::sleep_for(WAIT_AFTER_RES);
+
+    std::array<Sensors, 1>                expected_sensors = {rand_sensors};
+    std::array<SailbotDB::RcvdMsgInfo, 1> expected_info    = {rand_info};
+    verifyDBWrite(expected_sensors, expected_info);
+}
+
+/**
+ * @brief Test that the server can multiple POST requests at once
+ *
+ */
+TEST_F(TestHTTP, TestPostSensorsMult)
+{
+    SCOPED_TRACE("Seed: " + std::to_string(g_rand_seed));  // Print seed on any failure
+
+    constexpr int                                NUM_REQS = 10;
+    std::array<std::string, NUM_REQS>            queries;
+    std::array<std::thread, NUM_REQS>            req_threads;
+    std::array<http::status, NUM_REQS>           res_statuses;
+    std::array<Polaris::Sensors, NUM_REQS>       expected_sensors;
+    std::array<SailbotDB::RcvdMsgInfo, NUM_REQS> expected_info;
+
+    // Prepare all queries
+    for (size_t i = 0; i < NUM_REQS; i++) {
+        auto [rand_sensors, rand_info] = genRandData();
+        expected_sensors[i]            = rand_sensors;
+        expected_info[i]               = rand_info;
+        std::string rand_sensors_str;
+        ASSERT_TRUE(rand_sensors.SerializeToString(&rand_sensors_str));
+        Polaris::Sensors test;
+        test.ParseFromString(rand_sensors_str);
+        // This query is comprised entirely of arbitrary values exccept for .data_
+        queries[i] = createPostBody(
+          {.imei_          = 0,
+           .serial_        = 0,
+           .momsn_         = 1,
+           .transmit_time_ = rand_info.timestamp_,
+           .lat_           = rand_info.lat_,
+           .lon_           = rand_info.lon_,
+           .cep_           = rand_info.cep_,
+           .data_          = rand_sensors_str});
     }
 
-    // path waypoints
-    for (int i = 0; i < NUM_PATH_WAYPOINTS; i++) {
-        const Sensors::Path & dumped_path_waypoints = dumped_sensors.local_path_data(i);
-        const Sensors::Path & rand_path_waypoints   = rand_sensors.local_path_data(i);
-        EXPECT_EQ(dumped_path_waypoints.latitude(), rand_path_waypoints.latitude());
-        EXPECT_EQ(dumped_path_waypoints.longitude(), rand_path_waypoints.longitude());
+    // Send all requests at once
+    for (size_t i = 0; i < NUM_REQS; i++) {
+        req_threads[i] = std::thread([&queries, &res_statuses, i]() {
+            std::string query = queries[i];
+            res_statuses[i]   = http_client::post(
+                {TESTING_HOST, std::to_string(TESTING_PORT), remote_transceiver::targets::SENSORS},
+                "application/x-www-form-urlencoded", query);
+        });
     }
 
-    // generic sensors
-    for (int i = 0; i < NUM_GENERIC_SENSORS; i++) {
-        const Sensors::Generic & dumped_data_sensors = dumped_sensors.data_sensors(i);
-        const Sensors::Generic & rand_data_sensors   = rand_sensors.data_sensors(i);
-        EXPECT_EQ(dumped_data_sensors.id(), rand_data_sensors.id());
-        EXPECT_EQ(dumped_data_sensors.data(), rand_data_sensors.data());
+    // Wait for all requests to finish
+    for (int i = 0; i < NUM_REQS; i++) {
+        req_threads[i].join();
+        EXPECT_EQ(res_statuses[i], http::status::ok);
     }
+    std::this_thread::sleep_for(WAIT_AFTER_RES);
 
-    // batteries
-    for (int i = 0; i < NUM_BATTERIES; i++) {
-        const Sensors::Battery & dumped_batteries = dumped_sensors.batteries(i);
-        const Sensors::Battery & rand_batteries   = rand_sensors.batteries(i);
-        EXPECT_EQ(dumped_batteries.voltage(), rand_batteries.voltage());
-        EXPECT_EQ(dumped_batteries.current(), rand_batteries.current());
-    }
-
-    // wind sensors
-    for (int i = 0; i < NUM_WIND_SENSORS; i++) {
-        const Sensors::Wind & dumped_wind_sensors = dumped_sensors.wind_sensors(i);
-        const Sensors::Wind & rand_wind_sensors   = rand_sensors.wind_sensors(i);
-        EXPECT_EQ(dumped_wind_sensors.speed(), rand_wind_sensors.speed());
-        EXPECT_EQ(dumped_wind_sensors.direction(), rand_wind_sensors.direction());
-    }
+    // Check that DB is updated properly for all requests
+    verifyDBWrite(expected_sensors, expected_info);
 }
