@@ -23,73 +23,56 @@ namespace msg = custom_interfaces::msg;
  */
 class LocalTransceiver
 {
-    /**
-     * Buffer class to synchronize sensors updates and transmissions
-     */
-    class SensorBuf
-    {
-    public:
-        /**
-         * @brief Construct a new Sensor Buf object
-         *
-         */
-        SensorBuf();
-
-        /**
-         * @brief Update the buffer with new GPS data
-         *
-         * @param gps custom_interfaces gps object
-         */
-        void updateSensor(msg::GPS gps);
-
-        /**
-         * @brief Update the buffer with new AIS Ships data
-         *
-         * @param ships custom_interfaces AISShips object
-         */
-        void updateSensor(msg::AISShips ships);
-
-        /**
-         * @brief Update the buffer with new Wind sensor data
-         *
-         * @param wind custom_interfaces WindSensors object
-         */
-        void updateSensor(msg::WindSensors wind);
-
-        /**
-         * @brief Update the buffer with new battery data
-         *
-         * @param battery custom_interfaces Batteries object
-         */
-        void updateSensor(msg::Batteries battery);
-
-        /**
-         * @brief Update the buffer with new generic sensor data
-         *
-         * @param generic custom_interfaces GenericSensors object
-         */
-        void updateSensor(msg::GenericSensors msg);
-
-        /**
-         * @brief Update the buffer with new local path data
-         *
-         * @param localData custom_interfaces LPathData object
-         */
-        void updateSensor(msg::LPathData localData);
-
-        /**
-         * @brief Get a copy of the sensors object
-         *
-         * @return Copy of sensors_
-         */
-        Polaris::Sensors sensors();
-
-    private:
-        Polaris::Sensors sensors_;  // Underlying Sensors object
-        std::mutex       buf_mtx_;  // Mutex to synhronize access to sensors_
-    };
-
 public:
+    /**
+    * @brief Update the sensor with new GPS data
+    *
+    * @param gps custom_interfaces gps object
+    */
+    void updateSensor(msg::GPS gps);
+
+    /**
+    * @brief Update the sensor with new AIS Ships data
+    *
+    * @param ships custom_interfaces AISShips object
+    */
+    void updateSensor(msg::AISShips ships);
+
+    /**
+    * @brief Update the sensor with new Wind sensor data
+    *
+    * @param wind custom_interfaces WindSensors object
+    */
+    void updateSensor(msg::WindSensors wind);
+
+    /**
+    * @brief Update the sensor with new battery data
+    *
+    * @param battery custom_interfaces Batteries object
+    */
+    void updateSensor(msg::Batteries battery);
+
+    /**
+    * @brief Update the sensor with new generic sensor data
+    *
+    * @param generic custom_interfaces GenericSensors object
+    */
+    void updateSensor(msg::GenericSensors msg);
+
+    /**
+    * @brief Update the sensor with new local path data
+    *
+    * @param localData custom_interfaces LPathData object
+    */
+    void updateSensor(msg::LPathData localData);
+
+    /**
+    * @brief Get a copy of the sensors object
+    *
+    * @return Copy of sensors_
+    */
+    Polaris::Sensors sensors();
+
     /**
      * @brief Construct a new Local Transceiver object and connect it to a serial port
      *
@@ -114,13 +97,6 @@ public:
      *
      */
     void stop();
-
-    /**
-     * @brief Callback function for when new sensor data is received from the ROS network on Polaris
-     *
-     * @param sensor new sensor data
-     */
-    void onNewSensorData(custom_interfaces::msg::GPS sensor);
 
     /**
      * @brief Send current data to the serial port and to the remote server
@@ -150,10 +126,8 @@ private:
     boost::asio::io_service io_;
     // serial port data where is sent and received
     boost::asio::serial_port serial_;
-    // mutex to synchronize access to the serial port
-    std::mutex serial_mtx_;
-    // Buffer for sensors to be sent to the satellite
-    SensorBuf sensor_buf_;
+    // underlying sensors object
+    Polaris::Sensors sensors_;
 
     /**
      * @brief Send a command to the serial port

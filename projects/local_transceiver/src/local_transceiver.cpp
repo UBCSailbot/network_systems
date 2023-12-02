@@ -6,6 +6,14 @@
 #include <boost/asio/streambuf.hpp>
 #include <boost/asio/write.hpp>
 #include <boost/system/error_code.hpp>
+#include <custom_interfaces/msg/detail/batteries__struct.hpp>
+#include <custom_interfaces/msg/detail/generic_sensors__struct.hpp>
+#include <custom_interfaces/msg/detail/helper_battery__struct.hpp>
+#include <custom_interfaces/msg/detail/helper_generic_sensor__struct.hpp>
+#include <custom_interfaces/msg/detail/helper_lat_lon__struct.hpp>
+#include <custom_interfaces/msg/detail/l_path_data__struct.hpp>
+#include <custom_interfaces/msg/detail/path__struct.hpp>
+#include <custom_interfaces/msg/detail/wind_sensor__struct.hpp>
 #include <exception>
 #include <mutex>
 #include <stdexcept>
@@ -15,15 +23,18 @@
 #include "cmn_hdrs/ros_info.h"
 #include "cmn_hdrs/shared_constants.h"
 #include "custom_interfaces/msg/ais_ships.hpp"
+#include "custom_interfaces/msg/batteries.hpp"
+#include "custom_interfaces/msg/generic_sensors.hpp"
 #include "custom_interfaces/msg/gps.hpp"
+#include "custom_interfaces/msg/l_path_data.hpp"
+#include "custom_interfaces/msg/path.hpp"
+#include "custom_interfaces/msg/wind_sensor.hpp"
 #include "sensors.pb.h"
 
 using Polaris::Sensors;
 namespace bio = boost::asio;
 
-LocalTransceiver::SensorBuf::SensorBuf(){};
-
-void LocalTransceiver::SensorBuf::updateSensor(msg::GPS gps)
+void LocalTransceiver::updateSensor(msg::GPS gps)
 {
     sensors_.mutable_gps()->set_heading(gps.heading.heading);
     sensors_.mutable_gps()->set_latitude(gps.lat_lon.latitude);
@@ -31,7 +42,7 @@ void LocalTransceiver::SensorBuf::updateSensor(msg::GPS gps)
     sensors_.mutable_gps()->set_speed(gps.speed.speed);
 }
 
-void LocalTransceiver::SensorBuf::updateSensor(msg::AISShips ships)
+void LocalTransceiver::updateSensor(msg::AISShips ships)
 {
     sensors_.clear_ais_ships();
     for (const msg::HelperAISShip & ship : ships.ships) {
@@ -47,7 +58,47 @@ void LocalTransceiver::SensorBuf::updateSensor(msg::AISShips ships)
     }
 }
 
-Sensors LocalTransceiver::SensorBuf::sensors() { return sensors_; }
+void LocalTransceiver::updateSensor(msg::WindSensors wind)
+{
+    sensors_.clear_wind_sensors();
+    for (const msg::WindSensor & wind_data : wind.wind_sensors) {
+        Sensors::Wind * new_wind = sensors_.add_wind_sensors();
+        new_wind->set_direction(wind_data.direction);
+        new_wind->set_speed(wind_data.speed.speed);
+    }
+}
+
+void LocalTransceiver::updateSensor(msg::Batteries battery)
+{
+    sensors_.clear_batteries();
+    for (const msg::HelperBattery & battery_info : battery.batteries) {
+        Sensors::Battery * new_battery = sensors_.add_batteries();
+        new_battery->set_current(battery_info.current);
+        new_battery->set_voltage(battery_info.voltage);
+    }
+}
+
+void LocalTransceiver::updateSensor(msg::GenericSensors msg)
+{
+    sensors_.clear_data_sensors();
+    for (const msg::HelperGenericSensor & sensors_data : msg.generic_sensors) {
+        Sensors::Generic * new_sensor = sensors_.add_data_sensors();
+        new_sensor->set_data(sensors_data.data);
+        new_sensor->set_id(sensors_data.id);
+    }
+}
+
+void LocalTransceiver::updateSensor(msg::LPathData localData)
+{
+    sensors_.clear_local_path_data();
+    for (const msg::HelperLatLon & local_data : localData.local_path.waypoints) {
+        Sensors::Path * new_local = sensors_.add_local_path_data();
+        new_local->set_latitude(local_data.latitude);
+        new_local->set_longitude(local_data.longitude);
+    }
+}
+
+Sensors LocalTransceiver::sensors() { return sensors_; }
 
 LocalTransceiver::LocalTransceiver(const std::string & port_name, const uint32_t baud_rate) : serial_(io_, port_name)
 {
@@ -65,13 +116,12 @@ void LocalTransceiver::stop()
     serial_.close();  // Can throw an exception so cannot be put in the destructor
 }
 
-void LocalTransceiver::onNewSensorData(msg::GPS sensor) { sensor_buf_.updateSensor(sensor); }
-
 bool LocalTransceiver::send()
 {
     std::string data;
     // Make sure to get a copy of the sensors because repeated calls may give us different results
-    Polaris::Sensors sensors = sensor_buf_.sensors();
+    Polaris::Sensors sensors = sensors_;
+
     if (!sensors.SerializeToString(&data)) {
         std::cerr << "Failed to serialize sensors string" << std::endl;
         std::cerr << sensors.DebugString() << std::endl;
@@ -133,7 +183,7 @@ void LocalTransceiver::send(const std::string & cmd) { bio::write(serial_, bio::
 
 std::string LocalTransceiver::parseInMsg(const std::string & msg)
 {
-    //TODO(jma43): implement function
+    //TODO(jng468): implement function
     (void)msg;
     return "placeholder";
 }
