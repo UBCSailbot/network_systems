@@ -26,6 +26,7 @@
 #include "remote_transceiver.h"
 #include "sailbot_db.h"
 #include "sensors.pb.h"
+#include "waypoint.pb.h"
 
 constexpr int NUM_AIS_SHIPS       = 15;  // arbitrary number
 constexpr int NUM_GENERIC_SENSORS = 5;   // arbitrary number
@@ -209,11 +210,11 @@ public:
             const std::string &           timestamp = timestamp_vec[i];
             const bsoncxx::document::view path_doc  = *path_doc_it;
             for (bsoncxx::array::element path_doc : path_doc["waypoints"].get_array().value) {
-                Polaris::Waypoint * path = sensors.add_local_path_data();
+                Polaris::Waypoint * path = sensors.mutable_local_path_data()->add_waypoints();
                 path->set_latitude(static_cast<float>(path_doc["latitude"].get_double().value));
                 path->set_longitude(static_cast<float>(path_doc["longitude"].get_double().value));
             }
-            EXPECT_EQ(sensors.local_path_data().size(), NUM_PATH_WAYPOINTS)
+            EXPECT_EQ(sensors.local_path_data().waypoints_size(), NUM_PATH_WAYPOINTS)
               << "Size mismatch when reading path waypoints from DB";
             EXPECT_EQ(path_doc["timestamp"].get_utf8().value.to_string(), timestamp) << "Document timestamp mismatch";
         }
@@ -337,13 +338,16 @@ void genRandWindData(Sensors::Wind * wind_data)
  *
  * @return pointer to generated path data
  */
-void genRandPathData(Polaris::Waypoint * path_data)
+void genRandPathData(Sensors::Path * path_data)
 {
     std::uniform_real_distribution<float> latitude_path(LAT_LBND, LAT_UBND);
     std::uniform_real_distribution<float> longitude_path(LON_LBND, LON_UBND);
 
-    path_data->set_latitude(latitude_path(g_mt));
-    path_data->set_longitude(longitude_path(g_mt));
+    for (int i = 0; i < NUM_PATH_WAYPOINTS; i++) {
+        Polaris::Waypoint * waypoint = path_data->add_waypoints();
+        waypoint->set_latitude(latitude_path(g_mt));
+        waypoint->set_longitude(longitude_path(g_mt));
+    }
 }
 
 /**
@@ -379,9 +383,7 @@ Sensors genRandSensors()
     }
 
     // path waypoints
-    for (int i = 0; i < NUM_PATH_WAYPOINTS; i++) {
-        genRandPathData(sensors.add_local_path_data());
-    }
+    genRandPathData(sensors.mutable_local_path_data());
 
     return sensors;
 }
@@ -466,8 +468,8 @@ void verifyDBWrite(std::span<Sensors> expected_sensors, std::span<SailbotDB::Rcv
 
         // path waypoints
         for (int j = 0; j < NUM_PATH_WAYPOINTS; j++) {
-            const Polaris::Waypoint & dumped_path_waypoint   = dumped_sensors[i].local_path_data(j);
-            const Polaris::Waypoint & expected_path_waypoint = expected_sensors[i].local_path_data(j);
+            const Polaris::Waypoint & dumped_path_waypoint   = dumped_sensors[i].local_path_data().waypoints(j);
+            const Polaris::Waypoint & expected_path_waypoint = expected_sensors[i].local_path_data().waypoints(j);
             EXPECT_EQ(dumped_path_waypoint.latitude(), expected_path_waypoint.latitude());
             EXPECT_EQ(dumped_path_waypoint.longitude(), expected_path_waypoint.longitude());
         }

@@ -30,6 +30,7 @@
 #include "custom_interfaces/msg/path.hpp"
 #include "custom_interfaces/msg/wind_sensor.hpp"
 #include "sensors.pb.h"
+#include "waypoint.pb.h"
 
 using Polaris::Sensors;
 namespace bio = boost::asio;
@@ -92,9 +93,10 @@ void LocalTransceiver::updateSensor(msg::LPathData localData)
 {
     sensors_.clear_local_path_data();
     for (const msg::HelperLatLon & local_data : localData.local_path.waypoints) {
-        Sensors::Path * new_local = sensors_.add_local_path_data();
-        new_local->set_latitude(local_data.latitude);
-        new_local->set_longitude(local_data.longitude);
+        Sensors::Path *     new_local = sensors_.mutable_local_path_data();
+        Polaris::Waypoint * waypoint  = new_local->add_waypoints();
+        waypoint->set_latitude(local_data.latitude);
+        waypoint->set_longitude(local_data.longitude);
     }
 }
 

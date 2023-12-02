@@ -50,7 +50,5 @@ TEST_F(TestLocalTransceiver, sendGpsTest)
     gps.lat_lon.set__latitude(holder);
     gps.lat_lon.set__longitude(holder);
     gps.speed.set__speed(holder);
-
-    lcl_trns_->onNewSensorData(gps);
     lcl_trns_->send();
 }

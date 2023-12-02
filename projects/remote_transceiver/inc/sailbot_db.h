@@ -212,7 +212,7 @@ private:
      * @return false on failure
      */
     bool storePathSensors(
-      const ProtoList<Polaris::Waypoint> & path_pb, const std::string & timestamp, mongocxx::client & client);
+      const Polaris::Sensors::Path & local_path_pb, const std::string & timestamp, mongocxx::client & client);
 
     /**
     * @brief Adds generic sensors to the database

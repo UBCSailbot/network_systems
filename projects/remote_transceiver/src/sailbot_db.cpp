@@ -1,4 +1,4 @@
- #include "sailbot_db.h"
+#include "sailbot_db.h"
 
 #include <bsoncxx/builder/stream/array.hpp>
 #include <bsoncxx/builder/stream/document.hpp>
@@ -13,6 +13,7 @@
 #include <mongocxx/instance.hpp>
 
 #include "sensors.pb.h"
+#include "waypoint.pb.h"
 
 namespace bstream = bsoncxx::builder::stream;
 using Polaris::Sensors;
@@ -136,13 +137,14 @@ bool SailbotDB::storeWindSensors(
 }
 
 bool SailbotDB::storePathSensors(
-  const ProtoList<Polaris::Waypoint> & local_path_pb, const std::string & timestamp, mongocxx::client & client)
+  const Sensors::Path & local_path_pb, const std::string & timestamp, mongocxx::client & client)
 {
-    mongocxx::database   db              = client[db_name_];
-    mongocxx::collection local_path_coll = db[COLLECTION_LOCAL_PATH];
-    bstream::document    doc_builder{};
-    auto                 local_path_doc_arr = doc_builder << "waypoints" << bstream::open_array;
-    for (const Polaris::Waypoint & waypoint : local_path_pb) {
+    mongocxx::database           db              = client[db_name_];
+    mongocxx::collection         local_path_coll = db[COLLECTION_LOCAL_PATH];
+    bstream::document            doc_builder{};
+    auto                         local_path_doc_arr = doc_builder << "waypoints" << bstream::open_array;
+    ProtoList<Polaris::Waypoint> waypoints          = local_path_pb.waypoints();
+    for (const Polaris::Waypoint & waypoint : waypoints) {
         local_path_doc_arr = local_path_doc_arr << bstream::open_document << "latitude" << waypoint.latitude()
                                                 << "longitude" << waypoint.longitude() << bstream::close_document;
     }
