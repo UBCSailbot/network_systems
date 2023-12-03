@@ -15,6 +15,7 @@ from launch.substitutions import LaunchConfiguration
 # Local launch arguments and constants
 PACKAGE_NAME = "network_systems"
 NAMESPACE = "network_systems"
+global_launch_config = ""
 
 # Add args with DeclareLaunchArguments object(s) and utilize in setup_launch()
 LOCAL_LAUNCH_ARGUMENTS: List[DeclareLaunchArgument] = []
@@ -53,6 +54,9 @@ def get_global_launch_arguments() -> Tuple:
     spec.loader.exec_module(module)  # type: ignore[union-attr] # spec is not None
     global_launch_arguments = module.GLOBAL_LAUNCH_ARGUMENTS
     global_environment_vars = module.ENVIRONMENT_VARIABLES
+    global global_launch_config
+    global_launch_config = module.GLOBAL_LAUNCH_CONFIG
+
     return global_launch_arguments, global_environment_vars
 
 
@@ -82,7 +86,10 @@ def get_cached_fib_description(context: LaunchContext) -> Node:
         Node: The node object that launches the cached_fib node.
     """
     node_name = "cached_fib_subscriber"
-    ros_parameters = [*LaunchConfiguration("config").perform(context).split(",")]
+    ros_parameters = [
+        global_launch_config,
+        *LaunchConfiguration("config").perform(context).split(","),
+    ]
     ros_arguments: List[SomeSubstitutionsType] = [
         "--log-level",
         [f"{node_name}:=", LaunchConfiguration("log_level")],
@@ -111,6 +118,7 @@ def get_remote_transceiver_description(context: LaunchContext) -> Node:
     """
     node_name = "remote_transceiver_node"
     ros_parameters = [
+        global_launch_config,
         *LaunchConfiguration("config").perform(context).split(","),
         {"mode": LaunchConfiguration("mode")},
     ]
