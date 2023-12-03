@@ -20,7 +20,7 @@ namespace
 
 /**
  * @brief Format a CAN frame into a string for debugging and logging
- * 
+ *
  * @param frame CAN frame to format
  * @return String representation of frame
  */
@@ -114,5 +114,3 @@ void CanbusIntf::send(const CanFrame & frame) const
         std::cerr << fmtCanFrameDbgStr(frame) << std::endl;
     }
 }
-
-void CanSimIntf::receive() {}
