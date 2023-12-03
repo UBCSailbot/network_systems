@@ -15,8 +15,14 @@ class CachedFibSubscriber : public rclcpp::Node
 public:
     explicit CachedFibSubscriber(const std::size_t initSize) : Node("cached_fib_subscriber"), c_fib_(initSize)
     {
-        sub_ = this->create_subscription<std_msgs::msg::UInt64>(
-          CACHED_FIB_TOPIC, ROS_Q_SIZE, std::bind(&CachedFibSubscriber::topic_callback, this, std::placeholders::_1));
+        this->declare_parameter("enabled", false);
+        bool enabled = this->get_parameter("enabled").as_bool();
+        if (enabled) {
+            RCLCPP_INFO(this->get_logger(), "Running example cached fib node");
+            sub_ = this->create_subscription<std_msgs::msg::UInt64>(
+              CACHED_FIB_TOPIC, ROS_Q_SIZE,
+              std::bind(&CachedFibSubscriber::topic_callback, this, std::placeholders::_1));
+        }
     }
 
 private:

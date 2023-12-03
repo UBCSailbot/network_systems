@@ -14,6 +14,7 @@ from launch.substitutions import LaunchConfiguration
 
 # Local launch arguments and constants
 PACKAGE_NAME = "network_systems"
+NAMESPACE = "network_systems"
 
 # Add args with DeclareLaunchArguments object(s) and utilize in setup_launch()
 LOCAL_LAUNCH_ARGUMENTS: List[DeclareLaunchArgument] = []
@@ -80,8 +81,8 @@ def get_cached_fib_description(context: LaunchContext) -> Node:
     Returns:
         Node: The node object that launches the cached_fib node.
     """
-    node_name = "cached_fib"
-    ros_parameters = [LaunchConfiguration("config").perform(context)]
+    node_name = "cached_fib_subscriber"
+    ros_parameters = [*LaunchConfiguration("config").perform(context).split(",")]
     ros_arguments: List[SomeSubstitutionsType] = [
         "--log-level",
         [f"{node_name}:=", LaunchConfiguration("log_level")],
@@ -89,7 +90,7 @@ def get_cached_fib_description(context: LaunchContext) -> Node:
 
     node = Node(
         package=PACKAGE_NAME,
-        namespace="example",
+        namespace=NAMESPACE,
         executable="example",
         name=node_name,
         parameters=ros_parameters,
@@ -108,9 +109,9 @@ def get_remote_transceiver_description(context: LaunchContext) -> Node:
     Returns:
         Node: The node object that launches the cached_fib node.
     """
-    node_name = "remote_transceiver"
+    node_name = "remote_transceiver_node"
     ros_parameters = [
-        LaunchConfiguration("config").perform(context),
+        *LaunchConfiguration("config").perform(context).split(","),
         {"mode": LaunchConfiguration("mode")},
     ]
     ros_arguments: List[SomeSubstitutionsType] = [
@@ -120,7 +121,7 @@ def get_remote_transceiver_description(context: LaunchContext) -> Node:
 
     node = Node(
         package=PACKAGE_NAME,
-        namespace="remote_transceiver",
+        namespace=NAMESPACE,
         executable="remote_transceiver",
         name=node_name,
         parameters=ros_parameters,

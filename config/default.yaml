@@ -1,19 +1,20 @@
-can_transceiver_node:
-  ros__parameters:
-    enabled: true
+network_systems:
+  can_transceiver_node:
+    ros__parameters:
+      enabled: true
 
-can_transceiver_sim_node:
-  ros__parameters:
-    enabled: false
+  can_transceiver_sim_node:
+    ros__parameters:
+      enabled: false
 
-cached_fib_subscriber:
-  ros__parameters:
-    enabled: false
+  cached_fib_subscriber:
+    ros__parameters:
+      enabled: false
 
-local_transceiver_node:
-  ros__parameters:
-    enabled: true
+  local_transceiver_node:
+    ros__parameters:
+      enabled: true
 
-remote_transceiver_node:
-  ros__parameters:
-    enabled: true
+  remote_transceiver_node:
+    ros__parameters:
+      enabled: true
