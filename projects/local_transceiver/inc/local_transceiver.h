@@ -1,20 +1,19 @@
 #pragma once
 
-#include <custom_interfaces/msg/detail/ais_ships__struct.hpp>
-#include <custom_interfaces/msg/detail/batteries__struct.hpp>
-#include <custom_interfaces/msg/detail/generic_sensors__struct.hpp>
-#include <custom_interfaces/msg/detail/l_path_data__struct.hpp>
-#include <custom_interfaces/msg/detail/wind_sensors__struct.hpp>
+#include <boost/asio/io_service.hpp>
+#include <boost/asio/serial_port.hpp>
+#include <custom_interfaces/msg/ais_ships.hpp>
+#include <custom_interfaces/msg/batteries.hpp>
+#include <custom_interfaces/msg/generic_sensors.hpp>
+#include <custom_interfaces/msg/gps.hpp>
+#include <custom_interfaces/msg/l_path_data.hpp>
+#include <custom_interfaces/msg/wind_sensors.hpp>
 #include <mutex>
+#include <rclcpp/node.hpp>
+#include <std_msgs/msg/string.hpp>
 #include <string>
 
-#include "boost/asio/io_service.hpp"
-#include "boost/asio/serial_port.hpp"
-#include "custom_interfaces/msg/ais_ships.hpp"
-#include "custom_interfaces/msg/gps.hpp"
-#include "rclcpp/node.hpp"
 #include "sensors.pb.h"
-#include "std_msgs/msg/string.hpp"
 
 namespace msg = custom_interfaces::msg;
 

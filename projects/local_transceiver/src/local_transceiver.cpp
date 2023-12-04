@@ -6,14 +6,12 @@
 #include <boost/asio/streambuf.hpp>
 #include <boost/asio/write.hpp>
 #include <boost/system/error_code.hpp>
-#include <custom_interfaces/msg/detail/batteries__struct.hpp>
-#include <custom_interfaces/msg/detail/generic_sensors__struct.hpp>
-#include <custom_interfaces/msg/detail/helper_battery__struct.hpp>
-#include <custom_interfaces/msg/detail/helper_generic_sensor__struct.hpp>
-#include <custom_interfaces/msg/detail/helper_lat_lon__struct.hpp>
-#include <custom_interfaces/msg/detail/l_path_data__struct.hpp>
-#include <custom_interfaces/msg/detail/path__struct.hpp>
-#include <custom_interfaces/msg/detail/wind_sensor__struct.hpp>
+#include <custom_interfaces/msg/ais_ships.hpp>
+#include <custom_interfaces/msg/batteries.hpp>
+#include <custom_interfaces/msg/generic_sensors.hpp>
+#include <custom_interfaces/msg/gps.hpp>
+#include <custom_interfaces/msg/l_path_data.hpp>
+#include <custom_interfaces/msg/wind_sensors.hpp>
 #include <exception>
 #include <mutex>
 #include <stdexcept>
@@ -22,13 +20,6 @@
 #include "at_cmds.h"
 #include "cmn_hdrs/ros_info.h"
 #include "cmn_hdrs/shared_constants.h"
-#include "custom_interfaces/msg/ais_ships.hpp"
-#include "custom_interfaces/msg/batteries.hpp"
-#include "custom_interfaces/msg/generic_sensors.hpp"
-#include "custom_interfaces/msg/gps.hpp"
-#include "custom_interfaces/msg/l_path_data.hpp"
-#include "custom_interfaces/msg/path.hpp"
-#include "custom_interfaces/msg/wind_sensor.hpp"
 #include "sensors.pb.h"
 #include "waypoint.pb.h"
 

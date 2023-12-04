@@ -1,14 +1,14 @@
 #include <chrono>
 #include <memory>
+#include <rclcpp/publisher.hpp>
+#include <rclcpp/rclcpp.hpp>
+#include <rclcpp/subscription.hpp>
+#include <rclcpp/timer.hpp>
+#include <std_msgs/msg/string.hpp>
 
 #include "cmn_hdrs/ros_info.h"
 #include "cmn_hdrs/shared_constants.h"
 #include "local_transceiver.h"
-#include "rclcpp/publisher.hpp"
-#include "rclcpp/rclcpp.hpp"
-#include "rclcpp/subscription.hpp"
-#include "rclcpp/timer.hpp"
-#include "std_msgs/msg/string.hpp"
 
 /**
  * Local Transceiver Interface Node
