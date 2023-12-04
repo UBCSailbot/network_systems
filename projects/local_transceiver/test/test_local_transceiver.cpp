@@ -1,9 +1,10 @@
 /* IMPORTANT: Make sure only one instance of network_systems/scripts/run_virtual_iridium.sh is running */
 
+#include <gtest/gtest.h>
+
 #include <boost/system/system_error.hpp>
 
 #include "cmn_hdrs/shared_constants.h"
-#include "gtest/gtest.h"
 #include "local_transceiver.h"
 #include "sensors.pb.h"
 

@@ -1,37 +1,24 @@
 #include <chrono>
-#include <custom_interfaces/msg/detail/ais_ships__struct.hpp>
-#include <custom_interfaces/msg/detail/batteries__struct.hpp>
-#include <custom_interfaces/msg/detail/can_sim_to_boat_sim__struct.hpp>
-#include <custom_interfaces/msg/detail/desired_heading__struct.hpp>
-#include <custom_interfaces/msg/detail/generic_sensors__struct.hpp>
-#include <custom_interfaces/msg/detail/gps__struct.hpp>
-#include <custom_interfaces/msg/detail/helper_ais_ship__struct.hpp>
-#include <custom_interfaces/msg/detail/helper_lat_lon__struct.hpp>
-#include <custom_interfaces/msg/detail/sail_cmd__struct.hpp>
-#include <custom_interfaces/msg/detail/wind_sensors__struct.hpp>
+#include <custom_interfaces/msg/ais_ships.hpp>
+#include <custom_interfaces/msg/batteries.hpp>
+#include <custom_interfaces/msg/can_sim_to_boat_sim.hpp>
+#include <custom_interfaces/msg/desired_heading.hpp>
+#include <custom_interfaces/msg/generic_sensors.hpp>
+#include <custom_interfaces/msg/gps.hpp>
+#include <custom_interfaces/msg/wind_sensors.hpp>
 #include <functional>
 #include <memory>
+#include <rclcpp/publisher.hpp>
+#include <rclcpp/rclcpp.hpp>
+#include <rclcpp/subscription.hpp>
+#include <rclcpp/timer.hpp>
+#include <std_msgs/msg/string.hpp>
 #include <string>
 #include <thread>
 
 #include "can_frame_parser.h"
 #include "can_transceiver.h"
 #include "cmn_hdrs/ros_info.h"
-#include "custom_interfaces/msg/ais_ships.hpp"
-#include "custom_interfaces/msg/batteries.hpp"
-#include "custom_interfaces/msg/can_sim_to_boat_sim.hpp"
-#include "custom_interfaces/msg/desired_heading.hpp"
-#include "custom_interfaces/msg/generic_sensors.hpp"
-#include "custom_interfaces/msg/gps.hpp"
-#include "custom_interfaces/msg/helper_generic_sensor.hpp"
-#include "custom_interfaces/msg/sail_cmd.hpp"
-#include "custom_interfaces/msg/wind_sensor.hpp"
-#include "custom_interfaces/msg/wind_sensors.hpp"
-#include "rclcpp/publisher.hpp"
-#include "rclcpp/rclcpp.hpp"
-#include "rclcpp/subscription.hpp"
-#include "rclcpp/timer.hpp"
-#include "std_msgs/msg/string.hpp"
 
 constexpr int QUEUE_SIZE        = 10;
 constexpr int PLACEHOLDER_VALUE = 42;   // Placeholder value for debugging or testing
