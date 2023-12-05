@@ -33,11 +33,12 @@ static Vec2DFloat headingToVec2D(const float & heading)
     return {std::sin(angle), std::cos(angle)};
 }
 
-MockAisShip::MockAisShip(uint32_t seed, uint32_t id, Vec2DFloat polaris_lat_lon) : mt_rng_(seed)
+MockAisShip::MockAisShip(uint32_t seed, uint32_t id, Vec2DFloat polaris_lat_lon, SimShipConfig config)
+: mt_rng_(seed), config_(config)
 {
     static const std::array<float, 2>       pos_or_neg = {-1.0, 1.0};
-    std::uniform_real_distribution<float>   lat_dist(MIN_AIS_SHIP_DIST, MAX_AIS_SHIP_DIST);
-    std::uniform_real_distribution<float>   lon_dist(MIN_AIS_SHIP_DIST, MAX_AIS_SHIP_DIST);
+    std::uniform_real_distribution<float>   lat_dist(config_.min_ship_dist_, config_.max_ship_dist_);
+    std::uniform_real_distribution<float>   lon_dist(config_.min_ship_dist_, config_.max_ship_dist_);
     std::uniform_real_distribution<float>   speed_dist(SPEED_LBND, SPEED_UBND);
     std::uniform_real_distribution<float>   heading_dist(HEADING_LBND, HEADING_UBND);
     std::uniform_int_distribution<uint32_t> pos_or_neg_dist(0, 1);
@@ -52,8 +53,10 @@ MockAisShip::MockAisShip(uint32_t seed, uint32_t id, Vec2DFloat polaris_lat_lon)
 
 void MockAisShip::tick(const Vec2DFloat & polaris_lat_lon)
 {
-    std::uniform_real_distribution<float> heading_dist(heading_ - MAX_HEADING_CHANGE, heading_ + MAX_HEADING_CHANGE);
-    std::uniform_real_distribution<float> speed_dist(speed_ - MAX_SPEED_CHANGE, speed_ + MAX_SPEED_CHANGE);
+    std::uniform_real_distribution<float> heading_dist(
+      heading_ - config_.max_heading_change_, heading_ + config_.max_heading_change_);
+    std::uniform_real_distribution<float> speed_dist(
+      speed_ - config_.max_speed_change_, speed_ + config_.max_speed_change_);
 
     float speed = speed_dist(mt_rng_);
     if (speed > SPEED_UBND) {
@@ -66,29 +69,40 @@ void MockAisShip::tick(const Vec2DFloat & polaris_lat_lon)
     speed_             = speed;
     Vec2DFloat dir_vec = headingToVec2D(heading_);
     if (
-      (std::abs(std::abs(lat_lon_[0] + dir_vec[0] * speed_ - polaris_lat_lon[0])) < MAX_AIS_SHIP_DIST) &&
-      (std::abs(std::abs(lat_lon_[0] + dir_vec[0] * speed_ - polaris_lat_lon[0])) > MIN_AIS_SHIP_DIST)) {
+      (std::abs(std::abs(lat_lon_[0] + dir_vec[0] * speed_ - polaris_lat_lon[0])) < config_.max_ship_dist_) &&
+      (std::abs(std::abs(lat_lon_[0] + dir_vec[0] * speed_ - polaris_lat_lon[0])) > config_.min_ship_dist_)) {
         lat_lon_[0] += dir_vec[0] * speed_;
-    } else if (std::abs(lat_lon_[0] - polaris_lat_lon[0]) >= MAX_AIS_SHIP_DIST) {
-        lat_lon_[0] = polaris_lat_lon[0] + MAX_AIS_SHIP_DIST - MIN_AIS_SHIP_DIST;
-    } else if (std::abs(lat_lon_[0] - polaris_lat_lon[0]) < MIN_AIS_SHIP_DIST) {
-        lat_lon_[0] = polaris_lat_lon[0] + 2 * MIN_AIS_SHIP_DIST;
+    } else if (std::abs(lat_lon_[0] - polaris_lat_lon[0]) >= config_.max_ship_dist_) {
+        lat_lon_[0] = polaris_lat_lon[0] + config_.max_ship_dist_ - config_.min_ship_dist_;
+    } else if (std::abs(lat_lon_[0] - polaris_lat_lon[0]) < config_.min_ship_dist_) {
+        lat_lon_[0] = polaris_lat_lon[0] + 2 * config_.min_ship_dist_;
     }
     if (
-      (std::abs(std::abs(lat_lon_[1] + dir_vec[1] * speed_ - polaris_lat_lon[1])) < MAX_AIS_SHIP_DIST) &&
-      (std::abs(std::abs(lat_lon_[1] + dir_vec[1] * speed_ - polaris_lat_lon[1])) > MIN_AIS_SHIP_DIST)) {
+      (std::abs(std::abs(lat_lon_[1] + dir_vec[1] * speed_ - polaris_lat_lon[1])) < config_.max_ship_dist_) &&
+      (std::abs(std::abs(lat_lon_[1] + dir_vec[1] * speed_ - polaris_lat_lon[1])) > config_.min_ship_dist_)) {
         lat_lon_[1] += dir_vec[1] * speed_;
-    } else if (std::abs(lat_lon_[1] - polaris_lat_lon[1]) >= MAX_AIS_SHIP_DIST) {
-        lat_lon_[1] = polaris_lat_lon[1] + MAX_AIS_SHIP_DIST - MIN_AIS_SHIP_DIST;
-    } else if (std::abs(lat_lon_[1] - polaris_lat_lon[1]) < MIN_AIS_SHIP_DIST) {
-        lat_lon_[1] = polaris_lat_lon[1] + 2 * MIN_AIS_SHIP_DIST;
+    } else if (std::abs(lat_lon_[1] - polaris_lat_lon[1]) >= config_.max_ship_dist_) {
+        lat_lon_[1] = polaris_lat_lon[1] + config_.max_ship_dist_ - config_.min_ship_dist_;
+    } else if (std::abs(lat_lon_[1] - polaris_lat_lon[1]) < config_.min_ship_dist_) {
+        lat_lon_[1] = polaris_lat_lon[1] + 2 * config_.min_ship_dist_;
     }
 }
 
-MockAis::MockAis(uint32_t seed, uint32_t num_ships, Vec2DFloat polaris_lat_lon) : polaris_lat_lon_(polaris_lat_lon)
+MockAis::MockAis(uint32_t seed, uint32_t num_ships, Vec2DFloat polaris_lat_lon)
+: MockAis(
+    seed, num_ships, polaris_lat_lon,
+    {.max_heading_change_ = defaults::MAX_HEADING_CHANGE,
+     .max_speed_change_   = defaults::MAX_SPEED_CHANGE,
+     .max_ship_dist_      = defaults::MAX_AIS_SHIP_DIST,
+     .min_ship_dist_      = defaults::MIN_AIS_SHIP_DIST})
+{
+}
+
+MockAis::MockAis(uint32_t seed, uint32_t num_ships, Vec2DFloat polaris_lat_lon, SimShipConfig config)
+: polaris_lat_lon_(polaris_lat_lon)
 {
     for (uint32_t i = 0; i < num_ships; i++) {
-        ships_.push_back(MockAisShip(seed + i, i, polaris_lat_lon));
+        ships_.push_back(MockAisShip(seed + i, i, polaris_lat_lon, config));
     }
 }
 

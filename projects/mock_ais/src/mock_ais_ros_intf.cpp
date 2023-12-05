@@ -12,15 +12,6 @@
 #include "cmn_hdrs/ros_info.h"
 #include "mock_ais.h"
 
-namespace defaults
-{
-static constexpr int        PUB_RATE_MS   = 500;
-static constexpr int        SEED          = 123456;
-static constexpr int        NUM_SIM_SHIPS = 20;
-static constexpr Vec2DFloat POLARIS_START_POS{
-  49.28397458822112, -123.6525841364974};  // some point in the Strait of Georgia;
-}  // namespace defaults
-
 class MockAisRosIntf : public rclcpp::Node
 {
 public:
@@ -34,7 +25,7 @@ public:
           this->get_parameter("enabled").as_bool() &&
           this->get_parameter("mode").as_string() == "development") {  // TODO(hhenry01): replace with constant
 
-            this->declare_parameter("publish_rate_ms", defaults::PUB_RATE_MS);
+            this->declare_parameter("publish_rate_ms", defaults::UPDATE_RATE_MS);
             this->declare_parameter("seed", defaults::SEED);
             this->declare_parameter("num_sim_ships", defaults::NUM_SIM_SHIPS);
             this->declare_parameter(

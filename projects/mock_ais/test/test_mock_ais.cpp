@@ -9,6 +9,11 @@
 #include "cmn_hdrs/shared_constants.h"
 #include "mock_ais.h"
 
+using defaults::MAX_AIS_SHIP_DIST;
+using defaults::MAX_HEADING_CHANGE;
+using defaults::MAX_SPEED_CHANGE;
+using defaults::MIN_AIS_SHIP_DIST;
+
 constexpr uint32_t   NUM_SHIPS       = 50;
 constexpr uint32_t   NUM_TEST_CYCLES = 100;
 constexpr Vec2DFloat POLARIS_START_POS{49.28397458822112, -123.6525841364974};  // some point in the Strait of Georgia
