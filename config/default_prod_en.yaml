@@ -1,3 +1,4 @@
+# Configuration that just enables the mandatory production/deployment modules and uses their defaults
 network_systems:
   can_transceiver_node:
     ros__parameters:
