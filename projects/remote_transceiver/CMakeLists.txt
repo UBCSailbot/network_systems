@@ -22,10 +22,10 @@ set(compile_defs
 
 set(bin_srcs
     ${srcs}
-    ${CMAKE_CURRENT_LIST_DIR}/src/main.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/src/remote_transceiver_ros_intf.cpp
 )
 
-# Make executable (not ROS)
+# Make executable
 make_exe(${module} "${bin_srcs}" "${link_libs}" "${inc_dirs}" "${compile_defs}")
 
 # Create unit test

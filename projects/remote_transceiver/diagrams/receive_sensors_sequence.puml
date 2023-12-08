@@ -28,7 +28,7 @@ else Else All Sensor Payloads Received
     <- handler -- : Send Response
     server <-- buf : Read Entire Buffer
     server -> server : Parse Protobuf Sensors Object from Binary
-    server -> db ++ : Commit Sensors to DB
+    server -> db --++ : Commit Sensors to DB
     db -> db : Convert Sensors to BSON Format
     db --> mongo -- : Write Sensors to MongoDB
     deactivate server

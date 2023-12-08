@@ -23,7 +23,7 @@ public:
      * @param lcl_trns Local Transceiver instance
      */
     explicit LocalTransceiverIntf(std::shared_ptr<LocalTransceiver> lcl_trns)
-    : Node("local_transceiver_intf_node"), lcl_trns_(lcl_trns)
+    : Node("local_transceiver_node"), lcl_trns_(lcl_trns)
     {
         static constexpr int  ROS_Q_SIZE     = 5;
         static constexpr auto TIMER_INTERVAL = std::chrono::milliseconds(500);

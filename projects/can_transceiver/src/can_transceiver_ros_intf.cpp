@@ -28,7 +28,7 @@ class CanTransceiverIntf : public rclcpp::Node
 {
 public:
     explicit CanTransceiverIntf(std::shared_ptr<CanTransceiver> can_trns)
-    : Node("can_transceiver_intf_node"), can_trns_(can_trns)
+    : Node("can_transceiver_node"), can_trns_(can_trns)
     {
         static constexpr int  ROS_Q_SIZE     = 5;
         static constexpr auto TIMER_INTERVAL = std::chrono::milliseconds(500);
