@@ -10,11 +10,23 @@
 
 #include "cmn_hdrs/shared_constants.h"
 
+/**
+ * @brief Convert degress to radians
+ *
+ * @param degrees
+ * @return radians
+ */
 static float degToRad(const float & degrees)
 {
     return static_cast<float>(degrees * M_PI / 180.0);  // NOLINT(readability-magic-numbers)
 }
 
+/**
+ * @brief Bound a heading to our current limits
+ *
+ * @param heading
+ * @return bounded heading
+ */
 static float boundHeading(const float & heading)
 {
     if (heading < HEADING_LBND) {
@@ -26,6 +38,12 @@ static float boundHeading(const float & heading)
     return heading;
 }
 
+/**
+ * @brief Convert a heading to a 2D direction unit vector
+ *
+ * @param heading
+ * @return direction vector
+ */
 static Vec2DFloat headingToVec2D(const float & heading)
 {
     float angle = degToRad(heading);

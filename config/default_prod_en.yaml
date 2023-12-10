@@ -16,6 +16,10 @@ network_systems:
     ros__parameters:
       enabled: true
 
+  mock_ais_node:
+    ros__parameters:
+      enabled: false
+
   remote_transceiver_node:
     ros__parameters:
       enabled: true
