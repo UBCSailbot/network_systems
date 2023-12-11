@@ -53,6 +53,8 @@ public:
               mode.c_str(), publish_rate_ms_param.value_to_string().c_str(), seed_param.value_to_string().c_str(),
               num_sim_ships_param.value_to_string().c_str(), polaris_start_pos_param.value_to_string().c_str());
 
+            // TODO(): Add ROS parameters for so that we can use the MockAis constructor that takes SimShipConfig
+            // Optionally use nested parameters: https://answers.ros.org/question/325939/declare-nested-parameter/
             mock_ais_                     = std::make_unique<MockAis>(seed, num_sim_ships, polaris_start_pos);
             std::string polaris_gps_topic = mode == SYSTEM_MODE::DEV ? MOCK_GPS_TOPIC : GPS_TOPIC;
 
