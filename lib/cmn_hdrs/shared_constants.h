@@ -12,8 +12,8 @@ static const std::string PROD = "production";
 static const std::string DEV  = "development";
 };  // namespace SYSTEM_MODE
 
-constexpr unsigned int MAX_LOCAL_TO_REMOTE_PAYLOAD_SIZE_BYTES = 270;
-constexpr unsigned int MAX_REMOTE_TO_LOCAL_PAYLOAD_SIZE_BYTES = 340;
+constexpr unsigned int MAX_LOCAL_TO_REMOTE_PAYLOAD_SIZE_BYTES = 340;
+constexpr unsigned int MAX_REMOTE_TO_LOCAL_PAYLOAD_SIZE_BYTES = 270;
 
 constexpr int NUM_BATTERIES    = 2;
 constexpr int NUM_WIND_SENSORS = 2;
