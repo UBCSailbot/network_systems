@@ -28,6 +28,12 @@ protected:
     ~TestMockAisSim(){};
 };
 
+/**
+ * @brief Verify that an Ais ship is within acceptable distance from Polaris
+ *
+ * @param ais_ship_lat_lon ais ship position
+ * @param polaris_lat_lon  polaris position
+ */
 void checkAisShipInBounds(Vec2DFloat ais_ship_lat_lon, Vec2DFloat polaris_lat_lon)
 {
     EXPECT_LT(std::abs(ais_ship_lat_lon[0] - polaris_lat_lon[0]), MAX_AIS_SHIP_DIST);
@@ -36,6 +42,12 @@ void checkAisShipInBounds(Vec2DFloat ais_ship_lat_lon, Vec2DFloat polaris_lat_lo
     EXPECT_GT(std::abs(ais_ship_lat_lon[1] - polaris_lat_lon[1]), MIN_AIS_SHIP_DIST);
 }
 
+/**
+ * @brief Verify that ais ships operate within specified constraints
+ *
+ * @param updated_ship ais ship instance
+ * @param past_ship    same ais ship instance but saved from the previous tick
+ */
 void checkAisShipTickUpdateLimits(AisShip updated_ship, AisShip past_ship)
 {
     EXPECT_LE(updated_ship.speed_, SPEED_UBND);
@@ -61,8 +73,15 @@ void checkAisShipTickUpdateLimits(AisShip updated_ship, AisShip past_ship)
     } else {
         // Passes check
     }
+
+    EXPECT_LE(updated_ship.rot_, ROT_UBND);
+    EXPECT_GE(updated_ship.rot_, ROT_LBND);
 }
 
+/**
+ * @brief Test basic operation when Polaris is not moving
+ *
+ */
 TEST_F(TestMockAisSim, TestBasic)
 {
     SCOPED_TRACE("Seed: " + std::to_string(g_rand_seed));
@@ -80,6 +99,10 @@ TEST_F(TestMockAisSim, TestBasic)
     }
 }
 
+/**
+ * @brief Test operation when Polaris is moving
+ *
+ */
 TEST_F(TestMockAisSim, TestMovingPolaris)
 {
     SCOPED_TRACE("Seed: " + std::to_string(g_rand_seed));

@@ -9,24 +9,30 @@
 using Vec2DFloat = std::array<float, 2>;  // Convenience alias
 namespace defaults
 {
-static constexpr float      MAX_HEADING_CHANGE = 5.0;     // Max degree change per tick
-static constexpr float      MAX_SPEED_CHANGE   = 1.0;     // Min degree change per tick
-static constexpr float      MIN_AIS_SHIP_DIST  = 0.001;   // Min 111m (at equator) distance of ais ships from Polaris
-static constexpr float      MAX_AIS_SHIP_DIST  = 0.1;     // Max 11.1km (at equator) distance of ais ships from Polaris
-static constexpr int        UPDATE_RATE_MS     = 500;     // Update frequency
-static constexpr int        SEED               = 123456;  // Randomization seed
-static constexpr int        NUM_SIM_SHIPS      = 20;      // Number of ais ships to simulate
-static constexpr Vec2DFloat POLARIS_START_POS{
-  49.28397458822112, -123.6525841364974};  // some point in the Strait of Georgia;
+constexpr float MAX_HEADING_CHANGE   = 2.0;    // Max degree change per tick
+constexpr float MAX_SPEED_CHANGE     = 1.0;    // Min degree change per tick
+constexpr float MIN_AIS_SHIP_DIST    = 0.001;  // Min 111m (at equator) distance of ais ships from Polaris
+constexpr float MAX_AIS_SHIP_DIST    = 0.1;    // Max 11.1km (at equator) distance of ais ships from Polaris
+constexpr int   MIN_AIS_SHIP_WIDTH_M = 2;      // A boat this small likely won't have AIS
+constexpr int   MAX_AIS_SHIP_WIDTH_M = 49;     // Typical container ship width
+// Minimum and maximum ratios pulled from: http://marine.marsh-design.com/content/length-beam-ratio
+constexpr int        MIN_AIS_SHIP_L_W_RATIO = 2;
+constexpr int        MAX_AIS_SHIP_L_W_RATIO = 16;
+constexpr int        UPDATE_RATE_MS         = 500;                              // Update frequency
+constexpr int        SEED                   = 123456;                           // Randomization seed
+constexpr int        NUM_SIM_SHIPS          = 20;                               // Number of ais ships to simulate
+constexpr Vec2DFloat POLARIS_START_POS{49.28397458822112, -123.6525841364974};  // some point in the Strait of Georgia;
 }  // namespace defaults
 
-// TODO(): Add width and length
 struct AisShip
 {
     Vec2DFloat lat_lon_;
     float      speed_;
     float      heading_;
+    float      rot_;
     uint32_t   id_;
+    uint32_t   width_;
+    uint32_t   length_;
 };
 
 /**
@@ -34,10 +40,14 @@ struct AisShip
  */
 struct SimShipConfig
 {
-    float max_heading_change_;  // Max degree change per tick
-    float max_speed_change_;    // Min degree change per tick
-    float max_ship_dist_;       // Maximum distance from Polaris (Difference b/w lats and lons)
-    float min_ship_dist_;       // Minimum distance from Poalris (Difference b/w lats and lons)
+    float    max_heading_change_;  // Max degree change per tick
+    float    max_speed_change_;    // Min degree change per tick
+    float    max_ship_dist_;       // Maximum distance from Polaris (Difference b/w lats and lons)
+    float    min_ship_dist_;       // Minimum distance from Polaris (Difference b/w lats and lons)
+    uint32_t min_ship_width_m_;    // Minimum ship width in meters
+    uint32_t max_ship_width_m_;    // Maximum ship width in meters
+    uint32_t min_ship_l_w_ratio_;  // Minimum ship length:width ratio
+    uint32_t max_ship_l_w_ratio_;  // Maximum ship length:width ratio
 };
 
 class MockAisShip : public AisShip
@@ -95,7 +105,7 @@ public:
      *
      * @return A vector of AisShip objects
      */
-    std::vector<AisShip> ships();
+    std::vector<AisShip> ships() const;
 
     /**
      * @brief Update the current position of Polaris

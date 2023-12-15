@@ -53,7 +53,7 @@ public:
               mode.c_str(), publish_rate_ms_param.value_to_string().c_str(), seed_param.value_to_string().c_str(),
               num_sim_ships_param.value_to_string().c_str(), polaris_start_pos_param.value_to_string().c_str());
 
-            // TODO(): Add ROS parameters for so that we can use the MockAis constructor that takes SimShipConfig
+            // TODO(): Add ROS parameters so that we can use the MockAis constructor that takes SimShipConfig
             // Optionally use nested parameters: https://answers.ros.org/question/325939/declare-nested-parameter/
             mock_ais_                     = std::make_unique<MockAis>(seed, num_sim_ships, polaris_start_pos);
             std::string polaris_gps_topic = mode == SYSTEM_MODE::DEV ? MOCK_GPS_TOPIC : GPS_TOPIC;
@@ -100,6 +100,15 @@ private:
             lat_lon.set__latitude(ais_ship.lat_lon_[0]);
             lat_lon.set__longitude(ais_ship.lat_lon_[1]);
             helper_ship.set__lat_lon(lat_lon);
+            custom_interfaces::msg::HelperDimension width;
+            width.set__dimension(static_cast<float>(ais_ship.width_));
+            helper_ship.set__width(width);
+            custom_interfaces::msg::HelperDimension length;
+            length.set__dimension(static_cast<float>(ais_ship.length_));
+            helper_ship.set__length(length);
+            custom_interfaces::msg::HelperROT rot;
+            rot.set__rot(ais_ship.rot_);
+            helper_ship.set__rot(rot);
 
             msg.ships.push_back(helper_ship);
         }

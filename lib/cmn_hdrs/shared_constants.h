@@ -35,18 +35,20 @@ constexpr float HEADING_LBND = 0.0;
 constexpr float HEADING_UBND = 360.0;
 
 // boat rotation
-constexpr float ROT_LBND = -360.0;
-constexpr float ROT_UBND = 360;
+// See https://documentation.spire.com/ais-fundamentals/rate-of-turn-rot/ for how ROT works
+constexpr int8_t ROT_LBND = -126;
+constexpr int8_t ROT_UBND = 126;
+
 // boat dimension
-constexpr float DIMENSION_LBND = 0;
-constexpr float DIMENSION_UBND = 650.0;
+constexpr float SHIP_DIMENSION_LBND = 1;      // arbitrary number
+constexpr float SHIP_DIMENSION_UBND = 650.0;  // arbitrary number
 
 /***** Bounds for Battery ******/
-constexpr float VOLT_LBND    = 0.5;     // Placeholder number
-constexpr float VOLT_UBND    = 250.0;   // Placeholder number
-constexpr float CURRENT_LBND = -200.0;  // Placeholder number
-constexpr float CURRENT_UBND = 200.0;   // Placeholder number
+constexpr float BATT_VOLT_LBND = 0.5;     // Placeholder number
+constexpr float BATT_VOLT_UBND = 250.0;   // Placeholder number
+constexpr float BATT_CURR_LBND = -200.0;  // Placeholder number
+constexpr float BATT_CURR_UBND = 200.0;   // Placeholder number
 
 /***** Bounds for Wind Sensor ******/
-constexpr int DIRECTION_LBND = -180;
-constexpr int DIRECTION_UBND = 179;
+constexpr int WIND_DIRECTION_LBND = -180;
+constexpr int WIND_DIRECTION_UBND = 179;

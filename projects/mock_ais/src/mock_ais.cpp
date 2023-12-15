@@ -60,6 +60,9 @@ MockAisShip::MockAisShip(uint32_t seed, uint32_t id, Vec2DFloat polaris_lat_lon,
     std::uniform_real_distribution<float>   speed_dist(SPEED_LBND, SPEED_UBND);
     std::uniform_real_distribution<float>   heading_dist(HEADING_LBND, HEADING_UBND);
     std::uniform_int_distribution<uint32_t> pos_or_neg_dist(0, 1);
+    std::uniform_int_distribution<uint32_t> beam_dist(config_.min_ship_width_m_, config_.max_ship_width_m_);
+    std::uniform_int_distribution<uint32_t> l_w_ratio_dist(config_.min_ship_l_w_ratio_, config_.max_ship_l_w_ratio_);
+    std::uniform_int_distribution<int8_t>   rot_dist(ROT_LBND, ROT_UBND);
 
     id_      = id;
     lat_lon_ = {
@@ -67,6 +70,9 @@ MockAisShip::MockAisShip(uint32_t seed, uint32_t id, Vec2DFloat polaris_lat_lon,
       polaris_lat_lon[1] + pos_or_neg[pos_or_neg_dist(mt_rng_)] * lon_dist(mt_rng_)};
     speed_   = speed_dist(mt_rng_);
     heading_ = heading_dist(mt_rng_);
+    width_   = beam_dist(mt_rng_);
+    length_  = width_ * l_w_ratio_dist(mt_rng_);
+    rot_     = rot_dist(mt_rng_);
 }
 
 void MockAisShip::tick(const Vec2DFloat & polaris_lat_lon)
@@ -75,6 +81,7 @@ void MockAisShip::tick(const Vec2DFloat & polaris_lat_lon)
       heading_ - config_.max_heading_change_, heading_ + config_.max_heading_change_);
     std::uniform_real_distribution<float> speed_dist(
       speed_ - config_.max_speed_change_, speed_ + config_.max_speed_change_);
+    std::uniform_int_distribution<int8_t> rot_dist(ROT_LBND, ROT_UBND);
 
     float speed = speed_dist(mt_rng_);
     if (speed > SPEED_UBND) {
@@ -104,6 +111,7 @@ void MockAisShip::tick(const Vec2DFloat & polaris_lat_lon)
     } else if (std::abs(lat_lon_[1] - polaris_lat_lon[1]) < config_.min_ship_dist_) {
         lat_lon_[1] = polaris_lat_lon[1] + 2 * config_.min_ship_dist_;
     }
+    rot_ = rot_dist(mt_rng_);
 }
 
 MockAis::MockAis(uint32_t seed, uint32_t num_ships, Vec2DFloat polaris_lat_lon)
@@ -112,7 +120,11 @@ MockAis::MockAis(uint32_t seed, uint32_t num_ships, Vec2DFloat polaris_lat_lon)
     {.max_heading_change_ = defaults::MAX_HEADING_CHANGE,
      .max_speed_change_   = defaults::MAX_SPEED_CHANGE,
      .max_ship_dist_      = defaults::MAX_AIS_SHIP_DIST,
-     .min_ship_dist_      = defaults::MIN_AIS_SHIP_DIST})
+     .min_ship_dist_      = defaults::MIN_AIS_SHIP_DIST,
+     .min_ship_width_m_   = defaults::MIN_AIS_SHIP_WIDTH_M,
+     .max_ship_width_m_   = defaults::MAX_AIS_SHIP_WIDTH_M,
+     .min_ship_l_w_ratio_ = defaults::MIN_AIS_SHIP_L_W_RATIO,
+     .max_ship_l_w_ratio_ = defaults::MAX_AIS_SHIP_L_W_RATIO})
 {
 }
 
@@ -124,11 +136,11 @@ MockAis::MockAis(uint32_t seed, uint32_t num_ships, Vec2DFloat polaris_lat_lon, 
     }
 }
 
-std::vector<AisShip> MockAis::ships()
+std::vector<AisShip> MockAis::ships() const
 {
     std::vector<AisShip> ships;
     for (const MockAisShip & ship : ships_) {
-        ships.push_back({.lat_lon_ = ship.lat_lon_, .speed_ = ship.speed_, .heading_ = ship.heading_, .id_ = ship.id_});
+        ships.push_back(ship);
     }
     return ships;
 }
