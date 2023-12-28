@@ -279,8 +279,8 @@ void genRandAisData(Sensors::Ais * ais_ship)
     std::uniform_real_distribution<float>   speed_dist(SPEED_LBND, SPEED_UBND);
     std::uniform_real_distribution<float>   heading_dist(HEADING_LBND, HEADING_UBND);
     std::uniform_real_distribution<float>   rot_dist(ROT_LBND, ROT_UBND);
-    std::uniform_real_distribution<float>   width_dist(DIMENSION_LBND, DIMENSION_UBND);
-    std::uniform_real_distribution<float>   length_dist(DIMENSION_LBND, DIMENSION_UBND);
+    std::uniform_real_distribution<float>   width_dist(SHIP_DIMENSION_LBND, SHIP_DIMENSION_UBND);
+    std::uniform_real_distribution<float>   length_dist(SHIP_DIMENSION_LBND, SHIP_DIMENSION_UBND);
 
     ais_ship->set_id(id_dist(g_mt));
     ais_ship->set_latitude(lat_dist(g_mt));
@@ -313,8 +313,8 @@ void genRandGenericSensorData(Sensors::Generic * generic_sensor)
  */
 void genRandBatteriesData(Sensors::Battery * battery)
 {
-    std::uniform_real_distribution<float> voltage_battery(VOLT_LBND, VOLT_UBND);
-    std::uniform_real_distribution<float> current_battery(CURRENT_LBND, CURRENT_UBND);
+    std::uniform_real_distribution<float> voltage_battery(BATT_VOLT_LBND, BATT_VOLT_UBND);
+    std::uniform_real_distribution<float> current_battery(BATT_CURR_LBND, BATT_CURR_UBND);
 
     battery->set_voltage(voltage_battery(g_mt));
     battery->set_current(current_battery(g_mt));
@@ -328,7 +328,7 @@ void genRandBatteriesData(Sensors::Battery * battery)
 void genRandWindData(Sensors::Wind * wind_data)
 {
     std::uniform_real_distribution<float> speed_wind(SPEED_LBND, SPEED_UBND);
-    std::uniform_int_distribution<int>    direction_wind(DIRECTION_LBND, DIRECTION_UBND);
+    std::uniform_int_distribution<int>    direction_wind(WIND_DIRECTION_LBND, WIND_DIRECTION_UBND);
 
     wind_data->set_speed(speed_wind(g_mt));
     wind_data->set_direction(direction_wind(g_mt));

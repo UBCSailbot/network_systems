@@ -7,25 +7,25 @@ description at the top describing its purpose.
 
 To run with pure default defined in the code, run:
 
-```
+```shell
 ros2 launch network_systems main_launch.py
 ```
 
 To run with config files in this folder:
 
-```
+```shell
 ros2 launch network_systems main_launch.py config:=<comma separated list of config files>
 ```
 
 For example:
 
-```
+```shell
 ros2 launch network_systems main_launch.py config:=default_prod_en.yaml
 ```
 
 launches network_systems with the parameters specified in `default_prod_en.yaml`.
 
-```
+```shell
 ros2 launch network_systems main_launch.py config:=default.yaml,example/example_en.yaml
 ```
 
@@ -34,7 +34,7 @@ launches network_systems with the parameters specified in `default_prod_en.yaml`
 
 **NOTE**: Instead of defining a `mode` parameter for each node, a global ROS launch argument is used.
 
-```
+```shell
 ros2 launch network_systems main_launch.py config:=<...> mode:=production
 ros2 launch network_systems main_launch.py config:=<...> mode:=development
 ```
