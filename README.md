@@ -78,6 +78,9 @@ breakpoints and step through our code line by line to resolve issues.
 This convenient testing frontend is thank's to the
 [TestMate extension](https://marketplace.visualstudio.com/items?itemName=matepek.vscode-catch2-test-adapter).
 
+**Warning**: Large failing tests can crash VSCode. If this happens, either lower the size of the tests (ex. reduce
+the number of iterations) or [run the test binary directly](#run-test-binaries).
+
 ### Run Test Binaries
 
 Test binaries for each module found under projects can be found under

@@ -36,6 +36,8 @@ remote_transceiver::MOMsgParams::MOMsgParams(const std::string & query_string)
     std::string iridium_mdata = query_string.substr(0, data_key_idx);
     params_.data_             = query_string.substr(data_key_idx + DATA_KEY.size(), query_string.size());
 
+    // After the HTTP parameters are converted from a string of key-value pairs to an array of strings, keys become
+    // the even numbered indices while values become the odd numbered ones. We just need the values.
     constexpr uint8_t IMEI_IDX   = 1;
     constexpr uint8_t SERIAL_IDX = 3;
     constexpr uint8_t MOMSN_IDX  = 5;
@@ -69,6 +71,7 @@ void Listener::run()
         if (!e) {
             std::make_shared<HTTPServer>(std::move(socket), db_)->doAccept();
         } else {
+            // Do not throw an error as we can still try to accept new requests
             std::cerr << "Error: " << e.message() << std::endl;
         }
         run();
@@ -175,6 +178,9 @@ void HTTPServer::writeRes()
     std::shared_ptr<HTTPServer> self = shared_from_this();
     http::async_write(socket_, res_, [self](beast::error_code e, std::size_t /*bytesWritten*/) {
         self->socket_.shutdown(tcp::socket::shutdown_send, e);
+        if (e) {
+            std::cerr << "Error: " << e.message() << std::endl;
+        }
     });
 }
 

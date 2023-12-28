@@ -154,7 +154,7 @@ public:
      * @brief Create a new Listener
      *
      * @param io       reference to io_context
-     * @param acceptor tcp::acceptor configured with desired host, port, and target
+     * @param acceptor tcp::acceptor configured with desired host and port
      * @param db       SailbotDB instance - the Listener requires that it takes ownership of the db
      */
     Listener(bio::io_context & io, tcp::acceptor acceptor, SailbotDB && db);
@@ -181,7 +181,7 @@ struct ConnectionInfo
 {
     std::string host;    // Ex. TESTING_HOST
     std::string port;    // Ex. TESTING_PORT
-    std::string target;  // See targets
+    std::string target;  // See targets namespace
 
     /**
      * @brief Convenience function to access the contents of the struct
