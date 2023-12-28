@@ -15,6 +15,7 @@ namespace qvm = boost::qvm;
  */
 struct Vec2DFloat : public qvm::vec<float, 2>
 {
+    // Explicitly use the member variable 'a' in the base qvm::vec class
     using qvm::vec<float, 2>::a;
 
     /**
@@ -48,8 +49,10 @@ struct Vec2DFloat : public qvm::vec<float, 2>
     const float & operator[](std::size_t idx) const { return a[idx]; }
 };
 
-// This boost::qvm:: namespace segment is just boilerplate to register the Vec2DFloat type with qvm's vector operations
-// See https://www.boost.org/doc/libs/1_74_0/libs/qvm/doc/html/index.html#vec_traits for more info
+// NOLINTBEGIN
+// This boost::qvm:: namespace segment is just boilerplate to register the Vec2DFloat type with qvm's vector operations.
+// See https://www.boost.org/doc/libs/1_74_0/libs/qvm/doc/html/index.html#vec_traits for more info.
+// Even though its boilerplate, it triggers linter errors so disable linting for this section.
 namespace boost
 {
 namespace qvm
@@ -75,7 +78,7 @@ struct vec_traits<Vec2DFloat>
 };
 }  // namespace qvm
 }  // namespace boost
-
+// NOLINTEND
 namespace defaults
 {
 constexpr float MAX_HEADING_CHANGE   = 2.0;    // Max degree change per tick
