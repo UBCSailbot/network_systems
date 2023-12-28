@@ -2,11 +2,80 @@
 
 #include <boost/asio.hpp>
 #include <boost/asio/io_service.hpp>
+#include <boost/qvm/all.hpp>
 #include <cstdint>
 #include <mutex>
 #include <random>
 
-using Vec2DFloat = std::array<float, 2>;  // Convenience alias
+namespace qvm = boost::qvm;
+
+/**
+ * @brief Convenience struct for a 2D floating point vector
+ * All functionality is inherited from qvm::vec
+ */
+struct Vec2DFloat : public qvm::vec<float, 2>
+{
+    using qvm::vec<float, 2>::a;
+
+    /**
+     * @brief Instantiate an empty Vec2DFloat
+     *
+     */
+    Vec2DFloat() {}
+
+    /**
+     * @brief Instantiate a Vec2DFloat with initial component values
+     *
+     * @param i
+     * @param j
+     */
+    Vec2DFloat(float i, float j) : qvm::vec<float, 2>{i, j} {}
+
+    /**
+     * @brief Convenience array accessor for a
+     *
+     * @param idx
+     * @return float&
+     */
+    float & operator[](std::size_t idx) { return a[idx]; }
+
+    /**
+     * @brief Convenience array accessor for a
+     *
+     * @param idx
+     * @return const float&
+     */
+    const float & operator[](std::size_t idx) const { return a[idx]; }
+};
+
+// This boost::qvm:: namespace segment is just boilerplate to register the Vec2DFloat type with qvm's vector operations
+// See https://www.boost.org/doc/libs/1_74_0/libs/qvm/doc/html/index.html#vec_traits for more info
+namespace boost
+{
+namespace qvm
+{
+template <>
+struct vec_traits<Vec2DFloat>
+{
+    static int const dim = 2;
+
+    using scalar_type = float;
+
+    template <int I>
+    static inline scalar_type & write_element(Vec2DFloat & v)
+    {
+        return v.a[I];
+    }
+
+    template <int I>
+    static inline scalar_type read_element(Vec2DFloat const & v)
+    {
+        return v.a[I];
+    }
+};
+}  // namespace qvm
+}  // namespace boost
+
 namespace defaults
 {
 constexpr float MAX_HEADING_CHANGE   = 2.0;    // Max degree change per tick
@@ -16,23 +85,27 @@ constexpr float MAX_AIS_SHIP_DIST    = 0.1;    // Max 11.1km (at equator) distan
 constexpr int   MIN_AIS_SHIP_WIDTH_M = 2;      // A boat this small likely won't have AIS
 constexpr int   MAX_AIS_SHIP_WIDTH_M = 49;     // Typical container ship width
 // Minimum and maximum ratios pulled from: http://marine.marsh-design.com/content/length-beam-ratio
-constexpr int        MIN_AIS_SHIP_L_W_RATIO = 2;
-constexpr int        MAX_AIS_SHIP_L_W_RATIO = 16;
-constexpr int        UPDATE_RATE_MS         = 500;                              // Update frequency
-constexpr int        SEED                   = 123456;                           // Randomization seed
-constexpr int        NUM_SIM_SHIPS          = 20;                               // Number of ais ships to simulate
-constexpr Vec2DFloat POLARIS_START_POS{49.28397458822112, -123.6525841364974};  // some point in the Strait of Georgia;
+constexpr int    MIN_AIS_SHIP_L_W_RATIO = 2;                                // Ship length should be at least 2x width
+constexpr int    MAX_AIS_SHIP_L_W_RATIO = 16;                               // Ship length should be at most 16x width
+constexpr int    UPDATE_RATE_MS         = 500;                              // Update frequency
+constexpr int    SEED                   = 123456;                           // Randomization seed
+constexpr int    NUM_SIM_SHIPS          = 20;                               // Number of ais ships to simulate
+const Vec2DFloat POLARIS_START_POS{49.28397458822112, -123.6525841364974};  // some point in the Strait of Georgia;
 }  // namespace defaults
 
+/**
+ * @brief Struct that mirrors the definition of custom_interfaces::msg::HelperAISShip
+ *
+ */
 struct AisShip
 {
     Vec2DFloat lat_lon_;
     float      speed_;
     float      heading_;
-    float      rot_;
     uint32_t   id_;
     uint32_t   width_;
     uint32_t   length_;
+    int8_t     rot_;
 };
 
 /**
@@ -42,8 +115,8 @@ struct SimShipConfig
 {
     float    max_heading_change_;  // Max degree change per tick
     float    max_speed_change_;    // Min degree change per tick
-    float    max_ship_dist_;       // Maximum distance from Polaris (Difference b/w lats and lons)
-    float    min_ship_dist_;       // Minimum distance from Polaris (Difference b/w lats and lons)
+    float    max_ship_dist_;       // Maximum distance from Polaris
+    float    min_ship_dist_;       // Minimum distance from Polaris
     uint32_t min_ship_width_m_;    // Minimum ship width in meters
     uint32_t max_ship_width_m_;    // Maximum ship width in meters
     uint32_t min_ship_l_w_ratio_;  // Minimum ship length:width ratio

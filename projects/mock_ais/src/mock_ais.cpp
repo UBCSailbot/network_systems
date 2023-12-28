@@ -10,13 +10,15 @@
 
 #include "cmn_hdrs/shared_constants.h"
 
+namespace
+{
 /**
  * @brief Convert degress to radians
  *
  * @param degrees
  * @return radians
  */
-static float degToRad(const float & degrees)
+float degToRad(const float & degrees)
 {
     return static_cast<float>(degrees * M_PI / 180.0);  // NOLINT(readability-magic-numbers)
 }
@@ -27,7 +29,7 @@ static float degToRad(const float & degrees)
  * @param heading
  * @return bounded heading
  */
-static float boundHeading(const float & heading)
+float boundHeading(const float & heading)
 {
     if (heading < HEADING_LBND) {
         return heading + HEADING_UBND;
@@ -42,14 +44,15 @@ static float boundHeading(const float & heading)
  * @brief Convert a heading to a 2D direction unit vector
  *
  * @param heading
- * @return direction vector
+ * @return unit direction vector
  */
-static Vec2DFloat headingToVec2D(const float & heading)
+Vec2DFloat headingToVec2D(const float & heading)
 {
     float angle = degToRad(heading);
     // Since 0 is north (y-axis), use sin for x and cos for y
     return {std::sin(angle), std::cos(angle)};
 }
+}  // namespace
 
 MockAisShip::MockAisShip(uint32_t seed, uint32_t id, Vec2DFloat polaris_lat_lon, SimShipConfig config)
 : mt_rng_(seed), config_(config)
@@ -90,27 +93,25 @@ void MockAisShip::tick(const Vec2DFloat & polaris_lat_lon)
         speed = SPEED_LBND;
     }
 
-    heading_           = boundHeading(heading_dist(mt_rng_));
-    speed_             = speed;
-    Vec2DFloat dir_vec = headingToVec2D(heading_);
-    if (
-      (std::abs(std::abs(lat_lon_[0] + dir_vec[0] * speed_ - polaris_lat_lon[0])) < config_.max_ship_dist_) &&
-      (std::abs(std::abs(lat_lon_[0] + dir_vec[0] * speed_ - polaris_lat_lon[0])) > config_.min_ship_dist_)) {
-        lat_lon_[0] += dir_vec[0] * speed_;
-    } else if (std::abs(lat_lon_[0] - polaris_lat_lon[0]) >= config_.max_ship_dist_) {
-        lat_lon_[0] = polaris_lat_lon[0] + config_.max_ship_dist_ - config_.min_ship_dist_;
-    } else if (std::abs(lat_lon_[0] - polaris_lat_lon[0]) < config_.min_ship_dist_) {
-        lat_lon_[0] = polaris_lat_lon[0] + 2 * config_.min_ship_dist_;
+    heading_                               = boundHeading(heading_dist(mt_rng_));
+    speed_                                 = speed;
+    Vec2DFloat dir_vec                     = headingToVec2D(heading_);
+    Vec2DFloat displacement                = dir_vec * speed_;
+    Vec2DFloat new_pos                     = lat_lon_ + displacement;
+    Vec2DFloat polaris_to_new_pos_vec      = new_pos - polaris_lat_lon;
+    float      polaris_to_new_pos_distance = qvm::mag(polaris_to_new_pos_vec);
+
+    if (polaris_to_new_pos_distance < config_.min_ship_dist_) {
+        qvm::normalize(polaris_to_new_pos_vec);
+        lat_lon_ = polaris_lat_lon + config_.min_ship_dist_ * polaris_to_new_pos_vec;
+    } else if (polaris_to_new_pos_distance > config_.max_ship_dist_) {
+        qvm::normalize(polaris_to_new_pos_vec);
+        lat_lon_ = polaris_lat_lon + config_.max_ship_dist_ * polaris_to_new_pos_vec;
+    } else {
+        lat_lon_ = new_pos;
     }
-    if (
-      (std::abs(std::abs(lat_lon_[1] + dir_vec[1] * speed_ - polaris_lat_lon[1])) < config_.max_ship_dist_) &&
-      (std::abs(std::abs(lat_lon_[1] + dir_vec[1] * speed_ - polaris_lat_lon[1])) > config_.min_ship_dist_)) {
-        lat_lon_[1] += dir_vec[1] * speed_;
-    } else if (std::abs(lat_lon_[1] - polaris_lat_lon[1]) >= config_.max_ship_dist_) {
-        lat_lon_[1] = polaris_lat_lon[1] + config_.max_ship_dist_ - config_.min_ship_dist_;
-    } else if (std::abs(lat_lon_[1] - polaris_lat_lon[1]) < config_.min_ship_dist_) {
-        lat_lon_[1] = polaris_lat_lon[1] + 2 * config_.min_ship_dist_;
-    }
+
+    // ROT does not necessarily depend on actual change in heading, so we can use a random number
     rot_ = rot_dist(mt_rng_);
 }
 
