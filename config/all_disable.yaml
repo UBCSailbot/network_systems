@@ -1,20 +1,21 @@
-# Configuration that just enables the mandatory production/deployment modules and uses their defaults
+# Configuration that disables everything
+# Allows us to overload the config:=... arguments such that we only launch certain nodes (useful for integration testing)
 network_systems:
   can_transceiver_node:
     ros__parameters:
-      enabled: true
+      enabled: false
 
   can_transceiver_sim_node:
     ros__parameters:
       enabled: false
 
-  cached_fib_node:
+  cached_fib_subscriber:
     ros__parameters:
       enabled: false
 
   local_transceiver_node:
     ros__parameters:
-      enabled: true
+      enabled: false
 
   mock_ais_node:
     ros__parameters:
@@ -22,4 +23,4 @@ network_systems:
 
   remote_transceiver_node:
     ros__parameters:
-      enabled: true
+      enabled: false

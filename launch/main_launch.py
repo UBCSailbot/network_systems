@@ -86,7 +86,7 @@ def get_cached_fib_description(context: LaunchContext) -> Node:
     Returns:
         Node: The node object that launches the cached_fib node.
     """
-    node_name = "cached_fib_subscriber"
+    node_name = "cached_fib_node"
     ros_parameters = [
         global_launch_config,
         {"mode": LaunchConfiguration("mode")},
