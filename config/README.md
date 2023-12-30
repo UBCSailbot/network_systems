@@ -26,7 +26,7 @@ ros2 launch network_systems main_launch.py config:=default_prod_en.yaml
 launches network_systems with the parameters specified in `default_prod_en.yaml`.
 
 ```shell
-ros2 launch network_systems main_launch.py config:=default.yaml,example/example_en.yaml
+ros2 launch network_systems main_launch.py config:=default_prod_en.yaml,example/example_en.yaml
 ```
 
 launches network_systems with the parameters specified in `default_prod_en.yaml` *and* `example/example_en.yaml`. Since

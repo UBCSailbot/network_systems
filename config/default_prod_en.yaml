@@ -1,25 +1,24 @@
 # Configuration that just enables the mandatory production/deployment modules and uses their defaults
-network_systems:
-  can_transceiver_node:
-    ros__parameters:
-      enabled: true
+can_transceiver_node:
+  ros__parameters:
+    enabled: true
 
-  can_transceiver_sim_node:
-    ros__parameters:
-      enabled: false
+can_transceiver_sim_node:
+  ros__parameters:
+    enabled: false
 
-  cached_fib_node:
-    ros__parameters:
-      enabled: false
+cached_fib_node:
+  ros__parameters:
+    enabled: false
 
-  local_transceiver_node:
-    ros__parameters:
-      enabled: true
+local_transceiver_node:
+  ros__parameters:
+    enabled: true
 
-  mock_ais_node:
-    ros__parameters:
-      enabled: false
+mock_ais_node:
+  ros__parameters:
+    enabled: false
 
-  remote_transceiver_node:
-    ros__parameters:
-      enabled: true
+remote_transceiver_node:
+  ros__parameters:
+    enabled: true

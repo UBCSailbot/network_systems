@@ -14,7 +14,7 @@ from launch.substitutions import LaunchConfiguration
 
 # Local launch arguments and constants
 PACKAGE_NAME = "network_systems"
-NAMESPACE = "network_systems"
+NAMESPACE = ""
 global_launch_config = ""
 
 # Add args with DeclareLaunchArguments object(s) and utilize in setup_launch()
