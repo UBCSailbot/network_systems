@@ -64,7 +64,7 @@ public:
                   mock_ais_->updatePolarisPos({mock_gps.lat_lon.latitude, mock_gps.lat_lon.longitude});
               });
 
-            pub_   = this->create_publisher<custom_interfaces::msg::AISShips>(AIS_SHIPS_TOPIC, ROS_Q_SIZE);
+            pub_   = this->create_publisher<custom_interfaces::msg::AISShips>(MOCK_AIS_SHIPS_TOPIC, ROS_Q_SIZE);
             timer_ = this->create_wall_timer(
               std::chrono::milliseconds(publish_rate_ms), std::bind(&MockAisRosIntf::pubShipsCB, this));
         } else {
