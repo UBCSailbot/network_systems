@@ -1,5 +1,4 @@
 # Configuration that enables the cached_fib example module
-network_systems:
-  cached_fib_subscriber:
-    ros__parameters:
-      enabled: true
+cached_fib_node:
+  ros__parameters:
+    enabled: true

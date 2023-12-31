@@ -14,7 +14,7 @@ from launch.substitutions import LaunchConfiguration
 
 # Local launch arguments and constants
 PACKAGE_NAME = "network_systems"
-NAMESPACE = "network_systems"
+NAMESPACE = ""
 global_launch_config = ""
 
 # Add args with DeclareLaunchArguments object(s) and utilize in setup_launch()
@@ -86,7 +86,7 @@ def get_cached_fib_description(context: LaunchContext) -> Node:
     Returns:
         Node: The node object that launches the cached_fib node.
     """
-    node_name = "cached_fib_subscriber"
+    node_name = "cached_fib_node"
     ros_parameters = [
         global_launch_config,
         {"mode": LaunchConfiguration("mode")},

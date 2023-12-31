@@ -619,7 +619,7 @@ TEST_F(TestHTTP, TestPostSensorsMult)
 {
     SCOPED_TRACE("Seed: " + std::to_string(g_rand_seed));  // Print seed on any failure
 
-    constexpr int                                NUM_REQS = 10;
+    constexpr int                                NUM_REQS = 50;
     std::array<std::string, NUM_REQS>            queries;
     std::array<std::thread, NUM_REQS>            req_threads;
     std::array<http::status, NUM_REQS>           res_statuses;

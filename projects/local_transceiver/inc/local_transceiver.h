@@ -8,9 +8,7 @@
 #include <custom_interfaces/msg/gps.hpp>
 #include <custom_interfaces/msg/l_path_data.hpp>
 #include <custom_interfaces/msg/wind_sensors.hpp>
-#include <mutex>
 #include <rclcpp/node.hpp>
-#include <std_msgs/msg/string.hpp>
 #include <string>
 
 #include "sensors.pb.h"

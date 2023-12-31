@@ -13,7 +13,6 @@
 #include <custom_interfaces/msg/l_path_data.hpp>
 #include <custom_interfaces/msg/wind_sensors.hpp>
 #include <exception>
-#include <mutex>
 #include <stdexcept>
 #include <string>
 

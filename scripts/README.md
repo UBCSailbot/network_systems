@@ -2,7 +2,7 @@
 
 ## Autogen ROS Topics
 
-```
+```shell
 ./autogen_ros_topics.sh <input text file>
 ```
 
@@ -10,7 +10,7 @@ Given an input text file where each line is the name of a ROS topic, generates a
 
 ## Run Virtual Iridium
 
-```
+```shell
 ./run_virtual_iridium.sh <(optional) webhook server url> <(optional) virtual iridium http server port>
 ```
 

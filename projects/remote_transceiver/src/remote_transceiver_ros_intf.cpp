@@ -9,6 +9,10 @@
 #include "remote_transceiver.h"
 #include "sailbot_db.h"
 
+/**
+ * @brief Connect the Remote Transceiver to the onboard ROS network
+ *
+ */
 class RemoteTransceiverRosIntf : public rclcpp::Node
 {
 public:
@@ -93,6 +97,10 @@ public:
         }
     }
 
+    /**
+     * @brief If the Remote Transceiver is enabled, it needs to be cleanly destroyed when it goes out of scope. This
+     * means halting all IO. Otherwise, ROS will need to force exit after timeout.
+     */
     ~RemoteTransceiverRosIntf()
     {
         if (enabled_) {
@@ -104,10 +112,10 @@ public:
     }
 
 private:
-    std::unique_ptr<remote_transceiver::Listener> listener_;
-    std::unique_ptr<bio::io_context>              io_;
-    std::vector<std::thread>                      io_threads_;
-    bool                                          enabled_;
+    std::unique_ptr<remote_transceiver::Listener> listener_;    // Pointer to the HTTP Listener
+    std::unique_ptr<bio::io_context>              io_;          // io_context that all boost::asio operations run off of
+    std::vector<std::thread>                      io_threads_;  // Vector of all concurrent IO/HTTP request threads
+    bool enabled_;  // Status flag that indicates whether the Remote Transceiver is running or not
 };
 
 int main(int argc, char ** argv)
