@@ -4,144 +4,94 @@
 #include <stdint.h>
 
 #include <array>
+#include <custom_interfaces/msg/batteries.hpp>
+#include <map>
+#include <span>
 #include <stdexcept>
 
-using CanFrame   = struct can_frame;
-using RawDataBuf = std::array<uint8_t, CAN_MAX_DLEN>;
+// CAN frame definitions from: https://ubcsailbot.atlassian.net/wiki/spaces/prjt22/pages/1827176527/CAN+Frames
+namespace CAN
+{
 
-// Enum of all device IDs - TODO: Look into autogenerating this based on a csv file or similar
-enum CanId : uint32_t { Placeholder0 = 0, Placeholder1 = 1, RudderCmd, CAN_ID_MAX };
-// Array of device names mapped to their device IDs - TODO: Look into autogenerating this based on a csv file or similar
-static std::array<std::string, CanId::CAN_ID_MAX> CAN_DEVICE_NAMES = {"Placeholder0", "Placeholder1", "RudderCmd"};
+using CanFrame   = struct canfd_frame;
+using RawDataBuf = std::array<uint8_t, CANFD_MAX_DLEN>;
+
+enum CanId : uint32_t {
+    BMS_P_DATA_FRAME_1     = 0x31,
+    BMS_P_DATA_FRAME_2     = 0x32,
+    SAIL_WSM_CMD_FRAME_1   = 0x60,
+    SAIL_WSM_CMD_FRAME_2   = 0x61,
+    SAIL_ENCD_DATA_FRAME   = 0x62,
+    SAIL_WSM_DATA_FRAME_1  = 0x63,
+    SAIL_WSM_DATA_FRAME_2  = 0x64,
+    SAIL_WIND_DATA_FRAME_1 = 0x65,
+    SAIL_NAV_CMD_FRAME     = 0x66,
+    RUDR_CMD_FRAME         = 0x70,
+    RUDR_DATA_FRAME_1      = 0x71,
+    RUDR_DATA_FRAME_2      = 0x72,
+    PATH_GPS_DATA_FRAME_1  = 0x80,
+    PATH_GPS_DATA_FRAME_2  = 0x81,
+    PATH_GPS_DATA_FRAME_3  = 0x82,
+    PATH_GPS_DATA_FRAME_4  = 0x83,
+    PATH_WIND_DATA_FRAME   = 0x84,
+};
+
+static const std::map<CanId, std::string> CanDescription{
+  {BMS_P_DATA_FRAME_1, "Battery 1 data"},  // Dummy comment to pad the map for prettier formatting
+  {BMS_P_DATA_FRAME_2, "Battery 2 data"},
+  {SAIL_WSM_CMD_FRAME_1, "Main sail command"},
+  {SAIL_WSM_CMD_FRAME_2, "Jib Sail command"},
+  {SAIL_ENCD_DATA_FRAME, "Sail encoder data"},
+  {SAIL_WSM_DATA_FRAME_1, "Main sail data"},
+  {SAIL_WSM_DATA_FRAME_2, "Jib sail data"},
+  {SAIL_WIND_DATA_FRAME_1, "Mast wind sensor"},
+  {SAIL_NAV_CMD_FRAME, "Nav light commands"},
+  {RUDR_CMD_FRAME, "Rudder commands (BOTH RUDDERS)"},
+  {RUDR_DATA_FRAME_1, "Port rudder data,"},
+  {RUDR_DATA_FRAME_2, "Starboard rudder data"},
+  {PATH_GPS_DATA_FRAME_1, "GPS latitude"},
+  {PATH_GPS_DATA_FRAME_2, "GPS longitude"},
+  {PATH_GPS_DATA_FRAME_3, "GPS other data"},
+  {PATH_GPS_DATA_FRAME_4, "GPS time reporting (ex. day of the year)"},
+  {PATH_WIND_DATA_FRAME, "Hull wind sensor"}};
 
 /**
  * Custom exception for when an attempt is made to construct a CAN object with a mismatched ID
  *
  */
-class CanIdMismatchException : public std::runtime_error
+class CanIdMismatchException : public std::exception
 {
 public:
-    CanIdMismatchException(const CanId & expected, const canid_t & received)
-    : std::runtime_error(
-        "Mismatched ID when constructing CAN frame, expected device: " + CAN_DEVICE_NAMES[expected] + " ( " +
-        std::to_string(expected) + " ) " +
-        " - received device: " + (received >= CanId::CAN_ID_MAX ? "INVALID" : CAN_DEVICE_NAMES[received]) + " ( " +
-        std::to_string(received) + " )")
-    {
-    }
-};
+    CanIdMismatchException(std::span<const CanId> valid_ids, const canid_t & received);
 
-/**
- * Placeholder CAN device
- *
- */
-struct Placeholder0
-{
-public:
-    // Device id
-    static constexpr CanId id_ = CanId::Placeholder0;
-    union {
-        // Placeholder data fields - elaborate what these fields mean in actual implementation
-        struct
-        {
-            uint32_t field_0_       : 31;
-            bool     field_0_valid_ : 1;
-            uint16_t field_1_       : 16;
-            uint8_t  field_2_       : 8;
-            uint8_t  field_3_       : 4;
-            uint8_t  field_4_       : 4;
-        } fields_;
-        // Raw data buffer representation of data
-        RawDataBuf raw_buf_;
-    } data_;
-    static_assert(sizeof(data_) == CAN_MAX_DLEN);
-
-    /**
-     * @brief Construct the object from a CAN frame
-     *
-     * @param frame CAN frame
-     */
-    explicit Placeholder0(const CanFrame & frame);
-
-    /**
-     * @brief Construct the object from a ROS msg
-     *
-     */
-    Placeholder0(/* Placeholder0 ROS msg */);
-};
-
-/**
- * Placeholder CAN device
- *
- */
-struct Placeholder1
-{
-public:
-    // Device ID
-    static constexpr CanId id_ = CanId::Placeholder1;
-    union {
-        // Placeholder data fields - elaborate what these fields mean in actual implementation
-        struct
-        {
-            float    field_0_;
-            uint32_t field_1_;
-        } fields_;
-        // Raw data buffer representation of data
-        RawDataBuf raw_buf_;
-    } data_;
-    static_assert(sizeof(data_) == CAN_MAX_DLEN);
-
-    /**
-     * @brief Construct the object from a CAN frame
-     *
-     * @param frame CAN frame
-     */
-    explicit Placeholder1(const CanFrame & frame);
-
-    /**
-     * @brief Construct the object from a ROS msg
-     *
-     */
-    Placeholder1(/* Placeholder1 ROS msg */);
+    using std::exception::what;  // Needed to silence virtual function overload error
+    const char * what();
 
 private:
-    // Constants needed to process data fields
-    static constexpr uint8_t  f0_shift_ = 8;
-    static constexpr float    f0_div_   = 100.0;
-    static constexpr uint8_t  f1_byte_0 = 5;
-    static constexpr uint8_t  f1_byte_1 = 6;
-    static constexpr uint32_t f1_msk_   = 0xF0F0;
+    std::string msg;
 };
 
-/**
- * Rudder Command Frame
- *
- */
-struct RudderCmd
+struct CanBase
 {
-public:
-    // Device ID
-    static constexpr CanId id_ = CanId::RudderCmd;
-    union {
-        // Placeholder data fields - elaborate what these fields mean in actual implementation
-        struct
-        {
-            uint32_t field_0_       : 31;
-            bool     field_0_valid_ : 1;
-            uint16_t field_1_       : 16;
-            uint8_t  field_2_       : 8;
-            uint8_t  field_3_       : 4;
-            uint8_t  field_4_       : 4;
-        } fields_;
-        // Raw data buffer representation of data
-        RawDataBuf raw_buf_;
-    } data_;
-    static_assert(sizeof(data_) == CAN_MAX_DLEN);
+    CanId id_;
 
-    /**
-     * @brief Convert this object into a standard Linux CAN frame and return it
-     *
-     * @return Rudder command as a standard Linux CAN frame object
-     */
-    CanFrame toLinuxCan();
+    CanBase()            = delete;
+    CanBase(CanFrame cf) = delete;
+    CanBase(std::span<const CanId> valid_ids, CanId id);
+    friend std::ostream & operator<<(std::ostream & os, const CanBase & can);
 };
+
+struct Battery : public CanBase
+{
+    static constexpr std::array<CanId, 2> BATTERY_IDS = {BMS_P_DATA_FRAME_1, BMS_P_DATA_FRAME_2};
+    // Note: Each BMS battery is comprised of multiple battery cells
+    float volt_;      // Average voltage of cells in the battery
+    float curr_;      // Current - positive means charging and negative means discharging (powering the boat)
+    float volt_max_;  // Maximum voltage of cells in the battery pack (unused)
+    float volt_min_;  // Minimum voltage of cells in the battery pack (unused)
+
+    explicit Battery(CanFrame cf);
+    friend std::ostream & operator<<(std::ostream & os, const Battery & can);
+};
+
+}  // namespace CAN

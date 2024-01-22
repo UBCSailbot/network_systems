@@ -63,7 +63,9 @@ private:
      *
      *
      */
-    void sub_cb(std_msgs::msg::String /* placeholder */) { can_trns_->onNewCmd(Placeholder0); }
+    void sub_cb(std_msgs::msg::String /* placeholder */)
+    {  //can_trns_->onNewCmd(Placeholder0);
+    }
 };
 
 //===========================================================================================

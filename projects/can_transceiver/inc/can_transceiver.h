@@ -26,7 +26,7 @@ public:
      *        Passes the command down to the hardware/simulator
      *
      */
-    void onNewCmd(CanId id /*, other data fields... */);
+    void onNewCmd(CAN::CanId id /*, other data fields... */);
 
     /**
      * @brief Retrieve the most recent set of sensors data
@@ -49,14 +49,14 @@ protected:
      *
      * @param frame Command frame to send
      */
-    virtual void send(const CanFrame & frame) const = 0;
+    virtual void send(const CAN::CanFrame & frame) const = 0;
 
     /**
      * @brief Call on receiving a new CAN data frame from hardware/simulator
      *
      * @param frame received CAN data frame
      */
-    void onNewCanData(const CanFrame & frame);
+    void onNewCanData(const CAN::CanFrame & frame);
 };
 
 /**
@@ -97,7 +97,7 @@ private:
      *
      * @param frame command frame to send
      */
-    void send(const CanFrame & frame) const;
+    void send(const CAN::CanFrame & frame) const;
 };
 
 /**

@@ -2,54 +2,65 @@
 
 #include <linux/can.h>
 
-namespace
+#include <cstring>
+#include <span>
+
+namespace CAN
 {
-/**
- * @brief Verify that a given CAN frame to construct a device has a valid ID assigned to it
- *
- * @param actual_can_id   ID of the given CAN frame
- * @param expected_can_id ID of the device object that is attempting to be constructed
- */
-void checkId(const canid_t & actual_can_id, const CanId & expected_can_id)
+
+CanIdMismatchException::CanIdMismatchException(std::span<const CanId> valid_ids, const canid_t & received)
 {
-    if (actual_can_id != expected_can_id) {
-        throw CanIdMismatchException(expected_can_id, actual_can_id);
+    std::string build_msg = "Mismatch between received ID: (" + std::to_string(received) + ")and valid IDs: \n";
+    for (const CanId & id : valid_ids) {
+        build_msg += std::to_string(id) + ": " + CanDescription.at(id) + "\n";
     }
+    msg = build_msg;
 }
 
-/**
- * @brief Default CAN device object constructor for when construction is a 1:1 mapping between raw data and data fields
- *        Copies data from source CAN frame to a given buffer
- *
- * @param frame           Source CAN frame
- * @param expected_can_id Device ID of CAN Frame that is attempting to be constructed
- * @param buf             Output buffer for data to be copied into
- */
-void constructCanFrameDefault(
-  const can_frame & frame, const CanId & expected_can_id, std::array<uint8_t, CAN_MAX_DLEN> & buf)
+const char * CanIdMismatchException::what() { return msg.c_str(); }
+
+std::ostream & operator<<(std::ostream & os, const CanBase & can) { return os << CanDescription.at(can.id_); }
+
+std::ostream & operator<<(std::ostream & os, const Battery & can)
 {
-    if (frame.can_id != expected_can_id) {
-        throw CanIdMismatchException(expected_can_id, frame.can_id);
+    return os << static_cast<CanBase>(can) << std::endl
+              << "Voltage (V): " << can.volt_ << std::endl
+              << "Current (A): " << can.curr_ << std::endl
+              << "Max voltage (V): " << can.volt_max_ << std::endl
+              << "Min voltage (V): " << can.volt_min_;
+}
+
+CanBase::CanBase(std::span<const CanId> valid_ids, CanId id)
+{
+    bool valid = std::any_of(valid_ids.begin(), valid_ids.end(), [&id](CanId valid_id) { return id == valid_id; });
+    if (!valid) {
+        throw CanIdMismatchException(valid_ids, id);
     }
-    buf = std::to_array(frame.data);
+    id_ = id;
 }
-}  // namespace
 
-Placeholder0::Placeholder0(const can_frame & frame) { constructCanFrameDefault(frame, id_, data_.raw_buf_); }
+// NOLINTBEGIN(readability-magic-numbers)
+// Way too many bit shifts and masks so have to disable
 
-Placeholder1::Placeholder1(const can_frame & frame)
+Battery::Battery(CanFrame cf) : CanBase(std::span{BATTERY_IDS}, static_cast<CanId>(cf.can_id))
 {
-    checkId(frame.can_id, id_);
-    // NOLINTNEXTLINE(bugprone-narrowing-conversions)
-    data_.fields_.field_0_ = static_cast<float>((frame.data[0] + (frame.data[1] << f0_shift_)) / f0_div_);
-    data_.fields_.field_1_ = (frame.data[f1_byte_0] + frame.data[f1_byte_1]) & f1_msk_;
+    int16_t raw_volt;
+    int16_t raw_curr;
+    int16_t raw_max_volt;
+    int16_t raw_min_volt;
+
+    std::memcpy(&raw_volt, cf.data, sizeof(int16_t));
+    std::memcpy(&raw_curr, cf.data + 2, sizeof(int16_t));
+    std::memcpy(&raw_max_volt, cf.data + 4, sizeof(int16_t));
+    std::memcpy(&raw_min_volt, cf.data + 6, sizeof(int16_t));
+
+    volt_ = static_cast<float>(raw_volt) / 100;
+    curr_ = static_cast<float>(raw_curr) / 100;
+    // TODO(hhenry01): Max and min are dodgy... it doesn't make sense to not divide them by 100 - confirm with ELEC
+    volt_max_ = static_cast<float>(raw_max_volt);
+    volt_min_ = static_cast<float>(raw_min_volt);
 }
 
-CanFrame RudderCmd::toLinuxCan()
-{
-    // PLACEHOLDER - TODO
-    CanFrame frame;
-    frame.can_id = id_;
-    std::copy(std::begin(frame.data), std::end(frame.data), data_.raw_buf_.begin());
-    return frame;
-}
+// NOLINTEND(readability-magic-numbers)
+
+}  // namespace CAN
