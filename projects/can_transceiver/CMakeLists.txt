@@ -20,3 +20,9 @@ set(bin_srcs
     ${CMAKE_CURRENT_LIST_DIR}/src/can_transceiver_ros_intf.cpp
 )
 make_exe(${module} "${bin_srcs}" "${link_libs}" "${inc_dirs}" "${compile_defs}")
+
+set(test_srcs
+    ${srcs}
+    ${CMAKE_CURRENT_LIST_DIR}/test/test_can_transceiver.cpp
+)
+make_unit_test(${module} "${test_srcs}" "${link_libs}" "${inc_dirs}" "${compile_defs}")

@@ -3,6 +3,7 @@
 #include <linux/can.h>
 
 #include <cstring>
+#include <iostream>
 #include <span>
 #include <stdexcept>
 
@@ -99,7 +100,7 @@ CanFrame Battery::toLinuxCan() const
 
 Battery::Battery(custom_interfaces::msg::HelperBattery ros_bat, uint32_t bat_idx) : CanBase(CAN_BYTE_DLEN_)
 {
-    if (bat_idx > NUM_BATTERIES) {
+    if (bat_idx >= NUM_BATTERIES) {
         throw std::length_error(
           "bat_idx (" + std::to_string(bat_idx) + ") greater then NUM_BATTERIES (" + std::to_string(NUM_BATTERIES) +
           ")");
@@ -109,6 +110,14 @@ Battery::Battery(custom_interfaces::msg::HelperBattery ros_bat, uint32_t bat_idx
     curr_     = ros_bat.current;
     volt_max_ = 0.0;  // UNUSED
     volt_min_ = 0.0;  // UNUSED
+}
+
+custom_interfaces::msg::HelperBattery Battery::toRosMsg() const
+{
+    custom_interfaces::msg::HelperBattery msg;
+    msg.set__voltage(volt_);
+    msg.set__current(curr_);
+    return msg;
 }
 
 }  // namespace CAN

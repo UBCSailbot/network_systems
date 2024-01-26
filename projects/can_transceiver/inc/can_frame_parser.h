@@ -17,6 +17,7 @@ using CanFrame   = struct canfd_frame;
 using RawDataBuf = std::array<uint8_t, CANFD_MAX_DLEN>;
 
 enum CanId : uint32_t {
+    RESERVED               = 0x00,
     BMS_P_DATA_FRAME_1     = 0x31,
     BMS_P_DATA_FRAME_2     = 0x32,
     SAIL_WSM_CMD_FRAME_1   = 0x60,
@@ -37,6 +38,7 @@ enum CanId : uint32_t {
 };
 
 static const std::map<CanId, std::string> CanDescription{
+  {RESERVED, "RESERVED"},
   {BMS_P_DATA_FRAME_1, "BMS_P_DATA_FRAME_1 (Battery 1 data)"},
   {BMS_P_DATA_FRAME_2, "BMS_P_DATA_FRAME_2 (Battery 2 data)"},
   {SAIL_WSM_CMD_FRAME_1, "SAIL_WSM_CMD_FRAME_1 (Main sail command)"},
