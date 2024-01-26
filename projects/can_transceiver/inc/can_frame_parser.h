@@ -71,29 +71,37 @@ private:
     std::string msg;
 };
 
-struct CanBase
+class CanBase
 {
-    CanId id_;
-
-    CanBase() = delete;
-    CanBase(std::span<const CanId> valid_ids, CanId id);
+public:
+    CanId   id_;
+    uint8_t can_byte_dlen_;
 
     friend std::ostream & operator<<(std::ostream & os, const CanBase & can);
-    virtual CanFrame      toLinuxCan();
-    virtual std::string   debugStr() const;
+
+protected:
+    explicit CanBase(uint8_t can_byte_dlen);
+    CanBase(std::span<const CanId> valid_ids, CanId id, uint8_t can_byte_dlen_);
+    virtual CanFrame    toLinuxCan() const;
+    virtual std::string debugStr() const;
 };
 
 struct Battery : public CanBase
 {
-    static constexpr std::array<CanId, 2> BATTERY_IDS = {BMS_P_DATA_FRAME_1, BMS_P_DATA_FRAME_2};
+    static constexpr std::array<CanId, 2> BATTERY_IDS    = {BMS_P_DATA_FRAME_1, BMS_P_DATA_FRAME_2};
+    static constexpr uint8_t              CAN_BYTE_DLEN_ = 8;
     // Note: Each BMS battery is comprised of multiple battery cells
     float volt_;      // Average voltage of cells in the battery
     float curr_;      // Current - positive means charging and negative means discharging (powering the boat)
     float volt_max_;  // Maximum voltage of cells in the battery pack (unused)
     float volt_min_;  // Minimum voltage of cells in the battery pack (unused)
 
+    explicit Battery(CanId id);
     explicit Battery(CanFrame cf);
-    virtual std::string debugStr() const;
+    explicit Battery(custom_interfaces::msg::HelperBattery ros_bat, uint32_t bat_idx);
+    CanFrame                              toLinuxCan() const;
+    custom_interfaces::msg::HelperBattery toRosMsg() const;
+    std::string                           debugStr() const;
 };
 
 }  // namespace CAN

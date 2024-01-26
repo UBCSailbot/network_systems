@@ -28,9 +28,9 @@
 #include "sensors.pb.h"
 #include "waypoint.pb.h"
 
-constexpr int NUM_AIS_SHIPS       = 15;  // arbitrary number
-constexpr int NUM_GENERIC_SENSORS = 5;   // arbitrary number
-constexpr int NUM_PATH_WAYPOINTS  = 5;   // arbitrary number
+constexpr size_t NUM_AIS_SHIPS       = 15;  // arbitrary number
+constexpr size_t NUM_GENERIC_SENSORS = 5;   // arbitrary number
+constexpr size_t NUM_PATH_WAYPOINTS  = 5;   // arbitrary number
 
 using Polaris::Sensors;
 using remote_transceiver::HTTPServer;
@@ -344,7 +344,7 @@ void genRandPathData(Sensors::Path * path_data)
     std::uniform_real_distribution<float> latitude_path(LAT_LBND, LAT_UBND);
     std::uniform_real_distribution<float> longitude_path(LON_LBND, LON_UBND);
 
-    for (int i = 0; i < NUM_PATH_WAYPOINTS; i++) {
+    for (size_t i = 0; i < NUM_PATH_WAYPOINTS; i++) {
         Polaris::Waypoint * waypoint = path_data->add_waypoints();
         waypoint->set_latitude(latitude_path(g_mt));
         waypoint->set_longitude(longitude_path(g_mt));
@@ -364,22 +364,22 @@ Sensors genRandSensors()
     genRandGpsData(sensors.mutable_gps());
 
     // ais ships, TODO(): Polaris should be included as one of the AIS ships
-    for (int i = 0; i < NUM_AIS_SHIPS; i++) {
+    for (size_t i = 0; i < NUM_AIS_SHIPS; i++) {
         genRandAisData(sensors.add_ais_ships());
     }
 
     // generic sensors
-    for (int i = 0; i < NUM_GENERIC_SENSORS; i++) {
+    for (size_t i = 0; i < NUM_GENERIC_SENSORS; i++) {
         genRandGenericSensorData(sensors.add_data_sensors());
     }
 
     // batteries
-    for (int i = 0; i < NUM_BATTERIES; i++) {
+    for (size_t i = 0; i < NUM_BATTERIES; i++) {
         genRandBatteriesData(sensors.add_batteries());
     }
 
     // wind sensors
-    for (int i = 0; i < NUM_WIND_SENSORS; i++) {
+    for (size_t i = 0; i < NUM_WIND_SENSORS; i++) {
         genRandWindData(sensors.add_wind_sensors());
     }
 
@@ -430,7 +430,7 @@ void verifyDBWrite(std::span<Sensors> expected_sensors, std::span<SailbotDB::Rcv
         EXPECT_FLOAT_EQ(dumped_sensors[i].gps().heading(), expected_sensors[i].gps().heading());
 
         // ais ships
-        for (int j = 0; j < NUM_AIS_SHIPS; j++) {
+        for (size_t j = 0; j < NUM_AIS_SHIPS; j++) {
             const Sensors::Ais & dumped_ais_ship   = dumped_sensors[i].ais_ships(j);
             const Sensors::Ais & expected_ais_ship = expected_sensors[i].ais_ships(j);
             EXPECT_EQ(dumped_ais_ship.id(), expected_ais_ship.id());
@@ -444,7 +444,7 @@ void verifyDBWrite(std::span<Sensors> expected_sensors, std::span<SailbotDB::Rcv
         }
 
         // generic sensors
-        for (int j = 0; j < NUM_GENERIC_SENSORS; j++) {
+        for (size_t j = 0; j < NUM_GENERIC_SENSORS; j++) {
             const Sensors::Generic & dumped_data_sensor   = dumped_sensors[i].data_sensors(j);
             const Sensors::Generic & expected_data_sensor = expected_sensors[i].data_sensors(j);
             EXPECT_EQ(dumped_data_sensor.id(), expected_data_sensor.id());
@@ -452,7 +452,7 @@ void verifyDBWrite(std::span<Sensors> expected_sensors, std::span<SailbotDB::Rcv
         }
 
         // batteries
-        for (int j = 0; j < NUM_BATTERIES; j++) {
+        for (size_t j = 0; j < NUM_BATTERIES; j++) {
             const Sensors::Battery & dumped_battery   = dumped_sensors[i].batteries(j);
             const Sensors::Battery & expected_battery = expected_sensors[i].batteries(j);
             EXPECT_EQ(dumped_battery.voltage(), expected_battery.voltage());
@@ -460,7 +460,7 @@ void verifyDBWrite(std::span<Sensors> expected_sensors, std::span<SailbotDB::Rcv
         }
 
         // wind sensors
-        for (int j = 0; j < NUM_WIND_SENSORS; j++) {
+        for (size_t j = 0; j < NUM_WIND_SENSORS; j++) {
             const Sensors::Wind & dumped_wind_sensor   = dumped_sensors[i].wind_sensors(j);
             const Sensors::Wind & expected_wind_sensor = expected_sensors[i].wind_sensors(j);
             EXPECT_EQ(dumped_wind_sensor.speed(), expected_wind_sensor.speed());
@@ -468,7 +468,7 @@ void verifyDBWrite(std::span<Sensors> expected_sensors, std::span<SailbotDB::Rcv
         }
 
         // path waypoints
-        for (int j = 0; j < NUM_PATH_WAYPOINTS; j++) {
+        for (size_t j = 0; j < NUM_PATH_WAYPOINTS; j++) {
             const Polaris::Waypoint & dumped_path_waypoint   = dumped_sensors[i].local_path_data().waypoints(j);
             const Polaris::Waypoint & expected_path_waypoint = expected_sensors[i].local_path_data().waypoints(j);
             EXPECT_EQ(dumped_path_waypoint.latitude(), expected_path_waypoint.latitude());
@@ -658,7 +658,7 @@ TEST_F(TestHTTP, TestPostSensorsMult)
     }
 
     // Wait for all requests to finish
-    for (int i = 0; i < NUM_REQS; i++) {
+    for (size_t i = 0; i < NUM_REQS; i++) {
         req_threads[i].join();
         EXPECT_EQ(res_statuses[i], http::status::ok);
     }
