@@ -8,27 +8,45 @@
 namespace CAN
 {
 
+namespace
+{
+std::string canDebugStr(const CanId id) { return std::to_string(id) + ": " + CanDescription.at(id); }
+}  // namespace
+
 CanIdMismatchException::CanIdMismatchException(std::span<const CanId> valid_ids, const canid_t & received)
 {
-    std::string build_msg = "Mismatch between received ID: (" + std::to_string(received) + ")and valid IDs: \n";
+    std::string build_msg = "Mismatch between received ID: (" + std::to_string(received) + ") and valid IDs: \n";
     for (const CanId & id : valid_ids) {
-        build_msg += std::to_string(id) + ": " + CanDescription.at(id) + "\n";
+        build_msg += canDebugStr(id) + "\n";
     }
     msg = build_msg;
 }
 
 const char * CanIdMismatchException::what() { return msg.c_str(); }
 
-std::ostream & operator<<(std::ostream & os, const CanBase & can) { return os << CanDescription.at(can.id_); }
+std::ostream & operator<<(std::ostream & os, const CanBase & can) { return os << can.debugStr(); }
 
-std::ostream & operator<<(std::ostream & os, const Battery & can)
+std::string CanBase::debugStr() const { return canDebugStr(id_); }
+
+std::string Battery::debugStr() const
 {
-    return os << static_cast<CanBase>(can) << std::endl
-              << "Voltage (V): " << can.volt_ << std::endl
-              << "Current (A): " << can.curr_ << std::endl
-              << "Max voltage (V): " << can.volt_max_ << std::endl
-              << "Min voltage (V): " << can.volt_min_;
+    std::stringstream ss;
+    ss << CanBase::debugStr() << "\n"
+       << "Voltage (V): " << volt_ << "\n"
+       << "Current (A): " << curr_ << "\n"
+       << "Max voltage (V): " << volt_max_ << "\n"
+       << "Min voltage (V): " << volt_min_;
+    return ss.str();
 }
+
+// std::ostream & operator<<(std::ostream & os, const Battery & can)
+// {
+//     return os << static_cast<CanBase>(can) << std::endl
+//               << "Voltage (V): " << can.volt_ << std::endl
+//               << "Current (A): " << can.curr_ << std::endl
+//               << "Max voltage (V): " << can.volt_max_ << std::endl
+//               << "Min voltage (V): " << can.volt_min_;
+// }
 
 CanBase::CanBase(std::span<const CanId> valid_ids, CanId id)
 {

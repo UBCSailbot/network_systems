@@ -37,23 +37,23 @@ enum CanId : uint32_t {
 };
 
 static const std::map<CanId, std::string> CanDescription{
-  {BMS_P_DATA_FRAME_1, "Battery 1 data"},  // Dummy comment to pad the map for prettier formatting
-  {BMS_P_DATA_FRAME_2, "Battery 2 data"},
-  {SAIL_WSM_CMD_FRAME_1, "Main sail command"},
-  {SAIL_WSM_CMD_FRAME_2, "Jib Sail command"},
-  {SAIL_ENCD_DATA_FRAME, "Sail encoder data"},
-  {SAIL_WSM_DATA_FRAME_1, "Main sail data"},
-  {SAIL_WSM_DATA_FRAME_2, "Jib sail data"},
-  {SAIL_WIND_DATA_FRAME_1, "Mast wind sensor"},
-  {SAIL_NAV_CMD_FRAME, "Nav light commands"},
-  {RUDR_CMD_FRAME, "Rudder commands (BOTH RUDDERS)"},
-  {RUDR_DATA_FRAME_1, "Port rudder data,"},
-  {RUDR_DATA_FRAME_2, "Starboard rudder data"},
-  {PATH_GPS_DATA_FRAME_1, "GPS latitude"},
-  {PATH_GPS_DATA_FRAME_2, "GPS longitude"},
-  {PATH_GPS_DATA_FRAME_3, "GPS other data"},
-  {PATH_GPS_DATA_FRAME_4, "GPS time reporting (ex. day of the year)"},
-  {PATH_WIND_DATA_FRAME, "Hull wind sensor"}};
+  {BMS_P_DATA_FRAME_1, "BMS_P_DATA_FRAME_1 (Battery 1 data)"},
+  {BMS_P_DATA_FRAME_2, "BMS_P_DATA_FRAME_2 (Battery 2 data)"},
+  {SAIL_WSM_CMD_FRAME_1, "SAIL_WSM_CMD_FRAME_1 (Main sail command)"},
+  {SAIL_WSM_CMD_FRAME_2, "SAIL_WSM_CMD_FRAME_2 (Jib Sail command)"},
+  {SAIL_ENCD_DATA_FRAME, "SAIL_ENCD_DATA_FRAME (Sail encoder data)"},
+  {SAIL_WSM_DATA_FRAME_1, "SAIL_WSM_DATA_FRAME_1 (Main sail data)"},
+  {SAIL_WSM_DATA_FRAME_2, "SAIL_WSM_DATA_FRAME_2 (Jib sail data)"},
+  {SAIL_WIND_DATA_FRAME_1, "SAIL_WIND_DATA_FRAME_1 (Mast wind sensor)"},
+  {SAIL_NAV_CMD_FRAME, "SAIL_NAV_CMD_FRAME (Nav light commands)"},
+  {RUDR_CMD_FRAME, "RUDR_CMD_FRAME (Rudder commands [BOTH RUDDERS])"},
+  {RUDR_DATA_FRAME_1, "RUDR_DATA_FRAME_1 (Port rudder data)"},
+  {RUDR_DATA_FRAME_2, "RUDR_DATA_FRAME_2 (Starboard rudder data)"},
+  {PATH_GPS_DATA_FRAME_1, "PATH_GPS_DATA_FRAME_1 (GPS latitude)"},
+  {PATH_GPS_DATA_FRAME_2, "PATH_GPS_DATA_FRAME_2 (GPS longitude)"},
+  {PATH_GPS_DATA_FRAME_3, "PATH_GPS_DATA_FRAME_3 (GPS other data)"},
+  {PATH_GPS_DATA_FRAME_4, "PATH_GPS_DATA_FRAME_4 (GPS time reporting [ex. day of the year])"},
+  {PATH_WIND_DATA_FRAME, "PATH_WIND_DATA_FRAME (Hull wind sensor)"}};
 
 /**
  * Custom exception for when an attempt is made to construct a CAN object with a mismatched ID
@@ -75,10 +75,12 @@ struct CanBase
 {
     CanId id_;
 
-    CanBase()            = delete;
-    CanBase(CanFrame cf) = delete;
+    CanBase() = delete;
     CanBase(std::span<const CanId> valid_ids, CanId id);
+
     friend std::ostream & operator<<(std::ostream & os, const CanBase & can);
+    virtual CanFrame      toLinuxCan();
+    virtual std::string   debugStr() const;
 };
 
 struct Battery : public CanBase
@@ -91,7 +93,7 @@ struct Battery : public CanBase
     float volt_min_;  // Minimum voltage of cells in the battery pack (unused)
 
     explicit Battery(CanFrame cf);
-    friend std::ostream & operator<<(std::ostream & os, const Battery & can);
+    virtual std::string debugStr() const;
 };
 
 }  // namespace CAN
