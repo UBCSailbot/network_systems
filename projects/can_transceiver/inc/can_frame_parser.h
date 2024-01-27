@@ -6,6 +6,7 @@
 #include <array>
 #include <custom_interfaces/msg/batteries.hpp>
 #include <map>
+#include <optional>
 #include <span>
 #include <stdexcept>
 
@@ -17,6 +18,10 @@ using CanFrame   = struct canfd_frame;
 using RawDataBuf = std::array<uint8_t, CANFD_MAX_DLEN>;
 namespace msg    = custom_interfaces::msg;
 
+/**
+ * @brief IDs of CAN frames relevant to the Software team
+ *
+ */
 enum class CanId : canid_t {
     RESERVED               = 0x00,
     BMS_P_DATA_FRAME_1     = 0x31,
@@ -38,7 +43,11 @@ enum class CanId : canid_t {
     PATH_WIND_DATA_FRAME   = 0x84,
 };
 
-static const std::map<CanId, std::string> CanDescription{
+/**
+ * @brief Map the CanId enum to a description
+ *
+ */
+static const std::map<CanId, std::string> CAN_DESC{
   {CanId::RESERVED, "RESERVED"},
   {CanId::BMS_P_DATA_FRAME_1, "BMS_P_DATA_FRAME_1 (Battery 1 data)"},
   {CanId::BMS_P_DATA_FRAME_2, "BMS_P_DATA_FRAME_2 (Battery 2 data)"},
@@ -59,52 +68,155 @@ static const std::map<CanId, std::string> CanDescription{
   {CanId::PATH_WIND_DATA_FRAME, "PATH_WIND_DATA_FRAME (Hull wind sensor)"}};
 
 /**
- * Custom exception for when an attempt is made to construct a CAN object with a mismatched ID
+ * @brief Custom exception for when an attempt is made to construct a CAN object with a mismatched ID
  *
  */
 class CanIdMismatchException : public std::exception
 {
 public:
+    /**
+     * @brief Instantiate the CanIdMismatchException
+     *
+     * @param valid_ids Expected IDs
+     * @param received  The invalid ID that was received
+     */
     CanIdMismatchException(std::span<const CanId> valid_ids, const CanId & received);
 
     using std::exception::what;  // Needed to silence virtual function overload error
+    /**
+     * @brief Return the exception message
+     *
+     * @return exception message
+     */
     const char * what();
 
 private:
-    std::string msg_;
+    std::string msg_;  // exception message
 };
 
-class CanBase
+/**
+ * @brief Abstract class that represents a generic dataframe. Not meant to be instantiated
+ * on its own, and must be instantiated with a derived class
+ *
+ */
+class BaseFrame
 {
 public:
-    CanId   id_;
-    uint8_t can_byte_dlen_;
+    const CanId   id_;
+    const uint8_t can_byte_dlen_;  // Number of bytes of data used in the Linux CAN representation
 
-    friend std::ostream & operator<<(std::ostream & os, const CanBase & can);
+    /**
+     * @brief Override the << operator for printing
+     *
+     * @param os  output stream (typically std::cout)
+     * @param can BaseFrame instance to print
+     * @return stream to print
+     */
+    friend std::ostream & operator<<(std::ostream & os, const BaseFrame & can);
 
 protected:
-    explicit CanBase(uint8_t can_byte_dlen);
-    CanBase(std::span<const CanId> valid_ids, CanId id, uint8_t can_byte_dlen_);
-    virtual CanFrame    toLinuxCan() const;
+    /**
+     * @brief Derived classes can instantiate a base frame using an CanId and a data length
+     *
+     * @param id            CanId of the fraeme
+     * @param can_byte_dlen Number of bytes used in the Linux CAN representation
+     */
+    BaseFrame(CanId id, uint8_t can_byte_dlen);
+
+    /**
+     * @brief Derived classes can instantiate a base frame and check if the id is vaild
+     *
+     * @param valid_ids      a span of valid CanIds
+     * @param id             the id to check
+     * @param can_byte_dlen_ Number of bytes used in the Linux CAN representatio nof the dataframe
+     */
+    BaseFrame(std::span<const CanId> valid_ids, CanId id, uint8_t can_byte_dlen_);
+
+    /**
+     * @return The Linux CanFrame representation of the frame
+     */
+    virtual CanFrame toLinuxCan() const;
+
+    /**
+     * @return A string that can be printed or logged for debugging
+     */
     virtual std::string debugStr() const;
 };
 
-class Battery final : public CanBase
+/**
+ * @brief A battery class derived from the BaseFrame. Represents battery data.
+ *
+ */
+class Battery final : public BaseFrame
 {
 public:
-    static constexpr std::array<CanId, 2> BATTERY_IDS    = {CanId::BMS_P_DATA_FRAME_1, CanId::BMS_P_DATA_FRAME_2};
-    static constexpr uint8_t              CAN_BYTE_DLEN_ = 8;
+    // Valid CanIds that a Battery object can have
+    static constexpr std::array<CanId, 2> BATTERY_IDS       = {CanId::BMS_P_DATA_FRAME_1, CanId::BMS_P_DATA_FRAME_2};
+    static constexpr uint8_t              CAN_BYTE_DLEN_    = 8;
+    static constexpr uint8_t              BYTE_OFF_VOLT     = 0;
+    static constexpr uint8_t              BYTE_OFF_CURR     = 2;
+    static constexpr uint8_t              BYTE_OFF_MAX_VOLT = 4;
+    static constexpr uint8_t              BYTE_OFF_MIN_VOLT = 6;
 
+    /**
+     * @brief Explicitly deleted no-argument constructor
+     *
+     */
     Battery() = delete;
+
+    /**
+     * @brief Construct a Battery object from a Linux CanFrame representation
+     *
+     * @param cf Linux CanFrame
+     */
     explicit Battery(CanFrame cf);
-    explicit Battery(msg::HelperBattery ros_bat, uint32_t bat_idx);
+
+    /**
+     * @brief Construct a Battery object from a custom_interfaces ROS msg representation
+     *
+     * @param ros_bat custom_interfaces representation of a Battery
+     * @param id      CanId of the battery (use the rosIdxToCanId() method if unknown)
+     */
+    explicit Battery(msg::HelperBattery ros_bat, CanId id);
+
+    /**
+     * @return the custom_interfaces ROS representation of the Battery object
+     */
     msg::HelperBattery toRosMsg() const;
-    CanFrame           toLinuxCan() const override;
-    std::string        debugStr() const override;
+
+    /**
+     * @return the Linux CanFrame representation of the Battery object
+     */
+    CanFrame toLinuxCan() const override;
+
+    /**
+     * @return A string that can be printed or logged to debug a Battery object
+     */
+    std::string debugStr() const override;
+
+    /**
+     * @brief Factory method to convert the index of a battery in the custom_interfaces ROS representation
+     *        into a CanId if valid.
+     *
+     * @param bat_idx idx of the battery in a custom_interfaces::msg::Batteries array
+     * @return CanId if valid, std::nullopt if invalid
+     */
+    static std::optional<CanId> rosIdxToCanId(size_t bat_idx);
 
 private:
+    /**
+     * @brief Private helper constructor for Battery objects
+     *
+     * @param id CanId of the battery
+     */
     explicit Battery(CanId id);
+
+    /**
+     * @brief Check if the assigned fields after constructing a Battery object are within bounds.
+     * @throws std::out_of_range if any assigned fields are outside of expected bounds
+     */
     void checkBounds() const;
+
     // Note: Each BMS battery is comprised of multiple battery cells
     float volt_;      // Average voltage of cells in the battery
     float curr_;      // Current - positive means charging and negative means discharging (powering the boat)
