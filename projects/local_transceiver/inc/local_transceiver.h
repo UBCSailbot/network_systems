@@ -121,6 +121,14 @@ public:
      */
     std::string receive();
 
+    /**
+     * @brief Compute a checksum
+     *
+     * @param data data string
+     * @return checksum as a string
+     */
+    static std::string checksum(const std::string & data);
+
 private:
     // boost io service - required for boost::asio operations
     boost::asio::io_service io_;
@@ -158,12 +166,4 @@ private:
      * @return false if invalid
      */
     bool checkOK();
-
-    /**
-     * @brief Compute a checksum
-     *
-     * @param data data string
-     * @return checksum as a string
-     */
-    static std::string checksum(const std::string & data);
 };

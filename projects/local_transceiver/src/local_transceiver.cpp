@@ -140,29 +140,34 @@ bool LocalTransceiver::send()
         throw std::length_error(err_string);
     }
 
-    static constexpr int MAX_NUM_RETRIES = 20;
-    for (int i = 0; i < MAX_NUM_RETRIES; i++) {
-        std::string sbdwbCommand = "AT+SBDWB=" + std::to_string(data.size()) + "\r";
-        send(sbdwbCommand + data + "\r");
+    //static constexpr int MAX_NUM_RETRIES = 20;
+    // for (int i = 0; i < MAX_NUM_RETRIES; i++) {
+    std::string sbdwbCommand = "AT+SBDWB=" + std::to_string(data.size()) + "\r";
+    send(sbdwbCommand + data + "\r");
 
-        std::string checksumCommand = std::to_string(data.size()) + checksum(data) + "\r";
-        send(data + "+" + checksumCommand + "\r");
+    //readLine();
+    std::cout << readLine() << std::endl;
+    //TODO(Jng468): make sure this outputs READY
 
-        // Check SBD Session status to see if data was sent successfully
-        send(AT::SBD_SESSION);
-        std::string rsp_str = readLine();
-        readLine();  // empty line after response
-        if (checkOK()) {
-            try {
-                AT::SBDStatusResponse rsp(rsp_str);
-                if (rsp.MOSuccess()) {
-                    return true;
-                }
-            } catch (std::invalid_argument & e) {
-                /* Catch response parsing exceptions */
+    std::string checksumCommand = checksum(data) + "\r";
+    send(data + checksumCommand + "\r");
+
+    std::string rsp_str = readLine();
+
+    // Check SBD Session status to see if data was sent successfully
+    send(AT::SBD_SESSION);
+    //readLine();  // empty line after response
+    if (checkOK()) {
+        try {
+            AT::SBDStatusResponse rsp(rsp_str);
+            if (rsp.MOSuccess()) {
+                return true;
             }
+        } catch (std::invalid_argument & e) {
+            /* Catch response parsing exceptions */
         }
     }
+    //}
     return false;
 }
 

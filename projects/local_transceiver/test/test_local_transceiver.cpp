@@ -1,6 +1,7 @@
 /* IMPORTANT: Make sure only one instance of network_systems/scripts/run_virtual_iridium.sh is running */
 
 #include <boost/system/system_error.hpp>
+#include <fstream>
 
 #include "cmn_hdrs/shared_constants.h"
 #include "gtest/gtest.h"
@@ -28,6 +29,13 @@ protected:
     LocalTransceiver * lcl_trns_;
 };
 
+TEST_F(TestLocalTransceiver, testChecksum)
+{
+    std::string holder       = "hello";
+    std::string holderResult = LocalTransceiver::checksum(holder);
+    std::cout << holderResult << std::endl;
+}
+
 /**
  * @brief Verify debugSendTest sends something to the terminal
  */
@@ -43,6 +51,23 @@ TEST_F(TestLocalTransceiver, debugSendTest)
  */
 TEST_F(TestLocalTransceiver, sendGpsTest)
 {
+    constexpr float holder = 14.3;  // arbitrary number for testing
+
+    custom_interfaces::msg::GPS gps;
+    gps.heading.set__heading(holder);
+    gps.lat_lon.set__latitude(holder);
+    gps.lat_lon.set__longitude(holder);
+    gps.speed.set__speed(holder);
+    lcl_trns_->updateSensor(gps);
+    lcl_trns_->send();
+}
+
+/**
+ * @brief Open LOCAL_TRANSCEIVER_TEST_PORT as a file and visually confirm response
+ *
+ */
+TEST_F(TestLocalTransceiver, visualVerification)
+{
     constexpr float holder = 14.3;
 
     custom_interfaces::msg::GPS gps;
@@ -52,4 +77,27 @@ TEST_F(TestLocalTransceiver, sendGpsTest)
     gps.speed.set__speed(holder);
     lcl_trns_->updateSensor(gps);
     lcl_trns_->send();
+
+    //std::ifstream port(LOCAL_TRANSCEIVER_TEST_PORT);
+    std::string portline;
+
+    //while (std::getline(port, portline)) {
+    // Output the content of portline
+    // std::cout << "Read from file: " << portline << std::endl;
+    //}
+
+    // port.close();
+
+    /*std::ofstream mockSerialFile(LOCAL_TRANSCEIVER_TEST_PORT);
+
+    // Redirect cout to the file
+    std::streambuf *originalCoutBuffer = std::cout.rdbuf();
+    std::cout.rdbuf(mockSerialFile.rdbuf());
+
+    // Execute the function that generates output
+    lcl_trns_->receive();
+
+    // Restore the original cout buffer
+    std::cout.rdbuf(originalCoutBuffer);
+    */
 }
