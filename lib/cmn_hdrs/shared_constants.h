@@ -17,13 +17,13 @@ static const std::string DEV  = "development";
 constexpr unsigned int MAX_LOCAL_TO_REMOTE_PAYLOAD_SIZE_BYTES = 340;
 constexpr unsigned int MAX_REMOTE_TO_LOCAL_PAYLOAD_SIZE_BYTES = 270;
 
-constexpr size_t NUM_BATTERIES = []() constexpr
+constexpr int NUM_BATTERIES = []() constexpr
 {
     using batteries_arr = custom_interfaces::msg::Batteries::_batteries_type;
     return sizeof(batteries_arr) / sizeof(custom_interfaces::msg::HelperBattery);
 }
 ();
-constexpr size_t NUM_WIND_SENSORS = []() constexpr
+constexpr int NUM_WIND_SENSORS = []() constexpr
 {
     using wind_sensors_arr = custom_interfaces::msg::WindSensors::_wind_sensors_type;
     return sizeof(wind_sensors_arr) / sizeof(custom_interfaces::msg::WindSensor);

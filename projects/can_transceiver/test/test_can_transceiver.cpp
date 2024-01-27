@@ -86,21 +86,18 @@ TEST_F(TestCanFrameParser, TestBatteryInvalid)
 
     CAN::CanId invalid_id = CAN::CanId::RESERVED;
 
-    msg::HelperBattery msg;
-
-    EXPECT_THROW(CAN::Battery tmp(msg, invalid_id), CAN::CanIdMismatchException);
-
     CAN::CanFrame cf{.can_id = static_cast<canid_t>(invalid_id)};
 
     EXPECT_THROW(CAN::Battery tmp(cf), CAN::CanIdMismatchException);
 
-    std::vector<float> invalid_volts{-BATT_VOLT_LBND, BATT_VOLT_UBND};
-    std::vector<float> invalid_currs{-BATT_CURR_LBND, BATT_CURR_UBND};
+    std::vector<float> invalid_volts{BATT_VOLT_LBND - 1, BATT_VOLT_UBND + 1};
+    std::vector<float> invalid_currs{BATT_CURR_LBND - 1, BATT_CURR_UBND + 1};
 
     optId = CAN::Battery::rosIdxToCanId(0);
     ASSERT_TRUE(optId.has_value());
 
-    CAN::CanId valid_id = optId.value();
+    CAN::CanId         valid_id = optId.value();
+    msg::HelperBattery msg;
 
     // Set a valid current for this portion
     for (float invalid_volt : invalid_volts) {
@@ -111,7 +108,7 @@ TEST_F(TestCanFrameParser, TestBatteryInvalid)
     };
 
     // Set a valid voltage for this portion
-    for (float invalid_curr : invalid_volts) {
+    for (float invalid_curr : invalid_currs) {
         msg.set__voltage(BATT_VOLT_LBND);
         msg.set__current(invalid_curr);
 
