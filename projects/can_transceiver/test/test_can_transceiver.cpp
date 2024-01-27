@@ -5,6 +5,18 @@
 #include "can_frame_parser.h"
 #include "cmn_hdrs/shared_constants.h"
 
+namespace msg = custom_interfaces::msg;
+
+constexpr CAN::RawDataBuf GARBAGE_DATA = []() constexpr
+{
+    CAN::RawDataBuf buf;
+    for (uint8_t & entry : buf) {
+        entry = 0xFF;  // NOLINT(readability-magic-numbers)
+    }
+    return buf;
+}
+();
+
 /**
  * @brief Test CAN<->ROS translations
  *
@@ -25,10 +37,10 @@ TEST_F(TestCanFrameParser, BatteryTestValid)
     constexpr std::array<int16_t, NUM_BATTERIES> expected_raw_expected_currs{250, -100};
 
     for (size_t i = 0; i < NUM_BATTERIES; i++) {
-        CAN::CanId                            id            = CAN::Battery::BATTERY_IDS[i];
-        float                                 expected_volt = expected_volts[i];
-        float                                 expected_curr = expected_expected_currs[i];
-        custom_interfaces::msg::HelperBattery msg;
+        CAN::CanId         id            = CAN::Battery::BATTERY_IDS[i];
+        float              expected_volt = expected_volts[i];
+        float              expected_curr = expected_expected_currs[i];
+        msg::HelperBattery msg;
         msg.set__voltage(expected_volt);
         msg.set__current(expected_curr);
         CAN::Battery  bat_from_ros = CAN::Battery(msg, i);
@@ -49,7 +61,7 @@ TEST_F(TestCanFrameParser, BatteryTestValid)
 
         EXPECT_EQ(bat_from_can.id_, id);
 
-        custom_interfaces::msg::HelperBattery msg_from_bat = bat_from_can.toRosMsg();
+        msg::HelperBattery msg_from_bat = bat_from_can.toRosMsg();
 
         EXPECT_DOUBLE_EQ(msg_from_bat.voltage, expected_volt);
         EXPECT_DOUBLE_EQ(msg_from_bat.current, expected_curr);
@@ -58,7 +70,7 @@ TEST_F(TestCanFrameParser, BatteryTestValid)
 
 TEST_F(TestCanFrameParser, TestBatteryInvalid)
 {
-    custom_interfaces::msg::HelperBattery msg;
+    msg::HelperBattery msg;
 
     EXPECT_THROW(CAN::Battery tmp(msg, NUM_BATTERIES), std::length_error);
 
@@ -66,4 +78,28 @@ TEST_F(TestCanFrameParser, TestBatteryInvalid)
     CAN::CanFrame cf{.can_id = static_cast<canid_t>(invalid_id)};
 
     EXPECT_THROW(CAN::Battery tmp(cf), CAN::CanIdMismatchException);
+
+    std::vector<float> invalid_volts{-BATT_VOLT_LBND, BATT_VOLT_UBND};
+    std::vector<float> invalid_currs{-BATT_CURR_LBND, BATT_CURR_UBND};
+
+    // Set a valid current for this portion
+    for (float invalid_volt : invalid_volts) {
+        msg.set__voltage(invalid_volt);
+        msg.set__current(BATT_CURR_LBND);
+
+        EXPECT_THROW(CAN::Battery tmp(msg, 0), std::out_of_range);
+    };
+
+    // Set a valid voltage for this portion
+    for (float invalid_curr : invalid_volts) {
+        msg.set__voltage(BATT_VOLT_LBND);
+        msg.set__current(invalid_curr);
+
+        EXPECT_THROW(CAN::Battery tmp(msg, 0), std::out_of_range);
+    };
+
+    cf.can_id = static_cast<canid_t>(CAN::CanId::BMS_P_DATA_FRAME_1);
+    std::copy(std::begin(GARBAGE_DATA), std::end(GARBAGE_DATA), cf.data);
+
+    EXPECT_THROW(CAN::Battery tmp(cf), std::out_of_range);
 }

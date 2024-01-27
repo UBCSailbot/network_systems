@@ -8,25 +8,27 @@
 #include <stdexcept>
 
 #include "cmn_hdrs/shared_constants.h"
+#include "cmn_hdrs/utils.h"
 
 namespace CAN
 {
 
 namespace
 {
-std::string canDebugStr(const CanId id) { return std::to_string(id) + ": " + CanDescription.at(id); }
+std::string CanIdToStr(const CanId & id) { return std::to_string(static_cast<canid_t>(id)); }
+std::string canDebugStr(const CanId & id) { return CanIdToStr(id) + ": " + CanDescription.at(id); }
 }  // namespace
 
-CanIdMismatchException::CanIdMismatchException(std::span<const CanId> valid_ids, const canid_t & received)
+CanIdMismatchException::CanIdMismatchException(std::span<const CanId> valid_ids, const CanId & received)
 {
-    std::string build_msg = "Mismatch between received ID: (" + std::to_string(received) + ") and valid IDs: \n";
+    std::string build_msg = "Mismatch between received ID: (" + CanIdToStr(received) + ") and valid IDs: \n";
     for (const CanId & id : valid_ids) {
         build_msg += canDebugStr(id) + "\n";
     }
-    msg = build_msg;
+    msg_ = build_msg;
 }
 
-const char * CanIdMismatchException::what() { return msg.c_str(); }
+const char * CanIdMismatchException::what() { return msg_.c_str(); }
 
 std::ostream & operator<<(std::ostream & os, const CanBase & can) { return os << can.debugStr(); }
 
@@ -54,7 +56,7 @@ CanBase::CanBase(std::span<const CanId> valid_ids, CanId id, uint8_t can_byte_dl
     id_ = id;
 }
 
-CanFrame CanBase::toLinuxCan() const { return CanFrame{.can_id = id_, .len = can_byte_dlen_}; }
+CanFrame CanBase::toLinuxCan() const { return CanFrame{.can_id = static_cast<canid_t>(id_), .len = can_byte_dlen_}; }
 
 Battery::Battery(CanId id) : CanBase(std::span{BATTERY_IDS}, id, CAN_BYTE_DLEN_) {}
 
@@ -78,6 +80,8 @@ Battery::Battery(CanFrame cf) : Battery(static_cast<CanId>(cf.can_id))
     // TODO(hhenry01): Max and min are dodgy... it doesn't make sense to not divide them by 100 - confirm with ELEC
     volt_max_ = static_cast<float>(raw_max_volt);
     volt_min_ = static_cast<float>(raw_min_volt);
+
+    checkBounds();
 }
 
 CanFrame Battery::toLinuxCan() const
@@ -98,7 +102,7 @@ CanFrame Battery::toLinuxCan() const
 }
 // NOLINTEND(readability-magic-numbers)
 
-Battery::Battery(custom_interfaces::msg::HelperBattery ros_bat, uint32_t bat_idx) : CanBase(CAN_BYTE_DLEN_)
+Battery::Battery(msg::HelperBattery ros_bat, uint32_t bat_idx) : CanBase(CAN_BYTE_DLEN_)
 {
     if (bat_idx >= NUM_BATTERIES) {
         throw std::length_error(
@@ -110,14 +114,30 @@ Battery::Battery(custom_interfaces::msg::HelperBattery ros_bat, uint32_t bat_idx
     curr_     = ros_bat.current;
     volt_max_ = 0.0;  // UNUSED
     volt_min_ = 0.0;  // UNUSED
+
+    checkBounds();
 }
 
-custom_interfaces::msg::HelperBattery Battery::toRosMsg() const
+msg::HelperBattery Battery::toRosMsg() const
 {
-    custom_interfaces::msg::HelperBattery msg;
+    msg::HelperBattery msg;
     msg.set__voltage(volt_);
     msg.set__current(curr_);
     return msg;
+}
+
+void Battery::checkBounds() const
+{
+    auto err = utils::isOutOfBounds<float>(volt_, BATT_VOLT_LBND, BATT_VOLT_UBND);
+    if (err.has_value()) {
+        std::string err_msg = err.value();
+        throw std::out_of_range("Battery voltage is out of bounds!\n" + debugStr() + "\n" + err_msg);
+    }
+    err = utils::isOutOfBounds<float>(curr_, BATT_CURR_LBND, BATT_CURR_UBND);
+    if (err.has_value()) {
+        std::string err_msg = err.value();
+        throw std::out_of_range("Battery current is out of bounds!\n" + debugStr() + "\n" + err_msg);
+    }
 }
 
 }  // namespace CAN
