@@ -8,7 +8,7 @@
 #include <stdexcept>
 
 #include "cmn_hdrs/shared_constants.h"
-#include "cmn_hdrs/utils.h"
+#include "utils/utils.h"
 
 namespace CAN
 {
