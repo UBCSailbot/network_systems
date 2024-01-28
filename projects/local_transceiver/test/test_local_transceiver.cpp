@@ -3,6 +3,7 @@
 #include <boost/system/system_error.hpp>
 #include <fstream>
 
+#include "at_cmds.h"
 #include "cmn_hdrs/shared_constants.h"
 #include "gtest/gtest.h"
 #include "local_transceiver.h"
@@ -31,18 +32,17 @@ protected:
 
 TEST_F(TestLocalTransceiver, testChecksum)
 {
-    std::string holder       = "hello";
-    std::string holderResult = LocalTransceiver::checksum(holder);
-    std::cout << holderResult << std::endl;
+    std::string input    = "hello";
+    std::string checksum = LocalTransceiver::checksum(input);
+    EXPECT_EQ(checksum, "0214");
 }
 
 /**
- * @brief Verify debugSendTest sends something to the terminal
+ * @brief Verify debugSend
  */
 TEST_F(TestLocalTransceiver, debugSendTest)
 {
-    //std::string testDebug = "showsUp";
-    //lcl_trns_->debugSend(testDebug);
+    EXPECT_EQ(lcl_trns_->debugSend(AT::CHECK_CONN), AT::Line(AT::STATUS_OK).str_);
 }
 
 /**
