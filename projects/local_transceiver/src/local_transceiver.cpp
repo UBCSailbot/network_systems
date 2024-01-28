@@ -151,7 +151,12 @@ bool LocalTransceiver::send()
             continue;
         }
 
-        if (!rcvRsps({at_write_cmd, AT::Line(AT::DELIMITER), AT::Line(AT::RSP_READY)})) {
+        if (!rcvRsps({
+              at_write_cmd,
+              AT::Line(AT::DELIMITER),
+              AT::Line(AT::RSP_READY),
+              AT::Line("\n"),
+            })) {
             continue;
         }
 
@@ -161,14 +166,19 @@ bool LocalTransceiver::send()
             continue;
         }
 
-        if (!rcvRsps(
-              {AT::Line("\n"), AT::Line(AT::DELIMITER), AT::Line(AT::write_bin::rsp::SUCCESS), AT::Line("\n"),
-               AT::Line(AT::DELIMITER), AT::Line(AT::STATUS_OK), AT::Line("\n"), AT::Line(AT::DELIMITER)})) {
+        if (!rcvRsps({
+              AT::Line(AT::DELIMITER),
+              AT::Line(AT::write_bin::rsp::SUCCESS),
+              AT::Line("\n"),
+              AT::Line(AT::DELIMITER),
+              AT::Line(AT::STATUS_OK),
+              AT::Line("\n"),
+            })) {
             continue;
         }
 
         // Check SBD Session status to see if data was sent successfully
-
+        // NEEDS AN ACTIVE SERVER ON $WEBHOOK_SERVER_ENDPOINT OR VIRTUAL IRIDIUM WILL CRASH
         if (!send(AT::Line(AT::SBD_SESSION))) {
             continue;
         }
@@ -197,7 +207,10 @@ std::optional<std::string> LocalTransceiver::debugSend(const std::string & cmd)
         return std::nullopt;
     }
 
-    if (!rcvRsps({at_cmd, AT::Line(AT::DELIMITER)})) {
+    if (!rcvRsps({
+          at_cmd,
+          AT::Line(AT::DELIMITER),
+        })) {
         return std::nullopt;
     }
 
