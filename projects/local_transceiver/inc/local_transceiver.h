@@ -122,14 +122,6 @@ public:
      */
     std::string receive();
 
-    /**
-     * @brief Compute a checksum
-     *
-     * @param data data string
-     * @return checksum as a string
-     */
-    static std::string checksum(const std::string & data);
-
 private:
     // Serial port read/write timeout
     constexpr static const struct timeval TIMEOUT
@@ -154,13 +146,12 @@ private:
     /**
      * @brief Read responses from serial
      *
-     * @param last_cmd      last AT command sent to serial (need to flush it)
      * @param expected_rsps expected responses
      * @return true if all expected responses are read successfully, false otherwise
      */
-    bool rcvRsps(const AT::Line & last_cmd, std::initializer_list<const std::string> expected_rsps);
+    bool rcvRsps(std::initializer_list<const AT::Line> expected_rsps);
 
-    bool readExpected(const AT::Line & expected_line);
+    bool rcvRsp(const AT::Line & expected_rsp);
 
     std::optional<std::string> readRsp();
 
@@ -180,4 +171,15 @@ private:
      * @return buf contents as a string
      */
     static std::string streambufToStr(boost::asio::streambuf & buf);
+
+    /**
+     * @brief Compute the checksum of a binary data string.
+     * The checksum is the least significant 2 bytes of the
+     * sum of all bytes in the data string, where each character
+     * is one byte.
+     *
+     * @param data data string
+     * @return checksum value
+     */
+    static std::string checksum(const std::string & data);
 };

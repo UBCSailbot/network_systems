@@ -38,9 +38,9 @@ struct Line
     /**
      * @param str valid AT command or response string
      */
-    explicit Line(std::string str) : str_(str == AT::DELIMITER ? AT::DELIMITER : str + "\r") {}
+    inline explicit Line(const std::string & str) : str_(str == AT::DELIMITER || str == "\n" ? str : str + "\r") {}
     // In most cases, str_ will just be the input str to the constructor
-    // AT::DELIMITER is an exception, and remains the same
+    // AT::DELIMITER and \n are exceptions, and remain the same
     const std::string str_;
 };
 

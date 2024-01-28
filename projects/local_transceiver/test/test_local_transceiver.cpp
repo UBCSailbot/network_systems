@@ -30,13 +30,6 @@ protected:
     LocalTransceiver * lcl_trns_;
 };
 
-TEST_F(TestLocalTransceiver, testChecksum)
-{
-    std::string input    = "hello";
-    std::string checksum = LocalTransceiver::checksum(input);
-    EXPECT_EQ(checksum, "0214");
-}
-
 /**
  * @brief Verify debugSend
  */

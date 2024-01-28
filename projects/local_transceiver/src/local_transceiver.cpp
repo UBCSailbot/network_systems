@@ -151,7 +151,7 @@ bool LocalTransceiver::send()
             continue;
         }
 
-        if (!rcvRsps(at_write_cmd, {AT::RSP_READY})) {
+        if (!rcvRsps({at_write_cmd, AT::Line(AT::DELIMITER), AT::Line(AT::RSP_READY)})) {
             continue;
         }
 
@@ -161,7 +161,9 @@ bool LocalTransceiver::send()
             continue;
         }
 
-        if (!rcvRsps(msg, {AT::write_bin::rsp::SUCCESS, AT::STATUS_OK})) {
+        if (!rcvRsps(
+              {AT::Line("\n"), AT::Line(AT::DELIMITER), AT::Line(AT::write_bin::rsp::SUCCESS), AT::Line("\n"),
+               AT::Line(AT::DELIMITER), AT::Line(AT::STATUS_OK), AT::Line("\n"), AT::Line(AT::DELIMITER)})) {
             continue;
         }
 
@@ -195,11 +197,7 @@ std::optional<std::string> LocalTransceiver::debugSend(const std::string & cmd)
         return std::nullopt;
     }
 
-    if (!readExpected(at_cmd)) {
-        return std::nullopt;
-    }
-
-    if (!readExpected(AT::Line(AT::DELIMITER))) {
+    if (!rcvRsps({at_cmd, AT::Line(AT::DELIMITER)})) {
         return std::nullopt;
     }
 
@@ -231,39 +229,29 @@ std::string LocalTransceiver::parseInMsg(const std::string & msg)
     return "placeholder";
 }
 
-bool LocalTransceiver::rcvRsps(const AT::Line & last_cmd, std::initializer_list<const std::string> expected_rsps)
-{
-    bio::streambuf buf;
-    std::string    outstr;
-
-    // Flush last written command
-    if (!readExpected(last_cmd)) {
-        return false;
-    }
-
-    // If any response does not match the expected response, return false
-    return std::any_of(expected_rsps.begin(), expected_rsps.end(), [this](const std::string & e_rsp_str) {
-        AT::Line e_rsp(e_rsp_str);
-        return !readExpected(e_rsp);
-    });
-}
-
-bool LocalTransceiver::readExpected(const AT::Line & expected_line)
+bool LocalTransceiver::rcvRsp(const AT::Line & expected_rsp)
 {
     bio::streambuf buf;
     error_code     ec;
     // Caution: will hang if another proccess is reading from the same serial port
-    bio::read(serial_, buf, bio::transfer_exactly(expected_line.str_.size()), ec);
+    bio::read(serial_, buf, bio::transfer_exactly(expected_rsp.str_.size()), ec);
     if (ec) {
         std::cerr << "Failed to read with error: " << ec.message() << std::endl;
         return false;
     }
     std::string outstr = streambufToStr(buf);
-    if (outstr != expected_line.str_) {
-        std::cerr << "Expected to read: \"" << expected_line.str_ << "\"\nbut read: \"" << outstr << "\"" << std::endl;
+    if (outstr != expected_rsp.str_) {
+        std::cerr << "Expected to read: \"" << expected_rsp.str_ << "\"\nbut read: \"" << outstr << "\"" << std::endl;
         return false;
     }
     return true;
+}
+
+bool LocalTransceiver::rcvRsps(std::initializer_list<const AT::Line> expected_rsps)
+{
+    // All responses must match the expected responses
+    return std::all_of(
+      expected_rsps.begin(), expected_rsps.end(), [this](const AT::Line & e_rsp) { return rcvRsp(e_rsp); });
 }
 
 std::optional<std::string> LocalTransceiver::readRsp()
@@ -284,16 +272,15 @@ std::optional<std::string> LocalTransceiver::readRsp()
 
 std::string LocalTransceiver::checksum(const std::string & data)
 {
-    // TODO(Jng468): Describe how the checksum is computed with comments
-
-    uint16_t counter = 0;
+    uint16_t sum = 0;
     for (char c : data) {
-        counter += static_cast<uint8_t>(c);
+        sum += static_cast<uint8_t>(c);
     }
 
-    std::stringstream ss;
-    ss << std::hex << std::setw(4) << std::setfill('0') << counter;
-    return ss.str();
+    char checksum_low  = static_cast<char>(sum & 0xff);           // NOLINT(readability-magic-numbers)
+    char checksum_high = static_cast<char>((sum & 0xff00) >> 8);  // NOLINT(readability-magic-numbers)
+
+    return std::string{checksum_high, checksum_low};
 }
 
 std::string LocalTransceiver::streambufToStr(bio::streambuf & buf)
