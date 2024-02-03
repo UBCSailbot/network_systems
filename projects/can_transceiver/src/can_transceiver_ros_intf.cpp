@@ -29,6 +29,27 @@ namespace msg = custom_interfaces::msg;
 using CAN::CanFrame;
 using CAN::CanId;
 
+static int mockCanFd()
+{
+    static std::mutex           mtx;
+    std::lock_guard<std::mutex> lock(mtx);
+
+    volatile static int fd = -1;
+    if (fd == -1) {
+        const static std::string tmp_file_template_str = "/tmp/CanSimIntfXXXXXX";
+        std::vector<char>        tmp_file_template_cstr(
+                 tmp_file_template_str.c_str(), tmp_file_template_str.c_str() + tmp_file_template_str.size() + 1);
+        fd = mkstemp(tmp_file_template_cstr.data());
+        if (fd == -1) {
+            std::string err_msg = "Failed to open mock CAN fd with error: " + std::to_string(errno) + "(" +
+                                  strerror(errno) + ")";  // NOLINT(concurrency-mt-unsafe)
+            throw std::runtime_error(err_msg);
+        }
+        return fd;
+    }
+    return fd;
+}
+
 class CanTransceiverIntf : public rclcpp::Node
 {
 public:
@@ -45,9 +66,14 @@ public:
             std::string       mode       = mode_param.as_string();
 
             if (mode == SYSTEM_MODE::PROD) {
-                can_trns_ = std::make_unique<CanTransceiver>();
+                try {
+                    can_trns_ = std::make_unique<CanTransceiver>();
+                } catch (std::runtime_error err) {
+                    RCLCPP_ERROR(this->get_logger(), "%s", err.what());
+                    throw err;
+                }
             } else if (mode == SYSTEM_MODE::DEV) {
-                can_trns_ = std::make_unique<CanTransceiver>(-1);  // TODO(hhenry01) hook up to sim
+                can_trns_ = std::make_unique<CanTransceiver>(mockCanFd());
             } else {
                 std::string msg = "Error, invalid system mode" + mode;
                 throw std::runtime_error(msg);
@@ -77,7 +103,7 @@ private:
         CAN::Battery bat(battery_frame);
 
         size_t idx;
-        for (size_t i = 0;; i++) {  // idx WILL be in range
+        for (size_t i = 0;; i++) {  // idx WILL be in range (can_frame_parser guarentees this)
             if (bat.id_ == CAN::Battery::BATTERY_IDS[i]) {
                 idx = i;
                 break;
@@ -104,7 +130,13 @@ public:
             rclcpp::Parameter mode_param = this->get_parameter("mode");
             std::string       mode       = mode_param.as_string();
 
-            // TODO(hhenry01): Fill out
+            if (mode == SYSTEM_MODE::PROD) {
+                RCLCPP_WARN(this->get_logger(), "CAN Sim Intf is not meant to run in production mode!");
+            }
+
+            int fd = mockCanFd();
+
+            (void)fd;  // TODO(): flesh out Sim intf
         }
     }
 };

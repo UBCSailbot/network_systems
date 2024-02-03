@@ -140,12 +140,17 @@ protected:
         std::vector<char>        tmp_file_template_cstr(
                  tmp_file_template_str.c_str(), tmp_file_template_str.c_str() + tmp_file_template_str.size() + 1);
         fd_ = mkstemp(tmp_file_template_cstr.data());
-        EXPECT_NE(fd_, -1) << "Failed to open a test file: " << strerror(errno);  // NOLINT(concurrency-mt-unsafe)
+        EXPECT_NE(fd_, -1) << "Failed to open a test file with error: " << errno << ": "
+                           << strerror(errno);  // NOLINT(concurrency-mt-unsafe)
         canbus_t_ = new CanTransceiver(fd_);
     }
     ~TestCanTransceiver() override { delete canbus_t_; }
 };
 
+/**
+ * @brief Test the callbacks that get called on new data
+ *
+ */
 TEST_F(TestCanTransceiver, TestNewDataValid)
 {
     volatile bool is_cb_called = false;
@@ -166,4 +171,30 @@ TEST_F(TestCanTransceiver, TestNewDataValid)
     std::this_thread::sleep_for(SLEEP_TIME);
 
     EXPECT_TRUE(is_cb_called);
+}
+
+/**
+ * @brief Test that the CanTransceiver ignores IDs that we don't register callbacks for
+ *
+ */
+TEST_F(TestCanTransceiver, TestNewDataIgnore)
+{
+    volatile bool is_cb_called = false;
+
+    std::function<void(CAN::CanFrame)> test_cb = [&is_cb_called](CAN::CanFrame /*unused*/) { is_cb_called = true; };
+    canbus_t_->registerCanCbs({{
+      std::make_pair(CAN::CanId::BMS_P_DATA_FRAME_1, test_cb),
+    }});
+
+    // just need a valid and ignored ID for this test
+    CAN::CanFrame dummy_frame{.can_id = static_cast<canid_t>(CAN::CanId::RESERVED)};
+
+    canbus_t_->send(dummy_frame);
+    // Since we're writing to the same file we're reading from, we need to reset the seek offset
+    // This is NOT necessary in deployment as we won't be using a file to mock it
+    lseek(fd_, 0, SEEK_SET);
+
+    std::this_thread::sleep_for(SLEEP_TIME);
+
+    EXPECT_FALSE(is_cb_called);
 }

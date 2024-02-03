@@ -1,11 +1,11 @@
 #include "can_transceiver.h"
 
+#include <errno.h>
 #include <linux/can.h>
 #include <net/if.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
 
-#include <cstring>
 #include <stdexcept>
 #include <thread>
 
@@ -50,7 +50,9 @@ CanTransceiver::CanTransceiver()
     static const char * CAN_INST = "can0";
 
     if ((sock_desc_ = socket(PF_CAN, SOCK_RAW, CAN_RAW)) < 0) {
-        throw std::runtime_error("Failed to open CAN socket");
+        std::string err_msg = "Failed to open CAN socket with error: " + std::to_string(errno) + ": " +
+                              strerror(errno);  // NOLINT(concurrency-mt-unsafe)
+        throw std::runtime_error(err_msg);
     }
 
     IFreq       ifr;
@@ -84,14 +86,20 @@ CanTransceiver::~CanTransceiver()
 void CanTransceiver::receive()
 {
     while (!shutdown_flag_) {
-        CanFrame frame;
-        size_t   bytes_read = 0;
-        {  // scope the mutex
-            std::lock_guard<std::mutex> lock(can_mtx_);
-            bytes_read = read(sock_desc_, &frame, sizeof(CanFrame));
-        }
+        // make sure the lock is acquired and released INSIDE the loop, otherwise send() will never get the lock
+        std::lock_guard<std::mutex> lock(can_mtx_);
+        CanFrame                    frame;
+        ssize_t                     bytes_read = read(sock_desc_, &frame, sizeof(CanFrame));
         if (bytes_read > 0) {
-            onNewCanData(frame);
+            if (bytes_read != sizeof(CanFrame)) {
+                std::cerr << "CAN read error: read " << bytes_read << "B but CAN frames are expected to be "
+                          << sizeof(CanFrame) << "B" << std::endl;
+            } else {
+                onNewCanData(frame);
+            }
+        } else if (bytes_read < 0) {
+            std::cerr << "CAN read error: " << errno << "(" << strerror(errno)  // NOLINT(concurrency-mt-unsafe)
+                      << ")" << std::endl;
         }
     }
 }
@@ -99,7 +107,12 @@ void CanTransceiver::receive()
 void CanTransceiver::send(const CanFrame & frame) const
 {
     std::lock_guard<std::mutex> lock(can_mtx_);
-    if (write(sock_desc_, &frame, sizeof(can_frame)) != sizeof(can_frame)) {
-        std::cerr << "Failed to write frame to CAN:" << std::endl;
+    ssize_t                     bytes_written = write(sock_desc_, &frame, sizeof(can_frame));
+    if (bytes_written < 0) {
+        std::cerr << "CAN write error: " << errno << "(" << strerror(errno)  // NOLINT(concurrency-mt-unsafe)
+                  << ")" << std::endl;
+    } else if (bytes_written != sizeof(CanFrame)) {
+        std::cerr << "CAN write error: wrote " << bytes_written << "B but CAN frames are expected to be "
+                  << sizeof(CanFrame) << "B" << std::endl;
     }
 }
