@@ -19,14 +19,14 @@ public:
     * @brief Destroy the Can Transceiver object
     *
     */
-    virtual ~CanTransceiver() = 0;
+    virtual ~CanTransceiver();
 
     /**
      * @brief Call when a new command (ex. rudder command) needs to be executed
      *        Passes the command down to the hardware/simulator
      *
      */
-    void onNewCmd(CAN::CanId id /*, other data fields... */);
+    void onNewCmd(CAN::CanFrame cmd_frame);
 
     /**
      * @brief Retrieve the most recent set of sensors data
@@ -35,35 +35,41 @@ public:
      */
     std::string getRecentSensors();
 
-protected:
-    // Buffer where recent data is stored - DO NOT USE VOID POINTER IN ACTUAL IMPLEMENTATION
-    void * sensor_buf_;
-    /**
-     * @brief Retrieve latest incoming data from hardware/simulator and process it
-     *
-     */
-    virtual void receive() = 0;
+    void registerCanCb(std::pair<CAN::CanId, std::function<void(CAN::CanFrame)>> cb_kvp);
+
+    void registerCanCbs(
+      const std::initializer_list<std::pair<CAN::CanId, std::function<void(CAN::CanFrame)>>> & cb_kvps);
 
     /**
      * @brief Send a command to the hardware/simulator
      *
      * @param frame Command frame to send
      */
-    virtual void send(const CAN::CanFrame & frame) const = 0;
+    virtual void send(CAN::CanFrame frame) const = 0;
 
+protected:
     /**
      * @brief Call on receiving a new CAN data frame from hardware/simulator
      *
      * @param frame received CAN data frame
      */
-    void onNewCanData(const CAN::CanFrame & frame);
+    void onNewCanData(CAN::CanFrame frame) const;
+
+private:
+    /**
+     * @brief Retrieve latest incoming data from hardware/simulator and process it
+     *
+     */
+    virtual void receive() = 0;
+
+    std::map<CAN::CanId, std::function<void(const CAN::CanFrame &)>> read_callbacks_;
 };
 
 /**
  * Implementation of CAN Transceiver that interfaces with CAN hardware
  *
  */
-class CanbusIntf : public CanTransceiver
+class CanbusTransceiver : public CanTransceiver
 {
 public:
     /**
@@ -71,17 +77,28 @@ public:
     *
     * @param can_inst
     */
-    explicit CanbusIntf(const std::string & can_inst);
+    CanbusTransceiver();
+
+    explicit CanbusTransceiver(int fd);
 
     /**
      * @brief Destroy the Canbus Intf object
      *
      */
-    ~CanbusIntf();
+    ~CanbusTransceiver();
+
+    /**
+     * @brief Send a command to hardware
+     *
+     * @param frame command frame to send
+     */
+    void send(CAN::CanFrame frame) const;
 
 private:
     // Thread that listens to CAN
-    std::thread receive_thread_;
+    std::thread        receive_thread_;
+    bool               shutdown_flag_ = false;
+    mutable std::mutex can_mtx_;  // mutable keyword required for std::lock_guard
 
     // CAN socket this instance is attached to
     int sock_desc_;
@@ -91,13 +108,6 @@ private:
      *
      */
     void receive();
-
-    /**
-     * @brief Send a command to hardware
-     *
-     * @param frame command frame to send
-     */
-    void send(const CAN::CanFrame & frame) const;
 };
 
 /**
@@ -106,5 +116,10 @@ private:
  */
 class CanSimTransceiver : public CanTransceiver
 {
+public:
+    CanSimTransceiver();
+    void send(CAN::CanFrame frame) const;
+
+private:
     void receive();
 };

@@ -20,44 +20,37 @@ using CAN::CanId;
 
 CanTransceiver::~CanTransceiver(){};
 
-void CanTransceiver::onNewCmd(CanId id /*, other data fields...*/)
+void CanTransceiver::onNewCmd(const CanFrame cmd_frame)
 {
-    // switch (id) {
-    //     case RudderCmd: {
-    //         struct RudderCmd cmd;
-    //         CanFrame         frame = cmd.toLinuxCan();
-    //         send(frame);
-    //         break;
-    //     }
-    //     default:
-    //         // log error
-    //         std::cerr << "Unknown CAN ID: " << id << std::endl;
-    // }
+    // TODO(): IMPLEMENT
 }
 
-void CanTransceiver::onNewCanData(const CanFrame & frame)
+void CanTransceiver::onNewCanData(const CanFrame frame) const
 {
-    switch (frame.can_id) {
-        // case Placeholder0: {
-        //     struct Placeholder0 inst(frame);
-        //     // buffer data (PLACEHOLDER METHOD)
-        //     memcpy(sensor_buf_, &inst, sizeof(inst));
-        //     break;
-        // }
-        // case Placeholder1: {
-        //     struct Placeholder1 inst(frame);
-        //     // buffer data (PLACEHOLDER METHOD)
-        //     memcpy(sensor_buf_, &inst, sizeof(inst));
-        //     break;
-        // }
-        default:
-            // log error
-            std::cerr << "Unknown CAN ID: " << frame.can_id << std::endl;
+    CanId id{frame.can_id};
+    if (read_callbacks_.contains(id)) {
+        read_callbacks_.at(id)(frame);
     }
 }
 
-CanbusIntf::CanbusIntf(const std::string & can_inst)
+void CanTransceiver::registerCanCb(const std::pair<CanId, std::function<void(CanFrame)>> cb_kvp)
 {
+    auto [key, cb]       = cb_kvp;
+    read_callbacks_[key] = cb;
+}
+
+void CanTransceiver::registerCanCbs(
+  const std::initializer_list<std::pair<CanId, std::function<void(CanFrame)>>> & cb_kvps)
+{
+    for (const auto & cb_kvp : cb_kvps) {
+        registerCanCb(cb_kvp);
+    }
+}
+
+CanbusTransceiver::CanbusTransceiver()
+{
+    static const char * CAN_INST = "can0";
+
     if ((sock_desc_ = socket(PF_CAN, SOCK_RAW, CAN_RAW)) < 0) {
         throw std::runtime_error("Failed to open CAN socket");
     }
@@ -65,7 +58,7 @@ CanbusIntf::CanbusIntf(const std::string & can_inst)
     IFreq       ifr;
     SockAddrCan addr;
 
-    strncpy(ifr.ifr_name, can_inst.c_str(), IFNAMSIZ);
+    strncpy(ifr.ifr_name, CAN_INST, IFNAMSIZ);
     ioctl(sock_desc_, SIOCGIFINDEX, &ifr);
 
     addr.can_family  = AF_CAN;
@@ -75,25 +68,46 @@ CanbusIntf::CanbusIntf(const std::string & can_inst)
         throw std::runtime_error("Failed to bind CAN socket");
     }
 
-    receive_thread_ = std::thread(&CanbusIntf::receive, this);
+    receive_thread_ = std::thread(&CanbusTransceiver::receive, this);
 }
 
-CanbusIntf::~CanbusIntf() { close(sock_desc_); }
-
-void CanbusIntf::receive()
+CanbusTransceiver::CanbusTransceiver(int fd) : sock_desc_(fd)
 {
-    CanFrame frame;
-    while (true) {
-        read(sock_desc_, &frame, sizeof(can_frame));
-        onNewCanData(frame);
+    receive_thread_ = std::thread(&CanbusTransceiver::receive, this);
+}
+
+CanbusTransceiver::~CanbusTransceiver()
+{
+    close(sock_desc_);
+    shutdown_flag_ = true;
+    receive_thread_.join();
+}
+
+void CanbusTransceiver::receive()
+{
+    while (!shutdown_flag_) {
+        CanFrame frame;
+        size_t   bytes_read = 0;
+        {  // scope the mutex
+            std::lock_guard<std::mutex> lock(can_mtx_);
+            bytes_read = read(sock_desc_, &frame, sizeof(CanFrame));
+        }
+        if (bytes_read > 0) {
+            onNewCanData(frame);
+        }
     }
 }
 
-void CanbusIntf::send(const CanFrame & frame) const
+void CanbusTransceiver::send(const CanFrame frame) const
 {
+    std::lock_guard<std::mutex> lock(can_mtx_);
     if (write(sock_desc_, &frame, sizeof(can_frame)) != sizeof(can_frame)) {
-        // Log error
         std::cerr << "Failed to write frame to CAN:" << std::endl;
-        // std::cerr << fmtCanFrameDbgStr(frame) << std::endl;
     }
 }
+
+CanSimTransceiver::CanSimTransceiver() {}
+
+void CanSimTransceiver::receive() {}
+
+void CanSimTransceiver::send(CanFrame frame) const {}

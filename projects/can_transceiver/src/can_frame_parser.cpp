@@ -21,7 +21,7 @@ namespace
  * @param id CanId to convert
  * @return std::string
  */
-std::string CanIdToStr(const CanId & id) { return std::to_string(static_cast<canid_t>(id)); }
+std::string CanIdToStr(const CanId id) { return std::to_string(static_cast<canid_t>(id)); }
 
 /**
  * @brief Get a debug string for a CanId
@@ -29,12 +29,12 @@ std::string CanIdToStr(const CanId & id) { return std::to_string(static_cast<can
  * @param id CanId to target
  * @return std::string
  */
-std::string CanDebugStr(const CanId & id) { return CanIdToStr(id) + ": " + CAN_DESC.at(id); }
+std::string CanDebugStr(const CanId id) { return CanIdToStr(id) + ": " + CAN_DESC.at(id); }
 }  // namespace
 
 // CanIdMismatchException START
 
-CanIdMismatchException::CanIdMismatchException(std::span<const CanId> valid_ids, const CanId & received)
+CanIdMismatchException::CanIdMismatchException(std::span<const CanId> valid_ids, const CanId received)
 {
     std::string build_msg = "Mismatch between received ID: (" + CanIdToStr(received) + ") and valid IDs: \n";
     for (const CanId & id : valid_ids) {
@@ -153,12 +153,12 @@ Battery::Battery(CanId id) : BaseFrame(std::span{BATTERY_IDS}, id, CAN_BYTE_DLEN
 void Battery::checkBounds() const
 {
     auto err = utils::isOutOfBounds<float>(volt_, BATT_VOLT_LBND, BATT_VOLT_UBND);
-    if (err.has_value()) {
+    if (err) {
         std::string err_msg = err.value();
         throw std::out_of_range("Battery voltage is out of bounds!\n" + debugStr() + "\n" + err_msg);
     }
     err = utils::isOutOfBounds<float>(curr_, BATT_CURR_LBND, BATT_CURR_UBND);
-    if (err.has_value()) {
+    if (err) {
         std::string err_msg = err.value();
         throw std::out_of_range("Battery current is out of bounds!\n" + debugStr() + "\n" + err_msg);
     }

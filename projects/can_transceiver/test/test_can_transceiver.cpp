@@ -1,8 +1,11 @@
+#include <errno.h>
+#include <fcntl.h>
 #include <gtest/gtest.h>
 
 #include <cstring>
 
 #include "can_frame_parser.h"
+#include "can_transceiver.h"
 #include "cmn_hdrs/shared_constants.h"
 
 namespace msg = custom_interfaces::msg;
@@ -18,7 +21,7 @@ constexpr CAN::RawDataBuf GARBAGE_DATA = []() constexpr
 ();
 
 /**
- * @brief Test CAN<->ROS translations
+ * @brief Test ROS<->CAN translations
  *
  */
 class TestCanFrameParser : public ::testing::Test
@@ -29,7 +32,7 @@ protected:
 };
 
 /**
- * @brief Test CAN<->ROS Battery translations work as expected for valid input values
+ * @brief Test ROS<->CAN Battery translations work as expected for valid input values
  *
  */
 TEST_F(TestCanFrameParser, BatteryTestValid)
@@ -119,4 +122,46 @@ TEST_F(TestCanFrameParser, TestBatteryInvalid)
     std::copy(std::begin(GARBAGE_DATA), std::end(GARBAGE_DATA), cf.data);
 
     EXPECT_THROW(CAN::Battery tmp(cf), std::out_of_range);
+}
+
+/**
+ * @brief Test CanbusTransceiver using a tmp file
+ *
+ */
+class TestCanbusTransceiver : public ::testing::Test
+{
+protected:
+    static constexpr auto SLEEP_TIME = std::chrono::milliseconds(20);
+    CanbusTransceiver *   canbus_t_;
+    int                   fd_;
+    TestCanbusTransceiver()
+    {
+        const static std::string tmp_file_template_str = "/tmp/TestCanbusTransceiverXXXXXX";
+        std::vector<char>        tmp_file_template_cstr(
+                 tmp_file_template_str.c_str(), tmp_file_template_str.c_str() + tmp_file_template_str.size() + 1);
+        fd_ = mkstemp(tmp_file_template_cstr.data());
+        EXPECT_NE(fd_, -1) << "Failed to open a test file: " << strerror(errno);  // NOLINT(concurrency-mt-unsafe)
+        canbus_t_ = new CanbusTransceiver(fd_);
+    }
+    ~TestCanbusTransceiver() override { delete canbus_t_; }
+};
+
+TEST_F(TestCanbusTransceiver, TestNewDataValid)
+{
+    volatile bool is_cb_called = false;
+
+    std::function<void(CAN::CanFrame)> test_cb = [&is_cb_called](CAN::CanFrame /*unused*/) { is_cb_called = true; };
+    canbus_t_->registerCanCbs({{
+      std::make_pair(CAN::CanId::BMS_P_DATA_FRAME_1, test_cb),
+    }});
+
+    // just need a valid and matching ID for this test
+    CAN::CanFrame dummy_frame{.can_id = static_cast<canid_t>(CAN::CanId::BMS_P_DATA_FRAME_1)};
+
+    canbus_t_->send(dummy_frame);
+    lseek(fd_, 0, SEEK_SET);
+
+    std::this_thread::sleep_for(SLEEP_TIME);
+
+    EXPECT_TRUE(is_cb_called);
 }

@@ -80,9 +80,9 @@ public:
      * @param valid_ids Expected IDs
      * @param received  The invalid ID that was received
      */
-    CanIdMismatchException(std::span<const CanId> valid_ids, const CanId & received);
+    CanIdMismatchException(std::span<const CanId> valid_ids, CanId received);
 
-    using std::exception::what;  // Needed to silence virtual function overload error
+    using std::exception::what;  // Needed to resolve virtual function overload error
     /**
      * @brief Return the exception message
      *
