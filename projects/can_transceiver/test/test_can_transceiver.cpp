@@ -125,28 +125,28 @@ TEST_F(TestCanFrameParser, TestBatteryInvalid)
 }
 
 /**
- * @brief Test CanbusTransceiver using a tmp file
+ * @brief Test CanTransceiver using a tmp file
  *
  */
-class TestCanbusTransceiver : public ::testing::Test
+class TestCanTransceiver : public ::testing::Test
 {
 protected:
     static constexpr auto SLEEP_TIME = std::chrono::milliseconds(20);
-    CanbusTransceiver *   canbus_t_;
+    CanTransceiver *      canbus_t_;
     int                   fd_;
-    TestCanbusTransceiver()
+    TestCanTransceiver()
     {
-        const static std::string tmp_file_template_str = "/tmp/TestCanbusTransceiverXXXXXX";
+        const static std::string tmp_file_template_str = "/tmp/TestCanTransceiverXXXXXX";
         std::vector<char>        tmp_file_template_cstr(
                  tmp_file_template_str.c_str(), tmp_file_template_str.c_str() + tmp_file_template_str.size() + 1);
         fd_ = mkstemp(tmp_file_template_cstr.data());
         EXPECT_NE(fd_, -1) << "Failed to open a test file: " << strerror(errno);  // NOLINT(concurrency-mt-unsafe)
-        canbus_t_ = new CanbusTransceiver(fd_);
+        canbus_t_ = new CanTransceiver(fd_);
     }
-    ~TestCanbusTransceiver() override { delete canbus_t_; }
+    ~TestCanTransceiver() override { delete canbus_t_; }
 };
 
-TEST_F(TestCanbusTransceiver, TestNewDataValid)
+TEST_F(TestCanTransceiver, TestNewDataValid)
 {
     volatile bool is_cb_called = false;
 
@@ -159,6 +159,8 @@ TEST_F(TestCanbusTransceiver, TestNewDataValid)
     CAN::CanFrame dummy_frame{.can_id = static_cast<canid_t>(CAN::CanId::BMS_P_DATA_FRAME_1)};
 
     canbus_t_->send(dummy_frame);
+    // Since we're writing to the same file we're reading from, we need to reset the seek offset
+    // This is NOT necessary in deployment as we won't be using a file to mock it
     lseek(fd_, 0, SEEK_SET);
 
     std::this_thread::sleep_for(SLEEP_TIME);

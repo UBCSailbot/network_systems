@@ -45,9 +45,9 @@ public:
             std::string       mode       = mode_param.as_string();
 
             if (mode == SYSTEM_MODE::PROD) {
-                can_trns_ = std::make_unique<CanbusTransceiver>();
+                can_trns_ = std::make_unique<CanTransceiver>();
             } else if (mode == SYSTEM_MODE::DEV) {
-                can_trns_ = std::make_unique<CanSimTransceiver>();
+                can_trns_ = std::make_unique<CanTransceiver>(-1);  // TODO(hhenry01) hook up to sim
             } else {
                 std::string msg = "Error, invalid system mode" + mode;
                 throw std::runtime_error(msg);
@@ -89,10 +89,31 @@ private:
     }
 };
 
+class CanSimIntf : public rclcpp::Node
+{
+public:
+    explicit CanSimIntf() : Node("can_sim_node")
+    {
+        this->declare_parameter("enabled", true);
+
+        if (!this->get_parameter("enabled").as_bool()) {
+            RCLCPP_INFO(this->get_logger(), "CAN Sim Intf is DISABLED");
+        } else {
+            this->declare_parameter("mode", rclcpp::PARAMETER_STRING);
+
+            rclcpp::Parameter mode_param = this->get_parameter("mode");
+            std::string       mode       = mode_param.as_string();
+
+            // TODO(hhenry01): Fill out
+        }
+    }
+};
+
 int main(int argc, char * argv[])
 {
     rclcpp::init(argc, argv);
     rclcpp::spin(std::make_shared<CanTransceiverIntf>());
+    rclcpp::spin(std::make_shared<CanSimIntf>());
     rclcpp::shutdown();
     return 0;
 }

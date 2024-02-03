@@ -18,8 +18,6 @@ using SockAddrCan = struct sockaddr_can;
 using CAN::CanFrame;
 using CAN::CanId;
 
-CanTransceiver::~CanTransceiver(){};
-
 void CanTransceiver::onNewCmd(const CanFrame cmd_frame)
 {
     // TODO(): IMPLEMENT
@@ -47,7 +45,7 @@ void CanTransceiver::registerCanCbs(
     }
 }
 
-CanbusTransceiver::CanbusTransceiver()
+CanTransceiver::CanTransceiver()
 {
     static const char * CAN_INST = "can0";
 
@@ -68,22 +66,22 @@ CanbusTransceiver::CanbusTransceiver()
         throw std::runtime_error("Failed to bind CAN socket");
     }
 
-    receive_thread_ = std::thread(&CanbusTransceiver::receive, this);
+    receive_thread_ = std::thread(&CanTransceiver::receive, this);
 }
 
-CanbusTransceiver::CanbusTransceiver(int fd) : sock_desc_(fd)
+CanTransceiver::CanTransceiver(int fd) : sock_desc_(fd)
 {
-    receive_thread_ = std::thread(&CanbusTransceiver::receive, this);
+    receive_thread_ = std::thread(&CanTransceiver::receive, this);
 }
 
-CanbusTransceiver::~CanbusTransceiver()
+CanTransceiver::~CanTransceiver()
 {
     close(sock_desc_);
     shutdown_flag_ = true;
     receive_thread_.join();
 }
 
-void CanbusTransceiver::receive()
+void CanTransceiver::receive()
 {
     while (!shutdown_flag_) {
         CanFrame frame;
@@ -98,16 +96,10 @@ void CanbusTransceiver::receive()
     }
 }
 
-void CanbusTransceiver::send(const CanFrame frame) const
+void CanTransceiver::send(const CanFrame frame) const
 {
     std::lock_guard<std::mutex> lock(can_mtx_);
     if (write(sock_desc_, &frame, sizeof(can_frame)) != sizeof(can_frame)) {
         std::cerr << "Failed to write frame to CAN:" << std::endl;
     }
 }
-
-CanSimTransceiver::CanSimTransceiver() {}
-
-void CanSimTransceiver::receive() {}
-
-void CanSimTransceiver::send(CanFrame frame) const {}
