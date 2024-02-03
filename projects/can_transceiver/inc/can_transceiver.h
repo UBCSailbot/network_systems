@@ -35,13 +35,13 @@ public:
      *
      * @param frame command frame to send
      */
-    void send(CAN::CanFrame frame) const;
+    void send(const CAN::CanFrame & frame) const;
     /**
      * @brief Call when a new command (ex. rudder command) needs to be executed
      *        Passes the command down to the hardware/simulator
      *
      */
-    void onNewCmd(CAN::CanFrame cmd_frame);
+    void onNewCmd(const CAN::CanFrame & cmd_frame);
 
     /**
      * @brief Retrieve the most recent set of sensors data
@@ -50,10 +50,10 @@ public:
      */
     std::string getRecentSensors();
 
-    void registerCanCb(std::pair<CAN::CanId, std::function<void(CAN::CanFrame)>> cb_kvp);
+    void registerCanCb(std::pair<CAN::CanId, std::function<void(const CAN::CanFrame &)>> cb_kvp);
 
     void registerCanCbs(
-      const std::initializer_list<std::pair<CAN::CanId, std::function<void(CAN::CanFrame)>>> & cb_kvps);
+      const std::initializer_list<std::pair<CAN::CanId, std::function<void(const CAN::CanFrame &)>>> & cb_kvps);
 
 private:
     // CAN socket this instance is attached to
@@ -78,5 +78,5 @@ private:
      *
      * @param frame received CAN data frame
      */
-    void onNewCanData(CAN::CanFrame frame) const;
+    void onNewCanData(const CAN::CanFrame & frame) const;
 };

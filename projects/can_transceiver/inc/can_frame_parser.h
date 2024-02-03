@@ -169,7 +169,7 @@ public:
      *
      * @param cf Linux CanFrame
      */
-    explicit Battery(CanFrame cf);
+    explicit Battery(const CanFrame & cf);
 
     /**
      * @brief Construct a Battery object from a custom_interfaces ROS msg representation

@@ -18,12 +18,12 @@ using SockAddrCan = struct sockaddr_can;
 using CAN::CanFrame;
 using CAN::CanId;
 
-void CanTransceiver::onNewCmd(const CanFrame cmd_frame)
+void CanTransceiver::onNewCmd(const CanFrame & cmd_frame)
 {
     // TODO(): IMPLEMENT
 }
 
-void CanTransceiver::onNewCanData(const CanFrame frame) const
+void CanTransceiver::onNewCanData(const CanFrame & frame) const
 {
     CanId id{frame.can_id};
     if (read_callbacks_.contains(id)) {
@@ -31,14 +31,14 @@ void CanTransceiver::onNewCanData(const CanFrame frame) const
     }
 }
 
-void CanTransceiver::registerCanCb(const std::pair<CanId, std::function<void(CanFrame)>> cb_kvp)
+void CanTransceiver::registerCanCb(const std::pair<CanId, std::function<void(const CanFrame &)>> cb_kvp)
 {
     auto [key, cb]       = cb_kvp;
     read_callbacks_[key] = cb;
 }
 
 void CanTransceiver::registerCanCbs(
-  const std::initializer_list<std::pair<CanId, std::function<void(CanFrame)>>> & cb_kvps)
+  const std::initializer_list<std::pair<CanId, std::function<void(const CanFrame &)>>> & cb_kvps)
 {
     for (const auto & cb_kvp : cb_kvps) {
         registerCanCb(cb_kvp);
@@ -96,7 +96,7 @@ void CanTransceiver::receive()
     }
 }
 
-void CanTransceiver::send(const CanFrame frame) const
+void CanTransceiver::send(const CanFrame & frame) const
 {
     std::lock_guard<std::mutex> lock(can_mtx_);
     if (write(sock_desc_, &frame, sizeof(can_frame)) != sizeof(can_frame)) {

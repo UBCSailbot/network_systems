@@ -21,7 +21,7 @@ namespace
  * @param id CanId to convert
  * @return std::string
  */
-std::string CanIdToStr(const CanId id) { return std::to_string(static_cast<canid_t>(id)); }
+std::string CanIdToStr(CanId id) { return std::to_string(static_cast<canid_t>(id)); }
 
 /**
  * @brief Get a debug string for a CanId
@@ -29,12 +29,12 @@ std::string CanIdToStr(const CanId id) { return std::to_string(static_cast<canid
  * @param id CanId to target
  * @return std::string
  */
-std::string CanDebugStr(const CanId id) { return CanIdToStr(id) + ": " + CAN_DESC.at(id); }
+std::string CanDebugStr(CanId id) { return CanIdToStr(id) + ": " + CAN_DESC.at(id); }
 }  // namespace
 
 // CanIdMismatchException START
 
-CanIdMismatchException::CanIdMismatchException(std::span<const CanId> valid_ids, const CanId received)
+CanIdMismatchException::CanIdMismatchException(std::span<const CanId> valid_ids, CanId received)
 {
     std::string build_msg = "Mismatch between received ID: (" + CanIdToStr(received) + ") and valid IDs: \n";
     for (const CanId & id : valid_ids) {
@@ -73,7 +73,7 @@ CanFrame BaseFrame::toLinuxCan() const { return CanFrame{.can_id = static_cast<c
 // Battery START
 // Battery public START
 
-Battery::Battery(CanFrame cf) : Battery(static_cast<CanId>(cf.can_id))
+Battery::Battery(const CanFrame & cf) : Battery(static_cast<CanId>(cf.can_id))
 {
     int16_t raw_volt;
     int16_t raw_curr;
