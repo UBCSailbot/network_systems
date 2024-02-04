@@ -11,7 +11,7 @@
 #include <stdexcept>
 
 // CAN frame definitions from: https://ubcsailbot.atlassian.net/wiki/spaces/prjt22/pages/1827176527/CAN+Frames
-namespace CAN
+namespace CAN_FP
 {
 
 using CanFrame   = struct canfd_frame;
@@ -224,4 +224,4 @@ private:
     float volt_min_;  // Minimum voltage of cells in the battery pack (unused)
 };
 
-}  // namespace CAN
+}  // namespace CAN_FP

@@ -26,8 +26,8 @@ constexpr int QUEUE_SIZE = 10;
 // constexpr int PLACEHOLDER_MS    = 500;  // Timer to be replaced with callback in future
 
 namespace msg = custom_interfaces::msg;
-using CAN::CanFrame;
-using CAN::CanId;
+using CAN_FP::CanFrame;
+using CAN_FP::CanId;
 
 static int mockCanFd()
 {
@@ -100,11 +100,11 @@ private:
 
     void publishBattery(const CanFrame & battery_frame)
     {
-        CAN::Battery bat(battery_frame);
+        CAN_FP::Battery bat(battery_frame);
 
         size_t idx;
         for (size_t i = 0;; i++) {  // idx WILL be in range (can_frame_parser guarentees this)
-            if (bat.id_ == CAN::Battery::BATTERY_IDS[i]) {
+            if (bat.id_ == CAN_FP::Battery::BATTERY_IDS[i]) {
                 idx = i;
                 break;
             }
