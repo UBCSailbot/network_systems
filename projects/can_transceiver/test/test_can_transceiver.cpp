@@ -125,7 +125,7 @@ TEST_F(TestCanFrameParser, TestBatteryInvalid)
 }
 
 /**
- * @brief Test CanTransceiver using a tmp file
+ * @brief Test CanTransceiver using a mock CAN descriptor
  *
  */
 class TestCanTransceiver : public ::testing::Test
@@ -143,7 +143,7 @@ protected:
 };
 
 /**
- * @brief Test the callbacks that get called on new data
+ * @brief Test that callbacks can be properly registered and invoked on desired CanIds
  *
  */
 TEST_F(TestCanTransceiver, TestNewDataValid)
@@ -159,7 +159,6 @@ TEST_F(TestCanTransceiver, TestNewDataValid)
 
     // just need a valid and matching ID for this test
     CAN_FP::CanFrame dummy_frame{.can_id = static_cast<canid_t>(CAN_FP::CanId::BMS_P_DATA_FRAME_1)};
-    std::copy(std::begin(GARBAGE_DATA), std::end(GARBAGE_DATA), dummy_frame.data);
 
     canbus_t_->send(dummy_frame);
 
