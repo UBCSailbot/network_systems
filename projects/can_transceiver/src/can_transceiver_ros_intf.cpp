@@ -6,15 +6,10 @@
 #include <custom_interfaces/msg/generic_sensors.hpp>
 #include <custom_interfaces/msg/gps.hpp>
 #include <custom_interfaces/msg/wind_sensors.hpp>
-#include <functional>
-#include <memory>
 #include <rclcpp/publisher.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <rclcpp/subscription.hpp>
 #include <rclcpp/timer.hpp>
-#include <std_msgs/msg/string.hpp>
-#include <string>
-#include <thread>
 
 #include "can_frame_parser.h"
 #include "can_transceiver.h"
@@ -54,8 +49,8 @@ public:
             } else if (mode == SYSTEM_MODE::DEV) {
                 RCLCPP_INFO(this->get_logger(), "Running CAN Transceiver in development mode with CAN Sim Intf");
                 try {
-                    fd_       = mockCanFd("/tmp/CanSimIntfXXXXXX");
-                    can_trns_ = std::make_unique<CanTransceiver>(fd_);
+                    sim_intf_fd_ = mockCanFd("/tmp/CanSimIntfXXXXXX");
+                    can_trns_    = std::make_unique<CanTransceiver>(sim_intf_fd_);
                 } catch (std::runtime_error err) {
                     RCLCPP_ERROR(this->get_logger(), "%s", err.what());
                     throw err;
@@ -97,9 +92,10 @@ public:
     }
 
 private:
+    // pointer to the CAN Transceiver implementation
     std::unique_ptr<CanTransceiver> can_trns_;
 
-    // Universal publishers and subscribers
+    // Universal publishers and subscribers present in both deployment and simulation
     rclcpp::Publisher<msg::AISShips>::SharedPtr  ais_pub_;
     msg::AISShips                                ais_ships_;
     rclcpp::Publisher<msg::Batteries>::SharedPtr batteries_pub_;
@@ -112,16 +108,31 @@ private:
     // Timer for anything that just needs a repeatedly written value in simulation
     rclcpp::TimerBase::SharedPtr timer_;
 
-    int fd_;
+    // Mock CAN file descriptor for simulation
+    int sim_intf_fd_;
 
-    void publishAIS(const CanFrame & /**/) { ais_pub_->publish(ais_ships_); }
+    /**
+     * @brief Publish AIS ships
+     *
+     */
+    void publishAIS(const CanFrame & /**/)
+    {
+        //TODO(): Should be registered with CAN Transceiver once ELEC defines AIS frames
+        ais_pub_->publish(ais_ships_);
+    }
 
+    /**
+     * @brief Publish a battery_frame
+     *        Inteneded to be registered as a callback with the CAN Transceiver instance
+     *
+     * @param battery_frame battery CAN frame read from the CAN bus
+     */
     void publishBattery(const CanFrame & battery_frame)
     {
         CAN_FP::Battery bat(battery_frame);
 
         size_t idx;
-        for (size_t i = 0;; i++) {  // idx WILL be in range (can_frame_parser guarentees this)
+        for (size_t i = 0;; i++) {  // idx WILL be in range (can_frame_parser constructors guarantee this)
             if (bat.id_ == CAN_FP::Battery::BATTERY_IDS[i]) {
                 idx = i;
                 break;
@@ -132,17 +143,33 @@ private:
         batteries_pub_->publish(batteries_);
     }
 
+    /**
+     * @brief Mock AIS topic callback
+     *
+     * @param mock_ais_ships ais_ships received from the Mock AIS topic
+     */
     void subMockAISCb(msg::AISShips mock_ais_ships)
     {
+        //TODO(): Should be routed through the CAN Transceiver once ELEC defines AIS frames
         ais_ships_ = mock_ais_ships;
         publishAIS(CanFrame{});
     }
 
+    /**
+     * @brief Mock GPS topic callback
+     *
+     * @param mock_gps mock_gps received from the Mock GPS topic
+     */
     void subMockGpsCb(msg::GPS mock_gps)
     {
         // TODO(lross03): implement this and call the simSend() function
     }
 
+    /**
+     * @brief A mock batteries callback that just sends dummy (but valid) battery values to the simulation CAN intf
+     *        Intended to be continuously invoked in a loop every once in a while
+     *
+     */
     void mockBatteriesCb()
     {
         msg::HelperBattery bat;
@@ -151,19 +178,11 @@ private:
         for (size_t i = 0; i < NUM_BATTERIES; i++) {
             auto optCanId = CAN_FP::Battery::rosIdxToCanId(i);
             if (optCanId) {
-                simSend(CAN_FP::Battery(bat, optCanId.value()).toLinuxCan());
+                can_trns_->send(CAN_FP::Battery(bat, optCanId.value()).toLinuxCan());
             } else {
                 RCLCPP_ERROR(this->get_logger(), "Failed to send mock battery of index %zu!", i);
             }
         }
-    }
-
-    void simSend(const CAN_FP::CanFrame & cf)
-    {
-        can_trns_->send(cf);
-        // Since we're writing to the same file we're reading from, we need to maintain the seek offset
-        // This is NOT necessary in deployment as we won't be using a file to mock it
-        lseek(fd_, -static_cast<off_t>(sizeof(CAN_FP::CanFrame)), SEEK_CUR);
     }
 };
 

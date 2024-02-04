@@ -162,9 +162,6 @@ TEST_F(TestCanTransceiver, TestNewDataValid)
     std::copy(std::begin(GARBAGE_DATA), std::end(GARBAGE_DATA), dummy_frame.data);
 
     canbus_t_->send(dummy_frame);
-    // Since we're writing to the same file we're reading from, we need to reset the seek offset
-    // This is NOT necessary in deployment as we won't be using a file to mock it
-    lseek(fd_, 0, SEEK_SET);
 
     std::this_thread::sleep_for(SLEEP_TIME);
 
