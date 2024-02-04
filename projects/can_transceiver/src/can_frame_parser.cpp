@@ -10,7 +10,7 @@
 #include "cmn_hdrs/shared_constants.h"
 #include "utils/utils.h"
 
-namespace CAN
+namespace CAN_FP
 {
 
 namespace
@@ -167,4 +167,4 @@ void Battery::checkBounds() const
 // Battery private END
 // Battery END
 
-}  // namespace CAN
+}  // namespace CAN_FP

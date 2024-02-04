@@ -15,8 +15,8 @@ using IFreq       = struct ifreq;
 using SockAddr    = struct sockaddr;
 using SockAddrCan = struct sockaddr_can;
 
-using CAN::CanFrame;
-using CAN::CanId;
+using CAN_FP::CanFrame;
+using CAN_FP::CanId;
 
 void CanTransceiver::onNewCmd(const CanFrame & cmd_frame)
 {
@@ -47,6 +47,7 @@ void CanTransceiver::registerCanCbs(
 
 CanTransceiver::CanTransceiver()
 {
+    // See: https://www.kernel.org/doc/html/next/networking/can.html#how-to-use-socketcan
     static const char * CAN_INST = "can0";
 
     if ((sock_desc_ = socket(PF_CAN, SOCK_RAW, CAN_RAW)) < 0) {
@@ -65,7 +66,10 @@ CanTransceiver::CanTransceiver()
     addr.can_ifindex = ifr.ifr_ifindex;
 
     if (bind(sock_desc_, reinterpret_cast<const SockAddr *>(&addr), sizeof(addr)) < 0) {
-        throw std::runtime_error("Failed to bind CAN socket");
+        std::string err_msg = "Failed to bind CAN socket with error: " + std::to_string(errno) + ": " +
+                              strerror(errno);  // NOLINT(concurrency-mt-unsafe)
+
+        throw std::runtime_error(err_msg);
     }
 
     receive_thread_ = std::thread(&CanTransceiver::receive, this);

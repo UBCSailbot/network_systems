@@ -10,9 +10,9 @@
 
 namespace msg = custom_interfaces::msg;
 
-constexpr CAN::RawDataBuf GARBAGE_DATA = []() constexpr
+constexpr CAN_FP::RawDataBuf GARBAGE_DATA = []() constexpr
 {
-    CAN::RawDataBuf buf;
+    CAN_FP::RawDataBuf buf;
     for (uint8_t & entry : buf) {
         entry = 0xFF;  // NOLINT(readability-magic-numbers)
     }
@@ -43,31 +43,31 @@ TEST_F(TestCanFrameParser, BatteryTestValid)
     constexpr std::array<int16_t, NUM_BATTERIES> expected_raw_expected_currs{250, -100};
 
     for (size_t i = 0; i < NUM_BATTERIES; i++) {
-        auto optId = CAN::Battery::rosIdxToCanId(i);
+        auto optId = CAN_FP::Battery::rosIdxToCanId(i);
 
         ASSERT_TRUE(optId.has_value());
 
-        CAN::CanId         id            = optId.value();
+        CAN_FP::CanId      id            = optId.value();
         float              expected_volt = expected_volts[i];
         float              expected_curr = expected_currs[i];
         msg::HelperBattery msg;
         msg.set__voltage(expected_volt);
         msg.set__current(expected_curr);
-        CAN::Battery  bat_from_ros = CAN::Battery(msg, id);
-        CAN::CanFrame cf           = bat_from_ros.toLinuxCan();
+        CAN_FP::Battery  bat_from_ros = CAN_FP::Battery(msg, id);
+        CAN_FP::CanFrame cf           = bat_from_ros.toLinuxCan();
 
         EXPECT_EQ(cf.can_id, static_cast<canid_t>(id));
-        EXPECT_EQ(cf.len, CAN::Battery::CAN_BYTE_DLEN_);
+        EXPECT_EQ(cf.len, CAN_FP::Battery::CAN_BYTE_DLEN_);
 
         int16_t raw_volt;
         int16_t raw_curr;
-        std::memcpy(&raw_volt, cf.data + CAN::Battery::BYTE_OFF_VOLT, sizeof(int16_t));
-        std::memcpy(&raw_curr, cf.data + CAN::Battery::BYTE_OFF_CURR, sizeof(int16_t));
+        std::memcpy(&raw_volt, cf.data + CAN_FP::Battery::BYTE_OFF_VOLT, sizeof(int16_t));
+        std::memcpy(&raw_curr, cf.data + CAN_FP::Battery::BYTE_OFF_CURR, sizeof(int16_t));
 
         EXPECT_EQ(raw_volt, expected_raw_volts[i]);
         EXPECT_EQ(raw_curr, expected_raw_expected_currs[i]);
 
-        CAN::Battery bat_from_can = CAN::Battery(cf);
+        CAN_FP::Battery bat_from_can = CAN_FP::Battery(cf);
 
         EXPECT_EQ(bat_from_can.id_, id);
 
@@ -84,22 +84,22 @@ TEST_F(TestCanFrameParser, BatteryTestValid)
  */
 TEST_F(TestCanFrameParser, TestBatteryInvalid)
 {
-    auto optId = CAN::Battery::rosIdxToCanId(NUM_BATTERIES);
+    auto optId = CAN_FP::Battery::rosIdxToCanId(NUM_BATTERIES);
     EXPECT_FALSE(optId.has_value());
 
-    CAN::CanId invalid_id = CAN::CanId::RESERVED;
+    CAN_FP::CanId invalid_id = CAN_FP::CanId::RESERVED;
 
-    CAN::CanFrame cf{.can_id = static_cast<canid_t>(invalid_id)};
+    CAN_FP::CanFrame cf{.can_id = static_cast<canid_t>(invalid_id)};
 
-    EXPECT_THROW(CAN::Battery tmp(cf), CAN::CanIdMismatchException);
+    EXPECT_THROW(CAN_FP::Battery tmp(cf), CAN_FP::CanIdMismatchException);
 
     std::vector<float> invalid_volts{BATT_VOLT_LBND - 1, BATT_VOLT_UBND + 1};
     std::vector<float> invalid_currs{BATT_CURR_LBND - 1, BATT_CURR_UBND + 1};
 
-    optId = CAN::Battery::rosIdxToCanId(0);
+    optId = CAN_FP::Battery::rosIdxToCanId(0);
     ASSERT_TRUE(optId.has_value());
 
-    CAN::CanId         valid_id = optId.value();
+    CAN_FP::CanId      valid_id = optId.value();
     msg::HelperBattery msg;
 
     // Set a valid current for this portion
@@ -107,7 +107,7 @@ TEST_F(TestCanFrameParser, TestBatteryInvalid)
         msg.set__voltage(invalid_volt);
         msg.set__current(BATT_CURR_LBND);
 
-        EXPECT_THROW(CAN::Battery tmp(msg, valid_id), std::out_of_range);
+        EXPECT_THROW(CAN_FP::Battery tmp(msg, valid_id), std::out_of_range);
     };
 
     // Set a valid voltage for this portion
@@ -115,13 +115,13 @@ TEST_F(TestCanFrameParser, TestBatteryInvalid)
         msg.set__voltage(BATT_VOLT_LBND);
         msg.set__current(invalid_curr);
 
-        EXPECT_THROW(CAN::Battery tmp(msg, valid_id), std::out_of_range);
+        EXPECT_THROW(CAN_FP::Battery tmp(msg, valid_id), std::out_of_range);
     };
 
-    cf.can_id = static_cast<canid_t>(CAN::CanId::BMS_P_DATA_FRAME_1);
+    cf.can_id = static_cast<canid_t>(CAN_FP::CanId::BMS_P_DATA_FRAME_1);
     std::copy(std::begin(GARBAGE_DATA), std::end(GARBAGE_DATA), cf.data);
 
-    EXPECT_THROW(CAN::Battery tmp(cf), std::out_of_range);
+    EXPECT_THROW(CAN_FP::Battery tmp(cf), std::out_of_range);
 }
 
 /**
@@ -155,13 +155,16 @@ TEST_F(TestCanTransceiver, TestNewDataValid)
 {
     volatile bool is_cb_called = false;
 
-    std::function<void(CAN::CanFrame)> test_cb = [&is_cb_called](CAN::CanFrame /*unused*/) { is_cb_called = true; };
+    std::function<void(CAN_FP::CanFrame)> test_cb = [&is_cb_called](CAN_FP::CanFrame /*unused*/) {
+        is_cb_called = true;
+    };
     canbus_t_->registerCanCbs({{
-      std::make_pair(CAN::CanId::BMS_P_DATA_FRAME_1, test_cb),
+      std::make_pair(CAN_FP::CanId::BMS_P_DATA_FRAME_1, test_cb),
     }});
 
     // just need a valid and matching ID for this test
-    CAN::CanFrame dummy_frame{.can_id = static_cast<canid_t>(CAN::CanId::BMS_P_DATA_FRAME_1)};
+    CAN_FP::CanFrame dummy_frame{.can_id = static_cast<canid_t>(CAN_FP::CanId::BMS_P_DATA_FRAME_1)};
+    std::copy(std::begin(GARBAGE_DATA), std::end(GARBAGE_DATA), dummy_frame.data);
 
     canbus_t_->send(dummy_frame);
     // Since we're writing to the same file we're reading from, we need to reset the seek offset
@@ -181,13 +184,15 @@ TEST_F(TestCanTransceiver, TestNewDataIgnore)
 {
     volatile bool is_cb_called = false;
 
-    std::function<void(CAN::CanFrame)> test_cb = [&is_cb_called](CAN::CanFrame /*unused*/) { is_cb_called = true; };
+    std::function<void(CAN_FP::CanFrame)> test_cb = [&is_cb_called](CAN_FP::CanFrame /*unused*/) {
+        is_cb_called = true;
+    };
     canbus_t_->registerCanCbs({{
-      std::make_pair(CAN::CanId::BMS_P_DATA_FRAME_1, test_cb),
+      std::make_pair(CAN_FP::CanId::BMS_P_DATA_FRAME_1, test_cb),
     }});
 
     // just need a valid and ignored ID for this test
-    CAN::CanFrame dummy_frame{.can_id = static_cast<canid_t>(CAN::CanId::RESERVED)};
+    CAN_FP::CanFrame dummy_frame{.can_id = static_cast<canid_t>(CAN_FP::CanId::RESERVED)};
 
     canbus_t_->send(dummy_frame);
     // Since we're writing to the same file we're reading from, we need to reset the seek offset

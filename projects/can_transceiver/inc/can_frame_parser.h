@@ -12,7 +12,7 @@
 #include <stdexcept>
 
 // CAN frame definitions from: https://ubcsailbot.atlassian.net/wiki/spaces/prjt22/pages/1827176527/CAN+Frames
-namespace CAN
+namespace CAN_FP
 {
 
 using CanFrame   = struct canfd_frame;
@@ -289,4 +289,68 @@ private:
     float angle_;  // Angle specified by the command
 };
 
-}  // namespace CAN
+/**
+ * @brief A sail class derived from the BaseFrame. Represents a sail command.
+ *
+ */
+class SailCmd final : public BaseFrame
+{
+public:
+    static constexpr std::array<CanId, 2> BATTERY_IDS    = {CanId::SAIL_WSM_CMD_FRAME_1, CanId::SAIL_WSM_CMD_FRAME_2};
+    static constexpr uint8_t              CAN_BYTE_DLEN_ = 2;
+    static constexpr uint8_t              BYTE_OFF_ANGLE = 0;
+
+    /**
+     * @brief Explicitly deleted no-argument constructor
+     *
+     */
+    SailCmd() = delete;
+
+    /**
+     * @brief Construct a SailCmd object from a Linux CanFrame representation
+     *
+     * @param cf Linux CanFrame
+     */
+    explicit SailCmd(const CanFrame & cf);
+
+    /**
+     * @brief Construct a SailCmd object from a custom_interfaces ROS msg representation
+     *
+     * @param ros_sail_cmd custom_interfaces representation of a SailCmd
+     * @param id      CanId of the SailCmd (use the rosIdxToCanId() method if unknown)
+     */
+    explicit SailCmd(msg::SailCmd ros_sail_cmd, CanId id);
+
+    /**
+     * @return the custom_interfaces ROS representation of the SailCmd object
+     */
+    msg::SailCmd toRosMsg() const;
+
+    /**
+     * @return the Linux CanFrame representation of the SailCmd object
+     */
+    CanFrame toLinuxCan() const override;
+
+    /**
+     * @return A string that can be printed or logged to debug a SailCmd object
+     */
+    std::string debugStr() const override;
+
+private:
+    /**
+     * @brief Private helper constructor for SailCmd objects
+     *
+     * @param id CanId of the SailCmd
+     */
+    explicit SailCmd(CanId id);
+
+    /**
+     * @brief Check if the assigned fields after constructing a SailCmd object are within bounds.
+     * @throws std::out_of_range if any assigned fields are outside of expected bounds
+     */
+    void checkBounds() const;
+
+    float angle_;  // Angle specified by the command
+};
+
+}  // namespace CAN_FP

@@ -35,13 +35,13 @@ public:
      *
      * @param frame command frame to send
      */
-    void send(const CAN::CanFrame & frame) const;
+    void send(const CAN_FP::CanFrame & frame) const;
     /**
      * @brief Call when a new command (ex. rudder command) needs to be executed
      *        Passes the command down to the hardware/simulator
      *
      */
-    void onNewCmd(const CAN::CanFrame & cmd_frame);
+    void onNewCmd(const CAN_FP::CanFrame & cmd_frame);
 
     /**
      * @brief Retrieve the most recent set of sensors data
@@ -50,10 +50,10 @@ public:
      */
     std::string getRecentSensors();
 
-    void registerCanCb(std::pair<CAN::CanId, std::function<void(const CAN::CanFrame &)>> cb_kvp);
+    void registerCanCb(std::pair<CAN_FP::CanId, std::function<void(const CAN_FP::CanFrame &)>> cb_kvp);
 
     void registerCanCbs(
-      const std::initializer_list<std::pair<CAN::CanId, std::function<void(const CAN::CanFrame &)>>> & cb_kvps);
+      const std::initializer_list<std::pair<CAN_FP::CanId, std::function<void(const CAN_FP::CanFrame &)>>> & cb_kvps);
 
 private:
     // CAN socket this instance is attached to
@@ -66,7 +66,7 @@ private:
     // Flag to tell the receive_thread_ to stop
     bool shutdown_flag_ = false;
 
-    std::map<CAN::CanId, std::function<void(const CAN::CanFrame &)>> read_callbacks_;
+    std::map<CAN_FP::CanId, std::function<void(const CAN_FP::CanFrame &)>> read_callbacks_;
 
     /**
      * @brief Retrieve latest incoming CAN frame from hardware and process it
@@ -78,5 +78,5 @@ private:
      *
      * @param frame received CAN data frame
      */
-    void onNewCanData(const CAN::CanFrame & frame) const;
+    void onNewCanData(const CAN_FP::CanFrame & frame) const;
 };
