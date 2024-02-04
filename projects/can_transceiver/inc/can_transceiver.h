@@ -80,3 +80,5 @@ private:
      */
     void onNewCanData(const CAN_FP::CanFrame & frame) const;
 };
+
+int mockCanFd(std::string template_str);

@@ -21,39 +21,17 @@
 #include "cmn_hdrs/ros_info.h"
 #include "cmn_hdrs/shared_constants.h"
 
-constexpr int QUEUE_SIZE = 10;
-// constexpr int PLACEHOLDER_VALUE = 42;   // Placeholder value for debugging or testing
-// constexpr int PLACEHOLDER_MS    = 500;  // Timer to be replaced with callback in future
+constexpr int  QUEUE_SIZE     = 10;
+constexpr auto TIMER_INTERVAL = std::chrono::milliseconds(500);
 
 namespace msg = custom_interfaces::msg;
 using CAN_FP::CanFrame;
 using CAN_FP::CanId;
 
-static int mockCanFd()
-{
-    static std::mutex           mtx;
-    std::lock_guard<std::mutex> lock(mtx);
-
-    volatile static int fd = -1;
-    if (fd == -1) {
-        const static std::string tmp_file_template_str = "/tmp/CanSimIntfXXXXXX";
-        std::vector<char>        tmp_file_template_cstr(
-                 tmp_file_template_str.c_str(), tmp_file_template_str.c_str() + tmp_file_template_str.size() + 1);
-        fd = mkstemp(tmp_file_template_cstr.data());
-        if (fd == -1) {
-            std::string err_msg = "Failed to open mock CAN fd with error: " + std::to_string(errno) + "(" +
-                                  strerror(errno) + ")";  // NOLINT(concurrency-mt-unsafe)
-            throw std::runtime_error(err_msg);
-        }
-        return fd;
-    }
-    return fd;
-}
-
 class CanTransceiverIntf : public rclcpp::Node
 {
 public:
-    explicit CanTransceiverIntf() : Node("can_transceiver_node")
+    CanTransceiverIntf() : Node("can_transceiver_node")
     {
         this->declare_parameter("enabled", true);
 
@@ -66,6 +44,7 @@ public:
             std::string       mode       = mode_param.as_string();
 
             if (mode == SYSTEM_MODE::PROD) {
+                RCLCPP_INFO(this->get_logger(), "Running CAN Transceiver in production mode");
                 try {
                     can_trns_ = std::make_unique<CanTransceiver>();
                 } catch (std::runtime_error err) {
@@ -73,12 +52,21 @@ public:
                     throw err;
                 }
             } else if (mode == SYSTEM_MODE::DEV) {
-                can_trns_ = std::make_unique<CanTransceiver>(mockCanFd());
+                RCLCPP_INFO(this->get_logger(), "Running CAN Transceiver in development mode with CAN Sim Intf");
+                try {
+                    fd_       = mockCanFd("/tmp/CanSimIntfXXXXXX");
+                    can_trns_ = std::make_unique<CanTransceiver>(fd_);
+                } catch (std::runtime_error err) {
+                    RCLCPP_ERROR(this->get_logger(), "%s", err.what());
+                    throw err;
+                }
             } else {
                 std::string msg = "Error, invalid system mode" + mode;
+                RCLCPP_ERROR(this->get_logger(), "%s", msg.c_str());
                 throw std::runtime_error(msg);
             }
 
+            ais_pub_       = this->create_publisher<msg::AISShips>(AIS_SHIPS_TOPIC, QUEUE_SIZE);
             batteries_pub_ = this->create_publisher<msg::Batteries>(BATTERIES_TOPIC, QUEUE_SIZE);
 
             can_trns_->registerCanCbs({
@@ -88,15 +76,45 @@ public:
               std::make_pair(
                 CanId::BMS_P_DATA_FRAME_2,
                 std::function<void(const CanFrame &)>([this](const CanFrame & frame) { publishBattery(frame); })),
+              // TODO(lross03): Add remaining pairs
             });
+
+            if (mode == SYSTEM_MODE::DEV) {  // Initialize the CAN Sim Intf
+                mock_ais_sub_ = this->create_subscription<msg::AISShips>(
+                  MOCK_AIS_SHIPS_TOPIC, QUEUE_SIZE,
+                  [this](msg::AISShips mock_ais_ships) { subMockAISCb(mock_ais_ships); });
+                mock_gps_sub_ = this->create_subscription<msg::GPS>(
+                  MOCK_GPS_TOPIC, QUEUE_SIZE, [this](msg::GPS mock_gps) { subMockGpsCb(mock_gps); });
+
+                // TODO(lross03): register a callback for CanSimToBoatSim
+
+                timer_ = this->create_wall_timer(TIMER_INTERVAL, [this]() {
+                    mockBatteriesCb();
+                    // Add any other necessary looping callbacks
+                });
+            }
         }
     }
 
 private:
     std::unique_ptr<CanTransceiver> can_trns_;
 
+    // Universal publishers and subscribers
+    rclcpp::Publisher<msg::AISShips>::SharedPtr  ais_pub_;
+    msg::AISShips                                ais_ships_;
     rclcpp::Publisher<msg::Batteries>::SharedPtr batteries_pub_;
     msg::Batteries                               batteries_;
+
+    // Simulation only publishers and subscribers
+    rclcpp::Subscription<msg::AISShips>::SharedPtr mock_ais_sub_;
+    rclcpp::Subscription<msg::GPS>::SharedPtr      mock_gps_sub_;
+
+    // Timer for anything that just needs a repeatedly written value in simulation
+    rclcpp::TimerBase::SharedPtr timer_;
+
+    int fd_;
+
+    void publishAIS(const CanFrame & /**/) { ais_pub_->publish(ais_ships_); }
 
     void publishBattery(const CanFrame & battery_frame)
     {
@@ -113,31 +131,39 @@ private:
         bat_msg                      = bat.toRosMsg();
         batteries_pub_->publish(batteries_);
     }
-};
 
-class CanSimIntf : public rclcpp::Node
-{
-public:
-    explicit CanSimIntf() : Node("can_sim_node")
+    void subMockAISCb(msg::AISShips mock_ais_ships)
     {
-        this->declare_parameter("enabled", true);
+        ais_ships_ = mock_ais_ships;
+        publishAIS(CanFrame{});
+    }
 
-        if (!this->get_parameter("enabled").as_bool()) {
-            RCLCPP_INFO(this->get_logger(), "CAN Sim Intf is DISABLED");
-        } else {
-            this->declare_parameter("mode", rclcpp::PARAMETER_STRING);
+    void subMockGpsCb(msg::GPS mock_gps)
+    {
+        // TODO(lross03): implement this and call the simSend() function
+    }
 
-            rclcpp::Parameter mode_param = this->get_parameter("mode");
-            std::string       mode       = mode_param.as_string();
-
-            if (mode == SYSTEM_MODE::PROD) {
-                RCLCPP_WARN(this->get_logger(), "CAN Sim Intf is not meant to run in production mode!");
+    void mockBatteriesCb()
+    {
+        msg::HelperBattery bat;
+        bat.set__voltage(BATT_VOLT_UBND);
+        bat.set__current(BATT_CURR_UBND);
+        for (size_t i = 0; i < NUM_BATTERIES; i++) {
+            auto optCanId = CAN_FP::Battery::rosIdxToCanId(i);
+            if (optCanId) {
+                simSend(CAN_FP::Battery(bat, optCanId.value()).toLinuxCan());
+            } else {
+                RCLCPP_ERROR(this->get_logger(), "Failed to send mock battery of index %zu!", i);
             }
-
-            int fd = mockCanFd();
-
-            (void)fd;  // TODO(): flesh out Sim intf
         }
+    }
+
+    void simSend(const CAN_FP::CanFrame & cf)
+    {
+        can_trns_->send(cf);
+        // Since we're writing to the same file we're reading from, we need to maintain the seek offset
+        // This is NOT necessary in deployment as we won't be using a file to mock it
+        lseek(fd_, -static_cast<off_t>(sizeof(CAN_FP::CanFrame)), SEEK_CUR);
     }
 };
 
@@ -145,7 +171,6 @@ int main(int argc, char * argv[])
 {
     rclcpp::init(argc, argv);
     rclcpp::spin(std::make_shared<CanTransceiverIntf>());
-    rclcpp::spin(std::make_shared<CanSimIntf>());
     rclcpp::shutdown();
     return 0;
 }

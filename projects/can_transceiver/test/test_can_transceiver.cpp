@@ -136,12 +136,7 @@ protected:
     int                   fd_;
     TestCanTransceiver()
     {
-        const static std::string tmp_file_template_str = "/tmp/TestCanTransceiverXXXXXX";
-        std::vector<char>        tmp_file_template_cstr(
-                 tmp_file_template_str.c_str(), tmp_file_template_str.c_str() + tmp_file_template_str.size() + 1);
-        fd_ = mkstemp(tmp_file_template_cstr.data());
-        EXPECT_NE(fd_, -1) << "Failed to open a test file with error: " << errno << ": "
-                           << strerror(errno);  // NOLINT(concurrency-mt-unsafe)
+        fd_       = mockCanFd("/tmp/TestCanTransceiverXXXXXX");
         canbus_t_ = new CanTransceiver(fd_);
     }
     ~TestCanTransceiver() override { delete canbus_t_; }

@@ -111,7 +111,7 @@ void CanTransceiver::receive()
 void CanTransceiver::send(const CanFrame & frame) const
 {
     std::lock_guard<std::mutex> lock(can_mtx_);
-    ssize_t                     bytes_written = write(sock_desc_, &frame, sizeof(can_frame));
+    ssize_t                     bytes_written = write(sock_desc_, &frame, sizeof(CanFrame));
     if (bytes_written < 0) {
         std::cerr << "CAN write error: " << errno << "(" << strerror(errno)  // NOLINT(concurrency-mt-unsafe)
                   << ")" << std::endl;
@@ -119,4 +119,17 @@ void CanTransceiver::send(const CanFrame & frame) const
         std::cerr << "CAN write error: wrote " << bytes_written << "B but CAN frames are expected to be "
                   << sizeof(CanFrame) << "B" << std::endl;
     }
+}
+
+int mockCanFd(std::string tmp_file_template_str)
+{
+    std::vector<char> tmp_file_template_cstr(
+      tmp_file_template_str.c_str(), tmp_file_template_str.c_str() + tmp_file_template_str.size() + 1);
+    int fd = mkstemp(tmp_file_template_cstr.data());
+    if (fd == -1) {
+        std::string err_msg = "Failed to open mock CAN fd with error: " + std::to_string(errno) + "(" +
+                              strerror(errno) + ")";  // NOLINT(concurrency-mt-unsafe)
+        throw std::runtime_error(err_msg);
+    }
+    return fd;
 }
