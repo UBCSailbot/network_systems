@@ -16,7 +16,7 @@
 #include "cmn_hdrs/ros_info.h"
 #include "cmn_hdrs/shared_constants.h"
 
-constexpr int  QUEUE_SIZE     = 10;
+constexpr int  QUEUE_SIZE     = 10;  // Arbitrary number
 constexpr auto TIMER_INTERVAL = std::chrono::milliseconds(500);
 
 namespace msg = custom_interfaces::msg;
@@ -162,7 +162,7 @@ private:
      */
     void subMockGpsCb(msg::GPS mock_gps)
     {
-        // TODO(lross03): implement this and call the simSend() function
+        // TODO(lross03): implement this
     }
 
     /**

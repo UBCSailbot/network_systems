@@ -44,14 +44,6 @@ public:
     void send(const CAN_FP::CanFrame & frame) const;
 
     /**
-     * @brief Call when a new command needs to be executed
-     *        Passes the command down to the hardware/simulator
-     *
-     * @param cmd_frame CAN command frame
-     */
-    void onNewCmd(const CAN_FP::CanFrame & cmd_frame);
-
-    /**
      * @brief Register a CanId -> CallbackFunc mapping to be called when the CanId is read from the CAN port
      *
      * @param cb_kvp pair of CanId and the callback function to associate with it

@@ -18,11 +18,6 @@ using SockAddrCan = struct sockaddr_can;
 using CAN_FP::CanFrame;
 using CAN_FP::CanId;
 
-void CanTransceiver::onNewCmd(const CanFrame & cmd_frame)
-{
-    // TODO(): IMPLEMENT
-}
-
 void CanTransceiver::onNewCanData(const CanFrame & frame) const
 {
     CanId id{frame.can_id};
