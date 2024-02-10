@@ -167,4 +167,66 @@ void Battery::checkBounds() const
 // Battery private END
 // Battery END
 
+// SailCmd START
+// SailCmd public START
+
+SailCmd::SailCmd(const CanFrame & cf) : SailCmd(static_cast<CanId>(cf.can_id))
+{
+    int16_t raw_angle;
+
+    std::memcpy(&raw_angle, cf.data + BYTE_OFF_ANGLE, sizeof(int16_t));
+
+    angle_ = static_cast<float>(raw_angle);
+
+    checkBounds();
+}
+
+SailCmd::SailCmd(msg::SailCmd ros_sail_cmd, CanId id)
+: BaseFrame(id, CAN_BYTE_DLEN_), angle_(ros_sail_cmd.trim_tab_angle_degrees)
+{
+    checkBounds();
+}
+
+msg::SailCmd SailCmd::toRosMsg() const
+{
+    msg::SailCmd msg;
+    msg.set__trim_tab_angle_degrees(angle_);
+    return msg;
+}
+
+CanFrame SailCmd::toLinuxCan() const
+{
+    int16_t raw_angle = static_cast<int16_t>(angle_);
+
+    CanFrame cf = BaseFrame::toLinuxCan();
+    std::memcpy(cf.data + BYTE_OFF_ANGLE, &raw_angle, sizeof(int16_t));
+
+    return cf;
+}
+
+std::string SailCmd::debugStr() const
+{
+    std::stringstream ss;
+    ss << BaseFrame::debugStr() << "\n"
+       << "Trim tab angle (degrees): " << angle_;
+    return ss.str();
+}
+
+// SailCmd public END
+// SailCmd private START
+
+SailCmd::SailCmd(CanId id) : BaseFrame(std::span{SAIL_CMD_IDS}, id, CAN_BYTE_DLEN_) {}
+
+void SailCmd::checkBounds() const
+{  //fix min max angle
+    auto err = utils::isOutOfBounds<float>(angle_, HEADING_LBND, HEADING_UBND);
+    if (err) {
+        std::string err_msg = err.value();
+        throw std::out_of_range("Sail angle is out of bounds!\n" + debugStr() + "\n" + err_msg);
+    }
+}
+
+// SailCmd private END
+// SailCmd END
+
 }  // namespace CAN_FP

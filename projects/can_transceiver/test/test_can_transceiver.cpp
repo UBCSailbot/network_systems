@@ -37,6 +37,7 @@ protected:
  */
 TEST_F(TestCanFrameParser, BatteryTestValid)
 {
+    //TODO implement this test
     constexpr std::array<float, NUM_BATTERIES>   expected_volts{12.5, 10.6};
     constexpr std::array<float, NUM_BATTERIES>   expected_currs{2.5, -1.0};  // negative currents are valid
     constexpr std::array<int16_t, NUM_BATTERIES> expected_raw_volts{1250, 1060};
@@ -122,6 +123,70 @@ TEST_F(TestCanFrameParser, TestBatteryInvalid)
     std::copy(std::begin(GARBAGE_DATA), std::end(GARBAGE_DATA), cf.data);
 
     EXPECT_THROW(CAN_FP::Battery tmp(cf), std::out_of_range);
+}
+
+/**
+ * @brief Test ROS<->CAN SailCmd translations work as expected for valid input values
+ *
+ */
+TEST_F(TestCanFrameParser, SailCmdTestValid)
+{
+    constexpr std::uint8_t                 NUM_SAILS = CAN_FP::SailCmd::SAIL_CMD_IDS.size();
+    constexpr std::array<float, NUM_SAILS> expected_angles{12, 128};
+
+    for (size_t i = 0; i < NUM_SAILS; i++) {
+        CAN_FP::CanId id             = CAN_FP::SailCmd::SAIL_CMD_IDS[i];
+        float         expected_angle = expected_angles[i];
+        msg::SailCmd  msg;
+        msg.set__trim_tab_angle_degrees(expected_angle);
+        CAN_FP::SailCmd  sail_from_ros = CAN_FP::SailCmd(msg, id);
+        CAN_FP::CanFrame cf            = sail_from_ros.toLinuxCan();
+
+        EXPECT_EQ(cf.can_id, static_cast<canid_t>(id));
+        EXPECT_EQ(cf.len, CAN_FP::SailCmd::CAN_BYTE_DLEN_);
+
+        int16_t raw_angle;
+        std::memcpy(&raw_angle, cf.data + CAN_FP::SailCmd::BYTE_OFF_ANGLE, sizeof(int16_t));
+
+        EXPECT_EQ(raw_angle, expected_angle);
+
+        CAN_FP::SailCmd sail_from_can = CAN_FP::SailCmd(cf);
+
+        EXPECT_EQ(sail_from_can.id_, id);
+
+        msg::SailCmd msg_from_bat = sail_from_can.toRosMsg();
+
+        EXPECT_DOUBLE_EQ(msg_from_bat.trim_tab_angle_degrees, expected_angle);
+    }
+}
+
+/**
+ * @brief Test the behavior of the SailCmd class when given invalid Id values
+ *
+ */
+TEST_F(TestCanFrameParser, TestSailCmdInvalid)
+{
+    CAN_FP::CanId invalid_id = CAN_FP::CanId::RESERVED;
+
+    CAN_FP::CanFrame cf{.can_id = static_cast<canid_t>(invalid_id)};
+
+    EXPECT_THROW(CAN_FP::SailCmd tmp(cf), CAN_FP::CanIdMismatchException);
+
+    std::vector<float> invalid_angles{HEADING_LBND - 1, HEADING_UBND + 1};
+
+    CAN_FP::CanId valid_id = CAN_FP::CanId::SAIL_WSM_CMD_FRAME_1;
+    msg::SailCmd  msg;
+
+    for (float invalid_angle : invalid_angles) {
+        msg.set__trim_tab_angle_degrees(invalid_angle);
+
+        EXPECT_THROW(CAN_FP::SailCmd tmp(msg, valid_id), std::out_of_range);
+    };
+
+    cf.can_id = static_cast<canid_t>(CAN_FP::CanId::SAIL_WSM_CMD_FRAME_1);
+    std::copy(std::begin(GARBAGE_DATA), std::end(GARBAGE_DATA), cf.data);
+
+    EXPECT_THROW(CAN_FP::SailCmd tmp(cf), std::out_of_range);
 }
 
 /**
