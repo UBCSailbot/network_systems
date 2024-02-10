@@ -627,7 +627,7 @@ TEST_F(TestHTTP, TestPostSensorsMult)
     std::array<SailbotDB::RcvdMsgInfo, NUM_REQS> expected_info;
 
     // Prepare all queries
-    for (size_t i = 0; i < NUM_REQS; i++) {
+    for (int i = 0; i < NUM_REQS; i++) {
         auto [rand_sensors, rand_info] = genRandData();
         expected_sensors[i]            = rand_sensors;
         expected_info[i]               = rand_info;
@@ -648,7 +648,7 @@ TEST_F(TestHTTP, TestPostSensorsMult)
     }
 
     // Send all requests at once
-    for (size_t i = 0; i < NUM_REQS; i++) {
+    for (int i = 0; i < NUM_REQS; i++) {
         req_threads[i] = std::thread([&queries, &res_statuses, i]() {
             std::string query = queries[i];
             res_statuses[i]   = http_client::post(

@@ -1,9 +1,9 @@
-# Configuration that enables the mandatory production modules and uses their defaults
+# Configuration that enables the mandatory deployment modules and uses their defaults
 can_transceiver_node:
   ros__parameters:
     enabled: true
 
-cached_fib_node:
+cached_fib_subscriber:
   ros__parameters:
     enabled: false
 
@@ -13,7 +13,7 @@ local_transceiver_node:
 
 mock_ais_node:
   ros__parameters:
-    enabled: false
+    enabled: true
 
 remote_transceiver_node:
   ros__parameters:
