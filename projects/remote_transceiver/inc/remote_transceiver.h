@@ -1,6 +1,8 @@
 #pragma once
 
 #include <boost/asio.hpp>
+#include <boost/asio/io_context.hpp>
+#include <boost/asio/strand.hpp>
 #include <boost/beast.hpp>
 #include <memory>
 
@@ -14,10 +16,16 @@ using tcp       = boost::asio::ip::tcp;
 
 namespace remote_transceiver
 {
+constexpr int DEFAULT_NUM_IO_THREADS = 2;  // Default number of HTTP requests that can be accepted in parallel
+
+// Production constants are all placheholders
+static const std::string PROD_DB_NAME = "PLACEHOLDER";
+static const std::string PROD_HOST    = "127.0.0.1";
+constexpr uint16_t       PROD_PORT    = 8081;
 
 // TESTING constants should match the webhook server endpoint info found in sailbot_workspace/run_virtual_iridium.sh
 static const std::string TESTING_HOST = "127.0.0.1";
-constexpr uint32_t       TESTING_PORT = 8081;
+constexpr uint16_t       TESTING_PORT = 8081;
 
 constexpr int HTTP_VERSION = 11;  // HTTP v1.1
 namespace targets
@@ -76,7 +84,7 @@ public:
      * @param socket TCP socket
      * @param db     SailbotDB instance
      */
-    explicit HTTPServer(tcp::socket socket, SailbotDB db);
+    explicit HTTPServer(tcp::socket socket, SailbotDB & db);
 
     /**
      * @brief Process an accepted HTTP request
@@ -84,22 +92,13 @@ public:
      */
     void doAccept();
 
-    /**
-     * @brief Asynchronously run an HTTPServer
-     *
-     * @param acceptor TCP acceptor
-     * @param socket   TCP socket
-     * @param db       SailbotDB instance
-     */
-    static void runServer(tcp::acceptor & acceptor, tcp::socket & socket, SailbotDB & db);
-
 private:
     // Buffer to store request data. Double MAX_LOCAL_TO_REMOTE_PAYLOAD_SIZE_BYTES to have room for Iridium metadata
     beast::flat_buffer                 buf_{static_cast<std::size_t>(MAX_LOCAL_TO_REMOTE_PAYLOAD_SIZE_BYTES * 2)};
     tcp::socket                        socket_;  // Socket the server is attached to
     http::request<http::dynamic_body>  req_;     // Current request the server is processing
     http::response<http::dynamic_body> res_;     // Server response
-    SailbotDB                          db_;      // SailbotDB instance
+    SailbotDB &                        db_;      // SailbotDB instance
 
     /**
      * @brief After accepting a request, read its contents into buf_
@@ -144,6 +143,34 @@ private:
     void writeRes();
 };
 
+/**
+ * Listener class to listen for and accept HTTP requests over TCP
+ *
+ */
+class Listener : public std::enable_shared_from_this<Listener>
+{
+public:
+    /**
+     * @brief Create a new Listener
+     *
+     * @param io       reference to io_context
+     * @param acceptor tcp::acceptor configured with desired host and port
+     * @param db       SailbotDB instance - the Listener requires that it takes ownership of the db
+     */
+    Listener(bio::io_context & io, tcp::acceptor acceptor, SailbotDB && db);
+
+    /**
+     * @brief Run the Listener
+     *
+     */
+    void run();
+
+private:
+    bio::io_context & io_;        // io_context used by this Listener
+    tcp::acceptor     acceptor_;  //tcp::acceptor configured with desired host, port, and target
+    SailbotDB         db_;        // SailbotDB attached to this Listener
+};
+
 namespace http_client
 {
 /**
@@ -154,7 +181,7 @@ struct ConnectionInfo
 {
     std::string host;    // Ex. TESTING_HOST
     std::string port;    // Ex. TESTING_PORT
-    std::string target;  // See targets
+    std::string target;  // See targets namespace
 
     /**
      * @brief Convenience function to access the contents of the struct

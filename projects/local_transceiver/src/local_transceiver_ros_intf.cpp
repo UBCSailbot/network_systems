@@ -1,14 +1,14 @@
 #include <chrono>
 #include <memory>
+#include <rclcpp/publisher.hpp>
+#include <rclcpp/rclcpp.hpp>
+#include <rclcpp/subscription.hpp>
+#include <rclcpp/timer.hpp>
+#include <std_msgs/msg/string.hpp>
 
 #include "cmn_hdrs/ros_info.h"
 #include "cmn_hdrs/shared_constants.h"
 #include "local_transceiver.h"
-#include "rclcpp/publisher.hpp"
-#include "rclcpp/rclcpp.hpp"
-#include "rclcpp/subscription.hpp"
-#include "rclcpp/timer.hpp"
-#include "std_msgs/msg/string.hpp"
 
 /**
  * Local Transceiver Interface Node
@@ -23,7 +23,7 @@ public:
      * @param lcl_trns Local Transceiver instance
      */
     explicit LocalTransceiverIntf(std::shared_ptr<LocalTransceiver> lcl_trns)
-    : Node("local_transceiver_intf_node"), lcl_trns_(lcl_trns)
+    : Node("local_transceiver_node"), lcl_trns_(lcl_trns)
     {
         static constexpr int  ROS_Q_SIZE     = 5;
         static constexpr auto TIMER_INTERVAL = std::chrono::milliseconds(500);

@@ -2,7 +2,10 @@
 
 #include <boost/algorithm/string.hpp>
 #include <boost/asio.hpp>
+#include <boost/asio/io_context.hpp>
+#include <boost/asio/strand.hpp>
 #include <boost/beast.hpp>
+#include <boost/beast/core/bind_handler.hpp>
 #include <boost/beast/core/buffers_to_string.hpp>
 #include <boost/beast/core/error.hpp>
 #include <boost/beast/core/flat_buffer.hpp>
@@ -20,6 +23,7 @@
 #include "sensors.pb.h"
 
 using remote_transceiver::HTTPServer;
+using remote_transceiver::Listener;
 namespace http_client = remote_transceiver::http_client;
 
 // PUBLIC
@@ -32,6 +36,8 @@ remote_transceiver::MOMsgParams::MOMsgParams(const std::string & query_string)
     std::string iridium_mdata = query_string.substr(0, data_key_idx);
     params_.data_             = query_string.substr(data_key_idx + DATA_KEY.size(), query_string.size());
 
+    // After the HTTP parameters are converted from a string of key-value pairs to an array of strings, keys become
+    // the even numbered indices while values become the odd numbered ones. We just need the values.
     constexpr uint8_t IMEI_IDX   = 1;
     constexpr uint8_t SERIAL_IDX = 3;
     constexpr uint8_t MOMSN_IDX  = 5;
@@ -52,19 +58,23 @@ remote_transceiver::MOMsgParams::MOMsgParams(const std::string & query_string)
     params_.cep_           = std::stoi(split_strings[CEP_IDX]);
 }
 
-HTTPServer::HTTPServer(tcp::socket socket, SailbotDB db) : socket_(std::move(socket)), db_(db) {}
+HTTPServer::HTTPServer(tcp::socket socket, SailbotDB & db) : socket_(std::move(socket)), db_(db) {}
 
 void HTTPServer::doAccept() { readReq(); }
 
-void HTTPServer::runServer(tcp::acceptor & acceptor, tcp::socket & socket, SailbotDB & db)
+Listener::Listener(bio::io_context & io, tcp::acceptor acceptor, SailbotDB && db)
+: io_(io), acceptor_(std::move(acceptor)), db_(std::move(db)){};
+
+void Listener::run()
 {
-    acceptor.async_accept(socket, [&](beast::error_code e) {
+    acceptor_.async_accept(bio::make_strand(io_), [&](beast::error_code e, tcp::socket socket) {
         if (!e) {
-            std::make_shared<HTTPServer>(std::move(socket), db)->doAccept();
+            std::make_shared<HTTPServer>(std::move(socket), db_)->doAccept();
         } else {
+            // Do not throw an error as we can still try to accept new requests
             std::cerr << "Error: " << e.message() << std::endl;
         }
-        runServer(acceptor, socket, db);
+        run();
     });
 }
 
@@ -168,6 +178,9 @@ void HTTPServer::writeRes()
     std::shared_ptr<HTTPServer> self = shared_from_this();
     http::async_write(socket_, res_, [self](beast::error_code e, std::size_t /*bytesWritten*/) {
         self->socket_.shutdown(tcp::socket::shutdown_send, e);
+        if (e) {
+            std::cerr << "Error: " << e.message() << std::endl;
+        }
     });
 }
 

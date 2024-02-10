@@ -15,9 +15,10 @@
 #include "custom_interfaces/msg/gps.hpp"
 #include "rclcpp/node.hpp"
 #include "sensors.pb.h"
-#include "std_msgs/msg/string.hpp"
 
 namespace msg = custom_interfaces::msg;
+
+constexpr unsigned int SATELLITE_BAUD_RATE = 19200;
 
 /**
  * Implementation of Local Transceiver that operates through a serial interface

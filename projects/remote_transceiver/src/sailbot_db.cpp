@@ -25,7 +25,7 @@ mongocxx::instance SailbotDB::inst_{};  // staticallly initialize instance
 SailbotDB::SailbotDB(const std::string & db_name, const std::string & mongodb_conn_str) : db_name_(db_name)
 {
     mongocxx::uri uri = mongocxx::uri{mongodb_conn_str};
-    pool_             = std::make_shared<mongocxx::pool>(uri);
+    pool_             = std::make_unique<mongocxx::pool>(uri);
 }
 
 void SailbotDB::printDoc(const DocVal & doc) { std::cout << bsoncxx::to_json(doc.view()) << std::endl; }
