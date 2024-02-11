@@ -62,12 +62,13 @@ HTTPServer::HTTPServer(tcp::socket socket, SailbotDB & db) : socket_(std::move(s
 
 void HTTPServer::doAccept() { readReq(); }
 
-Listener::Listener(bio::io_context & io, tcp::acceptor acceptor, SailbotDB && db)
-: io_(io), acceptor_(std::move(acceptor)), db_(std::move(db)){};
+Listener::Listener(
+  bio::io_context & io, tcp::acceptor acceptor, SailbotDB && db, bio::strand<bio::io_context::executor_type> strand)
+: io_(io), acceptor_(std::move(acceptor)), db_(std::move(db)), strand_(std::move(strand)){};
 
 void Listener::run()
 {
-    acceptor_.async_accept(bio::make_strand(io_), [&](beast::error_code e, tcp::socket socket) {
+    acceptor_.async_accept(strand_, [&](beast::error_code e, tcp::socket socket) {
         if (!e) {
             std::make_shared<HTTPServer>(std::move(socket), db_)->doAccept();
         } else {

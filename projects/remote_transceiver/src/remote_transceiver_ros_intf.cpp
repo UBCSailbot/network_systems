@@ -1,4 +1,5 @@
 #include <boost/asio/io_context.hpp>
+#include <boost/asio/strand.hpp>
 #include <iostream>
 #include <memory>
 #include <rclcpp/parameter.hpp>
@@ -82,8 +83,10 @@ public:
                 tcp::acceptor acceptor{*io_, {addr, static_cast<uint16_t>(port)}};
                 tcp::socket   socket{*io_};
 
-                listener_ =
-                  std::make_unique<remote_transceiver::Listener>(*io_, std::move(acceptor), std::move(sailbot_db));
+                bio::strand<bio::io_context::executor_type> strand = bio::make_strand(*io_);
+
+                listener_ = std::make_unique<remote_transceiver::Listener>(
+                  *io_, std::move(acceptor), std::move(sailbot_db), std::move(strand));
                 listener_->run();
 
                 for (std::thread & io_thread : io_threads_) {
