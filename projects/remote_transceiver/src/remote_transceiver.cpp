@@ -30,11 +30,13 @@ namespace http_client = remote_transceiver::http_client;
 
 remote_transceiver::MOMsgParams::MOMsgParams(const std::string & query_string)
 {
-    static const std::string DATA_KEY = "&data=";
+    static const std::string DATA_KEY =
+      "&data=";  // substring that signifies the beginning of payload data and end of iridium header
 
-    size_t      data_key_idx  = query_string.find(DATA_KEY);
-    std::string iridium_mdata = query_string.substr(0, data_key_idx);
-    params_.data_             = query_string.substr(data_key_idx + DATA_KEY.size(), query_string.size());
+    size_t data_key_idx = query_string.find(DATA_KEY);  // find first index of where &data= is, returns the index of &
+    std::string iridium_mdata = query_string.substr(0, data_key_idx);  // obtains the iridium header as a string
+    params_.data_ =
+      query_string.substr(data_key_idx + DATA_KEY.size(), query_string.size());  // obtains the actual payload data
 
     // After the HTTP parameters are converted from a string of key-value pairs to an array of strings, keys become
     // the even numbered indices while values become the odd numbered ones. We just need the values.
@@ -46,9 +48,15 @@ remote_transceiver::MOMsgParams::MOMsgParams(const std::string & query_string)
     constexpr uint8_t LON_IDX    = 11;
     constexpr uint8_t CEP_IDX    = 13;
 
+    // create an array of 14 strings to hold the iridium header as [[info], [value] ...]
+    // since there are 7 pieces of information in the header, each will be parsed as one [info], [value] pair we
+    // make an array of size 14 to hold the header
     std::vector<std::string> split_strings(CEP_IDX + 1);  // Minimally sized vector is size CEP_IDX + 1
+    // take the iridium header, and parse the [[key], [values]] with delimiters =, &, and ?
+    // similar to parsing over the array and when it encounters one of delimiters, stores parsed so far as new entry in array
     boost::algorithm::split(split_strings, iridium_mdata, boost::is_any_of("?=&"));
 
+    // access the array and obtain the values of the header and set them in the internal struct
     params_.imei_          = std::stoi(split_strings[IMEI_IDX]);
     params_.serial_        = std::stoi(split_strings[SERIAL_IDX]);
     params_.momsn_         = std::stoi(split_strings[MOMSN_IDX]);
@@ -58,18 +66,26 @@ remote_transceiver::MOMsgParams::MOMsgParams(const std::string & query_string)
     params_.cep_           = std::stoi(split_strings[CEP_IDX]);
 }
 
+// constructor for the HTTP server that takes its own socket and refernce to public db and saves them
 HTTPServer::HTTPServer(tcp::socket socket, SailbotDB & db) : socket_(std::move(socket)), db_(db) {}
 
+// accepts its connection and calls private readReq function
 void HTTPServer::doAccept() { readReq(); }
 
+// constructor for a listener that takes in an async io handler, tcp acceptor bound to a specific ip and port and a sailbot db instance for the servers
 Listener::Listener(bio::io_context & io, tcp::acceptor acceptor, SailbotDB && db)
 : io_(io), acceptor_(std::move(acceptor)), db_(std::move(db)){};
 
+// endless run function that creates an HTTP server and attaches it to the sailbot_db instance and its own private socket then instructs the new server to
+// accept the new connection request -> want one strand per listener
 void Listener::run()
 {
+    // for this tcp acceptor, we will make a strand, and then associate this function with the strand, this enables
+    // the function to be called synchronously
+    // uses overload 3 of 6
     acceptor_.async_accept(bio::make_strand(io_), [&](beast::error_code e, tcp::socket socket) {
         if (!e) {
-            std::make_shared<HTTPServer>(std::move(socket), db_)->doAccept();
+            std::make_shared<HTTPServer>(std::move(socket), db_)->doAccept();  // strand creates
         } else {
             // Do not throw an error as we can still try to accept new requests
             std::cerr << "Error: " << e.message() << std::endl;
@@ -82,11 +98,15 @@ void Listener::run()
 
 // PRIVATE
 
+// reads the connection request and call processing function
 void HTTPServer::readReq()
 {
+    // obtains a pointer to the HTTPserver associated with caller so it can be accessed in the callback function
     std::shared_ptr<HTTPServer> self = shared_from_this();
+    // asynchronously read from the socket which contains our request into req_ and process it
     http::async_read(socket_, buf_, req_, [self](beast::error_code e, std::size_t /*bytesTransferred*/) {
         if (!e) {
+            // call processReq
             self->processReq();
         } else {
             std::cerr << "Error: " << e.message() << std::endl;
@@ -95,31 +115,42 @@ void HTTPServer::readReq()
     });
 }
 
+// given a request to the server, choose how to handle it
 void HTTPServer::processReq()
 {
+    // set result version cause its the same
     res_.version(req_.version());
+    // disconnect after receiving post
     res_.keep_alive(false);  // Expect very infrequent requests, so disable keep alive
 
+    // case statement for request
     switch (req_.method()) {
-        case http::verb::post:
+        case http::verb::post:  // if receive post request, handle it downstream or upstream
             doPost();
             break;
-        case http::verb::get:
+        case http::verb::get:  // if receive get request, handle it
             doGet();
             break;
         default:
-            doBadReq();
+            doBadReq();  // if request is not handled, return bad request
     }
+
+    // send the response
     writeRes();
 }
 
+// handler if we are given an unhandled request type
 void HTTPServer::doBadReq()
 {
+    // set the response type to bad request
     res_.result(http::status::bad_request);
+    // set the content type of the response to plain text
     res_.set(http::field::content_type, "text/plain");
+    // write invalid request method to the data of response
     beast::ostream(res_.body()) << "Invalid request method: " << req_.method_string();
 }
 
+//
 void HTTPServer::doNotFound()
 {
     res_.result(http::status::bad_request);
@@ -131,6 +162,7 @@ void HTTPServer::doNotFound()
 // IMPORTANT: Have 3 seconds to send HTTP status 200, so do not process data on same thread before responding
 void HTTPServer::doPost()
 {
+    // from local to global with data on boat status
     if (req_.target() == remote_transceiver::targets::SENSORS) {
         beast::string_view content_type = req_["content-type"];
         if (content_type == "application/x-www-form-urlencoded") {

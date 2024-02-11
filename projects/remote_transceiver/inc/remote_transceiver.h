@@ -144,7 +144,8 @@ private:
 };
 
 /**
- * Listener class to listen for and accept HTTP requests over TCP
+ * Listener class to listen for and accept HTTP requests over TCP (HTTP Handler in the diagram)
+ *
  *
  */
 class Listener : public std::enable_shared_from_this<Listener>
