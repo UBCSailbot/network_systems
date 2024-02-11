@@ -545,9 +545,10 @@ protected:
 bio::io_context TestHTTP::io_{TestHTTP::NUM_THREADS};
 tcp::acceptor   TestHTTP::acceptor_{io_, {bio::ip::make_address(TESTING_HOST), TESTING_PORT}};
 tcp::socket     TestHTTP::socket_{io_};
-std::vector     TestHTTP::io_threads_ = std::vector<std::thread>(NUM_THREADS);
-SailbotDB       TestHTTP::server_db_  = TestDB();
-Listener        TestHTTP::listener_   = Listener(io_, std::move(acceptor_), std::move(server_db_), strand_);
+std::vector     TestHTTP::io_threads_                         = std::vector<std::thread>(NUM_THREADS);
+SailbotDB       TestHTTP::server_db_                          = TestDB();
+bio::strand<bio::io_context::executor_type> TestHTTP::strand_ = bio::make_strand(io_);
+Listener TestHTTP::listener_ = Listener(std::move(acceptor_), std::move(server_db_), strand_);
 
 /**
  * @brief Test HTTP GET request sending and handling. Currently just retrieves a placeholder string.
