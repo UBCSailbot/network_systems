@@ -34,6 +34,7 @@ constexpr int NUM_PATH_WAYPOINTS  = 5;   // arbitrary number
 
 using Polaris::Sensors;
 using remote_transceiver::HTTPServer;
+using remote_transceiver::Listener;
 using remote_transceiver::TESTING_HOST;
 using remote_transceiver::TESTING_PORT;
 namespace http_client = remote_transceiver::http_client;
@@ -278,8 +279,8 @@ void genRandAisData(Sensors::Ais * ais_ship)
     std::uniform_real_distribution<float>   speed_dist(SPEED_LBND, SPEED_UBND);
     std::uniform_real_distribution<float>   heading_dist(HEADING_LBND, HEADING_UBND);
     std::uniform_real_distribution<float>   rot_dist(ROT_LBND, ROT_UBND);
-    std::uniform_real_distribution<float>   width_dist(DIMENSION_LBND, DIMENSION_UBND);
-    std::uniform_real_distribution<float>   length_dist(DIMENSION_LBND, DIMENSION_UBND);
+    std::uniform_real_distribution<float>   width_dist(SHIP_DIMENSION_LBND, SHIP_DIMENSION_UBND);
+    std::uniform_real_distribution<float>   length_dist(SHIP_DIMENSION_LBND, SHIP_DIMENSION_UBND);
 
     ais_ship->set_id(id_dist(g_mt));
     ais_ship->set_latitude(lat_dist(g_mt));
@@ -312,8 +313,8 @@ void genRandGenericSensorData(Sensors::Generic * generic_sensor)
  */
 void genRandBatteriesData(Sensors::Battery * battery)
 {
-    std::uniform_real_distribution<float> voltage_battery(VOLT_LBND, VOLT_UBND);
-    std::uniform_real_distribution<float> current_battery(CURRENT_LBND, CURRENT_UBND);
+    std::uniform_real_distribution<float> voltage_battery(BATT_VOLT_LBND, BATT_VOLT_UBND);
+    std::uniform_real_distribution<float> current_battery(BATT_CURR_LBND, BATT_CURR_UBND);
 
     battery->set_voltage(voltage_battery(g_mt));
     battery->set_current(current_battery(g_mt));
@@ -327,7 +328,7 @@ void genRandBatteriesData(Sensors::Battery * battery)
 void genRandWindData(Sensors::Wind * wind_data)
 {
     std::uniform_real_distribution<float> speed_wind(SPEED_LBND, SPEED_UBND);
-    std::uniform_int_distribution<int>    direction_wind(DIRECTION_LBND, DIRECTION_UBND);
+    std::uniform_int_distribution<int>    direction_wind(WIND_DIRECTION_LBND, WIND_DIRECTION_UBND);
 
     wind_data->set_speed(speed_wind(g_mt));
     wind_data->set_direction(direction_wind(g_mt));
@@ -502,38 +503,33 @@ TEST_F(TestSailbotDB, TestStoreSensors)
 class TestHTTP : public TestSailbotDB
 {
 protected:
+    static constexpr int NUM_THREADS = 4;
     // Need to wait after receiving an HTTP response from the server
     static constexpr auto WAIT_AFTER_RES = std::chrono::milliseconds(20);
 
     // Network objects that are shared amongst all HTTP test suites
-    static bio::io_context * io_;
-    static tcp::acceptor *   acceptor_;
-    static tcp::socket *     socket_;
-    static std::thread *     io_thread_;
-    static SailbotDB *       server_db_;
+    static bio::io_context          io_;
+    static tcp::acceptor            acceptor_;
+    static tcp::socket              socket_;
+    static std::vector<std::thread> io_threads_;
+    static SailbotDB                server_db_;
+    static ::Listener               listener_;
 
     static void SetUpTestSuite()
     {
-        io_        = new bio::io_context;
-        acceptor_  = new tcp::acceptor{*io_, {bio::ip::make_address(TESTING_HOST), TESTING_PORT}};
-        socket_    = new tcp::socket{*io_};
-        server_db_ = new TestDB();
+        listener_.run();
 
-        HTTPServer::runServer(*acceptor_, *socket_, *server_db_);
-
-        io_thread_ = new std::thread([]() { io_->run(); });
+        for (std::thread & io_thread : io_threads_) {
+            io_thread = std::thread([]() { io_.run(); });
+        }
     }
 
     static void TearDownTestSuite()
     {
-        io_->stop();
-        io_thread_->join();
-
-        delete io_;
-        delete acceptor_;
-        delete socket_;
-        delete io_thread_;
-        delete server_db_;
+        io_.stop();
+        for (std::thread & io_thread : io_threads_) {
+            io_thread.join();
+        }
     }
 
     TestHTTP()
@@ -545,11 +541,12 @@ protected:
 };
 
 // Initialize static objects
-bio::io_context * TestHTTP::io_        = nullptr;
-tcp::acceptor *   TestHTTP::acceptor_  = nullptr;
-tcp::socket *     TestHTTP::socket_    = nullptr;
-std::thread *     TestHTTP::io_thread_ = nullptr;
-SailbotDB *       TestHTTP::server_db_ = nullptr;
+bio::io_context TestHTTP::io_{TestHTTP::NUM_THREADS};
+tcp::acceptor   TestHTTP::acceptor_{io_, {bio::ip::make_address(TESTING_HOST), TESTING_PORT}};
+tcp::socket     TestHTTP::socket_{io_};
+std::vector     TestHTTP::io_threads_ = std::vector<std::thread>(NUM_THREADS);
+SailbotDB       TestHTTP::server_db_  = TestDB();
+Listener        TestHTTP::listener_   = Listener(io_, std::move(acceptor_), std::move(server_db_));
 
 /**
  * @brief Test HTTP GET request sending and handling. Currently just retrieves a placeholder string.
@@ -622,7 +619,7 @@ TEST_F(TestHTTP, TestPostSensorsMult)
 {
     SCOPED_TRACE("Seed: " + std::to_string(g_rand_seed));  // Print seed on any failure
 
-    constexpr int                                NUM_REQS = 10;
+    constexpr int                                NUM_REQS = 50;
     std::array<std::string, NUM_REQS>            queries;
     std::array<std::thread, NUM_REQS>            req_threads;
     std::array<http::status, NUM_REQS>           res_statuses;
@@ -630,7 +627,7 @@ TEST_F(TestHTTP, TestPostSensorsMult)
     std::array<SailbotDB::RcvdMsgInfo, NUM_REQS> expected_info;
 
     // Prepare all queries
-    for (size_t i = 0; i < NUM_REQS; i++) {
+    for (int i = 0; i < NUM_REQS; i++) {
         auto [rand_sensors, rand_info] = genRandData();
         expected_sensors[i]            = rand_sensors;
         expected_info[i]               = rand_info;
@@ -651,7 +648,7 @@ TEST_F(TestHTTP, TestPostSensorsMult)
     }
 
     // Send all requests at once
-    for (size_t i = 0; i < NUM_REQS; i++) {
+    for (int i = 0; i < NUM_REQS; i++) {
         req_threads[i] = std::thread([&queries, &res_statuses, i]() {
             std::string query = queries[i];
             res_statuses[i]   = http_client::post(

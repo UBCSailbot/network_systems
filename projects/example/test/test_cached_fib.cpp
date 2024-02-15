@@ -1,5 +1,6 @@
+#include <gtest/gtest.h>
+
 #include "cached_fib.h"
-#include "gtest/gtest.h"
 
 static constexpr int DEFAULT_SIZE = 5;
 static CachedFib     g_test_fib   = CachedFib(DEFAULT_SIZE);

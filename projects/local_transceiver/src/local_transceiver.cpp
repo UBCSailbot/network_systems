@@ -6,32 +6,23 @@
 #include <boost/asio/streambuf.hpp>
 #include <boost/asio/write.hpp>
 #include <boost/system/error_code.hpp>
-#include <custom_interfaces/msg/detail/batteries__struct.hpp>
-#include <custom_interfaces/msg/detail/generic_sensors__struct.hpp>
-#include <custom_interfaces/msg/detail/helper_battery__struct.hpp>
-#include <custom_interfaces/msg/detail/helper_generic_sensor__struct.hpp>
-#include <custom_interfaces/msg/detail/helper_lat_lon__struct.hpp>
-#include <custom_interfaces/msg/detail/l_path_data__struct.hpp>
-#include <custom_interfaces/msg/detail/path__struct.hpp>
-#include <custom_interfaces/msg/detail/wind_sensor__struct.hpp>
+#include <custom_interfaces/msg/ais_ships.hpp>
+#include <custom_interfaces/msg/batteries.hpp>
+#include <custom_interfaces/msg/generic_sensors.hpp>
+#include <custom_interfaces/msg/gps.hpp>
+#include <custom_interfaces/msg/l_path_data.hpp>
+#include <custom_interfaces/msg/wind_sensors.hpp>
 #include <exception>
-#include <mutex>
 #include <stdexcept>
 #include <string>
 
 #include "at_cmds.h"
 #include "cmn_hdrs/ros_info.h"
 #include "cmn_hdrs/shared_constants.h"
-#include "custom_interfaces/msg/ais_ships.hpp"
-#include "custom_interfaces/msg/batteries.hpp"
-#include "custom_interfaces/msg/generic_sensors.hpp"
-#include "custom_interfaces/msg/gps.hpp"
-#include "custom_interfaces/msg/l_path_data.hpp"
-#include "custom_interfaces/msg/path.hpp"
-#include "custom_interfaces/msg/wind_sensor.hpp"
 #include "sensors.pb.h"
 #include "waypoint.pb.h"
 
+using boost::system::error_code;
 using Polaris::Sensors;
 namespace bio = boost::asio;
 
@@ -105,6 +96,8 @@ Sensors LocalTransceiver::sensors() { return sensors_; }
 LocalTransceiver::LocalTransceiver(const std::string & port_name, const uint32_t baud_rate) : serial_(io_, port_name)
 {
     serial_.set_option(bio::serial_port_base::baud_rate(baud_rate));
+    // Set a timeout for read/write operations on the serial port
+    setsockopt(serial_.native_handle(), SOL_SOCKET, SO_RCVTIMEO, &TIMEOUT, sizeof(TIMEOUT));
 };
 
 LocalTransceiver::~LocalTransceiver()
@@ -140,53 +133,98 @@ bool LocalTransceiver::send()
         throw std::length_error(err_string);
     }
 
-    //static constexpr int MAX_NUM_RETRIES = 20;
-    // for (int i = 0; i < MAX_NUM_RETRIES; i++) {
-    std::string sbdwbCommand = "AT+SBDWB=" + std::to_string(data.size()) + "\r";
-    send(sbdwbCommand + data + "\r");
+    std::string write_bin_cmd_str = AT::write_bin::CMD + std::to_string(data.size());
+    AT::Line    at_write_cmd(write_bin_cmd_str);
 
-    //readLine();
-    std::cout << readLine() << std::endl;
-    //TODO(Jng468): make sure this outputs READY
+    static constexpr int MAX_NUM_RETRIES = 20;
+    for (int i = 0; i < MAX_NUM_RETRIES; i++) {
+        if (!send(at_write_cmd)) {
+            continue;
+        }
 
-    std::string checksumCommand = checksum(data) + "\r";
-    send(data + checksumCommand + "\r");
+        if (!rcvRsps({
+              at_write_cmd,
+              AT::Line(AT::DELIMITER),
+              AT::Line(AT::RSP_READY),
+              AT::Line("\n"),
+            })) {
+            continue;
+        }
 
-    std::string rsp_str = readLine();
+        std::string msg_str = data + checksum(data);
+        AT::Line    msg(msg_str);
+        if (!send(msg)) {
+            continue;
+        }
 
-    // Check SBD Session status to see if data was sent successfully
-    send(AT::SBD_SESSION);
-    //readLine();  // empty line after response
-    if (checkOK()) {
-        try {
-            AT::SBDStatusResponse rsp(rsp_str);
-            if (rsp.MOSuccess()) {
-                return true;
-            }
-        } catch (std::invalid_argument & e) {
-            /* Catch response parsing exceptions */
+        if (!rcvRsps({
+              AT::Line(AT::DELIMITER),
+              AT::Line(AT::write_bin::rsp::SUCCESS),
+              AT::Line("\n"),
+              AT::Line(AT::DELIMITER),
+              AT::Line(AT::STATUS_OK),
+              AT::Line("\n"),
+            })) {
+            continue;
+        }
+
+        // Check SBD Session status to see if data was sent successfully
+        // NEEDS AN ACTIVE SERVER ON $WEBHOOK_SERVER_ENDPOINT OR VIRTUAL IRIDIUM WILL CRASH
+        if (!send(AT::Line(AT::SBD_SESSION))) {
+            continue;
+        }
+
+        auto optStatus = readRsp();
+        if (!optStatus) {
+            continue;
+        }
+
+        std::string sbdStatusStr = optStatus.value();
+
+        AT::SBDStatusRsp rsp(sbdStatusStr);
+        if (rsp.MOSuccess()) {
+            return true;
         }
     }
-    //}
     return false;
 }
 
-std::string LocalTransceiver::debugSend(const std::string & cmd)
+std::optional<std::string> LocalTransceiver::debugSend(const std::string & cmd)
 {
-    send(cmd);
+    AT::Line    at_cmd(cmd);
+    std::string sent_cmd;
 
-    std::string response = readLine();  // Read and capture the response
-    readLine();                         // Check if there is an empty line after respones
-    return response;
+    if (!send(at_cmd)) {
+        return std::nullopt;
+    }
+
+    if (!rcvRsps({
+          at_cmd,
+          AT::Line(AT::DELIMITER),
+        })) {
+        return std::nullopt;
+    }
+
+    return readRsp();
 }
 
 std::string LocalTransceiver::receive()
 {
-    std::string receivedData = readLine();
+    // TODO(hhenry01)
+    std::string receivedData = readRsp().value();
     return receivedData;
 }
 
-void LocalTransceiver::send(const std::string & cmd) { bio::write(serial_, bio::buffer(cmd, cmd.size())); }
+bool LocalTransceiver::send(const AT::Line & cmd)
+{
+    boost::system::error_code ec;
+    bio::write(serial_, bio::buffer(cmd.str_, cmd.str_.size()), ec);
+    if (ec) {
+        std::cerr << "Write failed with error: " << ec.message() << std::endl;
+        return false;
+    }
+    return true;
+}
 
 std::string LocalTransceiver::parseInMsg(const std::string & msg)
 {
@@ -195,30 +233,64 @@ std::string LocalTransceiver::parseInMsg(const std::string & msg)
     return "placeholder";
 }
 
-std::string LocalTransceiver::readLine()
+bool LocalTransceiver::rcvRsp(const AT::Line & expected_rsp)
 {
     bio::streambuf buf;
-
-    // Caution: will hang if another proccess is reading from serial port
-    bio::read_until(serial_, buf, AT::DELIMITER);
-    return std::string(
-      bio::buffers_begin(buf.data()), bio::buffers_begin(buf.data()) + static_cast<int64_t>(buf.data().size()));
+    error_code     ec;
+    // Caution: will hang if another proccess is reading from the same serial port
+    bio::read(serial_, buf, bio::transfer_exactly(expected_rsp.str_.size()), ec);
+    if (ec) {
+        std::cerr << "Failed to read with error: " << ec.message() << std::endl;
+        return false;
+    }
+    std::string outstr = streambufToStr(buf);
+    if (outstr != expected_rsp.str_) {
+        std::cerr << "Expected to read: \"" << expected_rsp.str_ << "\"\nbut read: \"" << outstr << "\"" << std::endl;
+        return false;
+    }
+    return true;
 }
 
-bool LocalTransceiver::checkOK()
+bool LocalTransceiver::rcvRsps(std::initializer_list<const AT::Line> expected_rsps)
 {
-    std::string status = readLine();
-    return status == AT::STATUS_OK;
+    // All responses must match the expected responses
+    return std::all_of(
+      expected_rsps.begin(), expected_rsps.end(), [this](const AT::Line & e_rsp) { return rcvRsp(e_rsp); });
+}
+
+std::optional<std::string> LocalTransceiver::readRsp()
+{
+    bio::streambuf buf;
+    error_code     ec;
+
+    // Caution: will hang if another proccess is reading from serial port
+    bio::read_until(serial_, buf, AT::DELIMITER, ec);
+    if (ec) {
+        return std::nullopt;
+    }
+
+    std::string rsp_str = streambufToStr(buf);
+    rsp_str.pop_back();  // Remove the "\n"
+    return rsp_str;
 }
 
 std::string LocalTransceiver::checksum(const std::string & data)
 {
-    uint16_t counter = 0;
+    uint16_t sum = 0;
     for (char c : data) {
-        counter += static_cast<uint8_t>(c);
+        sum += static_cast<uint8_t>(c);
     }
 
-    std::stringstream ss;
-    ss << std::hex << std::setw(4) << std::setfill('0') << counter;
-    return ss.str();
+    char checksum_low  = static_cast<char>(sum & 0xff);           // NOLINT(readability-magic-numbers)
+    char checksum_high = static_cast<char>((sum & 0xff00) >> 8);  // NOLINT(readability-magic-numbers)
+
+    return std::string{checksum_high, checksum_low};
+}
+
+std::string LocalTransceiver::streambufToStr(bio::streambuf & buf)
+{
+    std::string str = std::string(
+      bio::buffers_begin(buf.data()), bio::buffers_begin(buf.data()) + static_cast<int64_t>(buf.data().size()));
+    buf.consume(buf.size());
+    return str;
 }

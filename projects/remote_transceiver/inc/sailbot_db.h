@@ -171,7 +171,7 @@ public:
 
 protected:
     const std::string               db_name_;  // Name of the database
-    std::shared_ptr<mongocxx::pool> pool_;     // pool of clients for thread safety
+    std::unique_ptr<mongocxx::pool> pool_;     // pool of clients for thread safety
 
 private:
     static mongocxx::instance inst_;  // MongoDB instance (must be present - there can only ever be one)

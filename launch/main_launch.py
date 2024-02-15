@@ -14,6 +14,8 @@ from launch.substitutions import LaunchConfiguration
 
 # Local launch arguments and constants
 PACKAGE_NAME = "network_systems"
+NAMESPACE = ""
+global_launch_config = ""
 
 # Add args with DeclareLaunchArguments object(s) and utilize in setup_launch()
 LOCAL_LAUNCH_ARGUMENTS: List[DeclareLaunchArgument] = []
@@ -52,6 +54,9 @@ def get_global_launch_arguments() -> Tuple:
     spec.loader.exec_module(module)  # type: ignore[union-attr] # spec is not None
     global_launch_arguments = module.GLOBAL_LAUNCH_ARGUMENTS
     global_environment_vars = module.ENVIRONMENT_VARIABLES
+    global global_launch_config
+    global_launch_config = module.GLOBAL_LAUNCH_CONFIG
+
     return global_launch_arguments, global_environment_vars
 
 
@@ -67,20 +72,27 @@ def setup_launch(context: LaunchContext) -> List[Node]:
     """
     launch_description_entities = list()
     launch_description_entities.append(get_cached_fib_description(context))
+    launch_description_entities.append(get_mock_ais_description(context))
+    launch_description_entities.append(get_can_transceiver_description(context))
+    launch_description_entities.append(get_remote_transceiver_description(context))
     return launch_description_entities
 
 
 def get_cached_fib_description(context: LaunchContext) -> Node:
-    """Gets the launch description for the cached_fib node.
+    """Gets the launch description for the cached_fib_node.
 
     Args:
         context (LaunchContext): The current launch context.
 
     Returns:
-        Node: The node object that launches the cached_fib node.
+        Node: The node object that launches the cached_fib_node.
     """
-    node_name = "cached_fib"
-    ros_parameters = [LaunchConfiguration("config").perform(context)]
+    node_name = "cached_fib_node"
+    ros_parameters = [
+        global_launch_config,
+        {"mode": LaunchConfiguration("mode")},
+        *LaunchConfiguration("config").perform(context).split(","),
+    ]
     ros_arguments: List[SomeSubstitutionsType] = [
         "--log-level",
         [f"{node_name}:=", LaunchConfiguration("log_level")],
@@ -88,8 +100,104 @@ def get_cached_fib_description(context: LaunchContext) -> Node:
 
     node = Node(
         package=PACKAGE_NAME,
-        namespace="example",
+        namespace=NAMESPACE,
         executable="example",
+        name=node_name,
+        parameters=ros_parameters,
+        ros_arguments=ros_arguments,
+    )
+
+    return node
+
+
+def get_mock_ais_description(context: LaunchContext) -> Node:
+    """Gets the launch description for the mock_ais_node.
+
+    Args:
+        context (LaunchContext): The current launch context.
+
+    Returns:
+        Node: The node object that launches the mock_ais_node.
+    """
+    node_name = "mock_ais_node"
+    ros_parameters = [
+        global_launch_config,
+        {"mode": LaunchConfiguration("mode")},
+        *LaunchConfiguration("config").perform(context).split(","),
+    ]
+    ros_arguments: List[SomeSubstitutionsType] = [
+        "--log-level",
+        [f"{node_name}:=", LaunchConfiguration("log_level")],
+    ]
+
+    node = Node(
+        package=PACKAGE_NAME,
+        namespace=NAMESPACE,
+        executable="mock_ais",
+        name=node_name,
+        parameters=ros_parameters,
+        ros_arguments=ros_arguments,
+    )
+
+    return node
+
+
+def get_can_transceiver_description(context: LaunchContext) -> Node:
+    """Gets the launch description for the can_transceiver_node.
+
+    Args:
+        context (LaunchContext): The current launch context.
+
+    Returns:
+        Node: The node object that launches the can_transceiver_node.
+    """
+    node_name = "can_transceiver_node"
+    ros_parameters = [
+        global_launch_config,
+        {"mode": LaunchConfiguration("mode")},
+        *LaunchConfiguration("config").perform(context).split(","),
+    ]
+    ros_arguments: List[SomeSubstitutionsType] = [
+        "--log-level",
+        [f"{node_name}:=", LaunchConfiguration("log_level")],
+    ]
+
+    node = Node(
+        package=PACKAGE_NAME,
+        namespace=NAMESPACE,
+        executable="can_transceiver",
+        name=node_name,
+        parameters=ros_parameters,
+        ros_arguments=ros_arguments,
+    )
+
+    return node
+
+
+def get_remote_transceiver_description(context: LaunchContext) -> Node:
+    """Gets the launch description for the remote_transceiver_node.
+
+    Args:
+        context (LaunchContext): The current launch context.
+
+    Returns:
+        Node: The node object that launches the remote_transceiver_node.
+    """
+    node_name = "remote_transceiver_node"
+    ros_parameters = [
+        global_launch_config,
+        {"mode": LaunchConfiguration("mode")},
+        *LaunchConfiguration("config").perform(context).split(","),
+    ]
+    ros_arguments: List[SomeSubstitutionsType] = [
+        "--log-level",
+        [f"{node_name}:=", LaunchConfiguration("log_level")],
+    ]
+
+    node = Node(
+        package=PACKAGE_NAME,
+        namespace=NAMESPACE,
+        executable="remote_transceiver",
         name=node_name,
         parameters=ros_parameters,
         ros_arguments=ros_arguments,
