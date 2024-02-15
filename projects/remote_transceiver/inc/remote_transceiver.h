@@ -157,7 +157,7 @@ public:
      * @param acceptor tcp::acceptor configured with desired host and port
      * @param db       SailbotDB instance - the Listener requires that it takes ownership of the db
      */
-    Listener(tcp::acceptor acceptor, SailbotDB && db, bio::strand<bio::io_context::executor_type> strand);
+    Listener(bio::io_context & io, tcp::endpoint endpoint, SailbotDB && db);
 
     /**
      * @brief Run the Listener
@@ -166,9 +166,9 @@ public:
     void run();
 
 private:
-    tcp::acceptor acceptor_;                              //tcp::acceptor configured with desired host, port, and target
-    SailbotDB     db_;                                    // SailbotDB attached to this Listener
-    bio::strand<bio::io_context::executor_type> strand_;  // strand used by this listener
+    bio::io_context & io_;        // io_context used by this Listener
+    tcp::acceptor     acceptor_;  //tcp::acceptor configured with desired host, port, and target
+    SailbotDB         db_;        // SailbotDB attached to this Listener
 };
 
 namespace http_client

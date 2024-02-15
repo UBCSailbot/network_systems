@@ -80,14 +80,9 @@ public:
                 io_threads_.reserve(num_threads);
                 bio::ip::address addr = bio::ip::make_address(host);
 
-                tcp::acceptor acceptor{*io_, {addr, static_cast<uint16_t>(port)}};
-                tcp::socket   socket{*io_};
-
-                bio::strand<bio::io_context::executor_type> strand = bio::make_strand(*io_);
-
-                listener_ = std::make_unique<remote_transceiver::Listener>(
-                  std::move(acceptor), std::move(sailbot_db), std::move(strand));
-                listener_->run();
+                std::make_unique<remote_transceiver::Listener>(
+                  *io_, tcp::endpoint{addr, static_cast<uint16_t>(port)}, std::move(sailbot_db))
+                  ->run();
 
                 for (std::thread & io_thread : io_threads_) {
                     io_thread = std::thread([&io_ = io_]() { io_->run(); });
