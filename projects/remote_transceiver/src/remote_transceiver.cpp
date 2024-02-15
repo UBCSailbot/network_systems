@@ -85,7 +85,7 @@ void Listener::run()
 void HTTPServer::readReq()
 {
     std::shared_ptr<HTTPServer> self = shared_from_this();
-    req_.clear();
+    req_                             = {};
     http::async_read(socket_, buf_, req_, [self](beast::error_code e, std::size_t /*bytesTransferred*/) {
         if (!e) {
             self->processReq();
