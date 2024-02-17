@@ -94,7 +94,7 @@ Listener::Listener(bio::io_context & io, tcp::endpoint endpoint, SailbotDB && db
 
 void Listener::run()
 {
-    acceptor_.async_accept(bio::make_strand(io_), [&](beast::error_code e, tcp::socket socket) {
+    acceptor_.async_accept(bio::make_strand(io_), [this](beast::error_code e, tcp::socket socket) {
         if (!e) {
             std::make_shared<HTTPServer>(std::move(socket), db_)->doAccept();
         } else {
