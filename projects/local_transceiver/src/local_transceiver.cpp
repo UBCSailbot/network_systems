@@ -136,7 +136,7 @@ bool LocalTransceiver::send()
     std::string write_bin_cmd_str = AT::write_bin::CMD + std::to_string(data.size());
     AT::Line    at_write_cmd(write_bin_cmd_str);
 
-    static constexpr int MAX_NUM_RETRIES = 20;
+    static constexpr int MAX_NUM_RETRIES = 20;  // allow retries because the connection is imperfect
     for (int i = 0; i < MAX_NUM_RETRIES; i++) {
         if (!send(at_write_cmd)) {
             continue;
@@ -186,6 +186,8 @@ bool LocalTransceiver::send()
             return true;
         }
     }
+    std::cerr << "Failed to transmit data to satellite!" << std::endl;
+    std::cerr << sensors.DebugString() << std::endl;
     return false;
 }
 

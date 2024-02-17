@@ -38,7 +38,7 @@ struct Line
     /**
      * @param str valid AT command or response string
      */
-    inline explicit Line(const std::string & str) : str_(str == AT::DELIMITER || str == "\n" ? str : str + "\r") {}
+    inline explicit Line(const std::string & str) : str_((str == AT::DELIMITER || str == "\n") ? str : (str + "\r")) {}
     // In most cases, str_ will just be the input str to the constructor
     // AT::DELIMITER and \n are exceptions, and remain the same
     const std::string str_;
@@ -63,7 +63,7 @@ struct SBDStatusRsp  // TODO(Jng468): Implement this class
     /**
      * @brief Construct a new Status Response object
      *
-     * @param rsp_string string of format "+SBDIX:<MO status>,<MOMSN>,<MT status>,<MTMSN>,<MT length>,<MTqueued>""
+     * @param rsp_string string of format "+SBDIX:<MO status>,<MOMSN>,<MT status>,<MTMSN>,<MT length>,<MTqueued>"
      */
     explicit SBDStatusRsp(const std::string & rsp_string)
     {

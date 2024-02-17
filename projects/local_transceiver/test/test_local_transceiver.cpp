@@ -2,6 +2,7 @@
 
 #include <gtest/gtest.h>
 
+#include <boost/process.hpp>
 #include <boost/system/system_error.hpp>
 #include <fstream>
 
@@ -10,9 +11,25 @@
 #include "local_transceiver.h"
 #include "sensors.pb.h"
 
+namespace bp = boost::process;
+
+/* >>>>>README<<<<<<
+Local Transceiver unit tests rely on two other programs: Virtual Iridium and HTTP Echo Server
+1. Spawning a separate process for RUN_VIRTUAL_IRIDIUM_SCRIPT_PATH doesn't work very well because the script
+    spawns it's own subprocess for mock serial ports. You can spawn it ezpz, but cleaning up mock serial port
+    subprocesses is a lot harder than you'd think. Hence, it's not done in the test code.
+2. Virtual Iridium needs a valid HTTP POST endpoint for certain commands. RUN_HTTP_ECHO_SERVER_CMD runs a simple
+   server that just echos whatever it receives.
+   ***IMPORTANT***: Make sure the echo server is running on the host and port specified in the virtual iridium
+                    --webhook_server_endpoint argument (default: 127.0.0.1:8081)
+*/
 class TestLocalTransceiver : public ::testing::Test
 {
 protected:
+    static void SetUpTestSuite() { http_echo_server_proc_ = bp::child(RUN_HTTP_ECHO_SERVER_CMD); }
+
+    static void TearDownTestSuite() { http_echo_server_proc_.terminate(); }
+
     TestLocalTransceiver()
     {
         try {
@@ -29,7 +46,11 @@ protected:
     }
 
     LocalTransceiver * lcl_trns_;
+
+private:
+    static bp::child http_echo_server_proc_;
 };
+bp::child TestLocalTransceiver::http_echo_server_proc_ = {};
 
 /**
  * @brief Verify debugSend
