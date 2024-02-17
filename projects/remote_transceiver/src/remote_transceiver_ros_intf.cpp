@@ -80,7 +80,7 @@ public:
                 io_threads_.reserve(num_threads);
                 bio::ip::address addr = bio::ip::make_address(host);
 
-                std::make_unique<remote_transceiver::Listener>(
+                std::make_shared<remote_transceiver::Listener>(
                   *io_, tcp::endpoint{addr, static_cast<uint16_t>(port)}, std::move(sailbot_db))
                   ->run();
 

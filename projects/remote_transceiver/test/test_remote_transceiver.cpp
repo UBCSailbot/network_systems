@@ -512,11 +512,12 @@ protected:
     static std::vector<std::thread> io_threads_;
     static SailbotDB                server_db_;
     static bio::ip::address         addr_;
-    static ::Listener               listener_;
 
     static void SetUpTestSuite()
     {
-        listener_.run();
+        std::make_shared<remote_transceiver::Listener>(
+          TestHTTP::io_, tcp::endpoint{TestHTTP::addr_, TESTING_PORT}, std::move(TestHTTP::server_db_))
+          ->run();
 
         for (std::thread & io_thread : io_threads_) {
             io_thread = std::thread([]() { io_.run(); });
@@ -544,7 +545,6 @@ bio::io_context  TestHTTP::io_{TestHTTP::NUM_THREADS};
 std::vector      TestHTTP::io_threads_ = std::vector<std::thread>(NUM_THREADS);
 SailbotDB        TestHTTP::server_db_  = TestDB();
 bio::ip::address TestHTTP::addr_       = bio::ip::make_address(TESTING_HOST);
-Listener TestHTTP::listener_ = Listener(io_, bio::ip::tcp::endpoint{addr_, TESTING_PORT}, std::move(server_db_));
 
 /**
  * @brief Test HTTP GET request sending and handling. Currently just retrieves a placeholder string.

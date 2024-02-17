@@ -94,14 +94,15 @@ Listener::Listener(bio::io_context & io, tcp::endpoint endpoint, SailbotDB && db
 
 void Listener::run()
 {
-    acceptor_.async_accept(bio::make_strand(io_), [this](beast::error_code e, tcp::socket socket) {
+    std::shared_ptr<Listener> self = shared_from_this();
+    acceptor_.async_accept(bio::make_strand(io_), [self](beast::error_code e, tcp::socket socket) {
         if (!e) {
-            std::make_shared<HTTPServer>(std::move(socket), db_)->doAccept();
+            std::make_shared<HTTPServer>(std::move(socket), self->db_)->doAccept();
         } else {
             // Do not throw an error as we can still try to accept new requests
             std::cerr << "Error: " << e.message() << std::endl;
         }
-        run();
+        self->run();
     });
 }
 
