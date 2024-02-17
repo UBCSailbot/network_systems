@@ -1,5 +1,7 @@
 #include "local_transceiver.h"
 
+#include <boost/algorithm/string/classification.hpp>
+#include <boost/algorithm/string/split.hpp>
 #include <boost/asio/read.hpp>
 #include <boost/asio/read_until.hpp>
 #include <boost/asio/serial_port.hpp>
@@ -170,18 +172,33 @@ bool LocalTransceiver::send()
 
         // Check SBD Session status to see if data was sent successfully
         // NEEDS AN ACTIVE SERVER ON $WEBHOOK_SERVER_ENDPOINT OR VIRTUAL IRIDIUM WILL CRASH
-        if (!send(AT::Line(AT::SBD_SESSION))) {
+        static const AT::Line sbdix_cmd = AT::Line(AT::SBD_SESSION);
+        if (!send(sbdix_cmd)) {
             continue;
         }
 
-        auto optStatus = readRsp();
-        if (!optStatus) {
+        if (!rcvRsps({
+              AT::Line("\r"),
+              sbdix_cmd,
+              AT::Line(AT::DELIMITER),
+            })) {
             continue;
         }
 
-        std::string sbdStatusStr = optStatus.value();
+        auto opt_rsp = readRsp();
+        if (!opt_rsp) {
+            continue;
+        }
 
-        AT::SBDStatusRsp rsp(sbdStatusStr);
+        // This string will look something like:
+        // "+SBDIX:<MO status>,<MOMSN>,<MT status>,<MTMSN>,<MT length>,<MTqueued>\r\n\r\nOK\r"
+        // on success
+        // Don't bother to check for OK\r as MO status will tell us if it succeeded or not
+        std::string              opt_rsp_val = opt_rsp.value();
+        std::vector<std::string> sbd_status_vec;
+        boost::algorithm::split(sbd_status_vec, opt_rsp_val, boost::is_any_of(AT::DELIMITER));
+
+        AT::SBDStatusRsp rsp(sbd_status_vec[0]);
         if (rsp.MOSuccess()) {
             return true;
         }
