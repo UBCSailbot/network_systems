@@ -150,21 +150,26 @@ void HTTPServer::doBadReq()
     beast::ostream(res_.body()) << "Invalid request method: " << req_.method_string();
 }
 
-//
+// used in doPost in the case where we are trying to post to an un-managed resource
 void HTTPServer::doNotFound()
 {
+    // set the request response to a bad request
     res_.result(http::status::bad_request);
+    // set the response data to empty text
     res_.set(http::field::content_type, "text/plain");
     beast::ostream(res_.body()) << "Not found: " << req_.target();
 }
 
 // https://docs.rockblock.rock7.com/reference/receiving-mo-messages-via-http-webhook
 // IMPORTANT: Have 3 seconds to send HTTP status 200, so do not process data on same thread before responding
+// used when we get a Post request, handle each request differently based on the type of data received
 void HTTPServer::doPost()
 {
-    // from local to global with data on boat status
+    // from local to global with data on boat status -> upstream
     if (req_.target() == remote_transceiver::targets::SENSORS) {
+        // obtain the content type
         beast::string_view content_type = req_["content-type"];
+        // since we only support the application/x-www-form-urlencoded type, check for this
         if (content_type == "application/x-www-form-urlencoded") {
             res_.result(http::status::ok);
             std::shared_ptr<HTTPServer> self = shared_from_this();
@@ -183,6 +188,7 @@ void HTTPServer::doPost()
             });
             post_thread.detach();
         } else {
+            // send a response that the data is unsupported
             res_.result(http::status::unsupported_media_type);
             res_.set(http::field::content_type, "text/plain");
             beast::ostream(res_.body()) << "Server does not support sensors POST requests of type: " << content_type;
