@@ -126,6 +126,7 @@ void HTTPServer::readReq()
 
 void HTTPServer::processReq()
 {
+    res_ = {};
     res_.version(req_.version());
     res_.keep_alive(false);  // Expect very infrequent requests, so disable keep alive
 

@@ -110,9 +110,8 @@ public:
     }
 
 private:
-    std::unique_ptr<remote_transceiver::Listener> listener_;    // Pointer to the HTTP Listener
-    std::unique_ptr<bio::io_context>              io_;          // io_context that all boost::asio operations run off of
-    std::vector<std::thread>                      io_threads_;  // Vector of all concurrent IO/HTTP request threads
+    std::unique_ptr<bio::io_context> io_;          // io_context that all boost::asio operations run off of
+    std::vector<std::thread>         io_threads_;  // Vector of all concurrent IO/HTTP request threads
     bool enabled_;  // Status flag that indicates whether the Remote Transceiver is running or not
 };
 
