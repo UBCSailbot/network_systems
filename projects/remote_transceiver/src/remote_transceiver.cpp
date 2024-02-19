@@ -172,29 +172,34 @@ void HTTPServer::doPost()
         // since we only support the application/x-www-form-urlencoded type (from iridium), check for this
         if (content_type == "application/x-www-form-urlencoded") {
             res_.result(http::status::ok);                          // set result status to ok
-            std::shared_ptr<HTTPServer> self = shared_from_this();  // obtain reference to this instance of HTTP
+            std::shared_ptr<HTTPServer> self = shared_from_this();  // obtain reference to this instance of HTTP server
             // Detach a thread to process the data so that the server can write a response within the 3 seconds allotted
             std::thread post_thread([self]() {  // create a thread and start executing the function given here
                 // parse data of post to a string
                 std::string query_string = beast::buffers_to_string(self->req_.body().data());
                 // create a sensor parameters object which parses the string into a C++ data representation
                 MOMsgParams::Params params = MOMsgParams(query_string).params_;
-                if (!params.data_.empty()) {         // if our params has data in it
-                    Polaris::Sensors       sensors;  // create new sensors object
+                if (!params.data_.empty()) {   // if our params has data in it
+                    Polaris::Sensors sensors;  // create new sensors object
+                    // obtain information about iridium header which contains lat, lon, cep_ and transmit_time_
                     SailbotDB::RcvdMsgInfo info = {params.lat_, params.lon_, params.cep_, params.transmit_time_};
+
+                    // create polaris sensors object from data_string sent from iridium
                     sensors.ParseFromString(params.data_);
+                    // store sensors object into data base or print out info value if failed
                     if (!self->db_.storeNewSensors(sensors, info)) {
                         std::cerr << "Error, failed to store data received from:\n" << info << std::endl;
                     };
                 }
             });
-            post_thread.detach();
+            post_thread.detach();  // detach this thread and make it execute in parallel on its own
         } else {
             // send a response that the data is unsupported
             res_.result(http::status::unsupported_media_type);
             res_.set(http::field::content_type, "text/plain");
             beast::ostream(res_.body()) << "Server does not support sensors POST requests of type: " << content_type;
         }
+        // from global to local with global waypoints -> downstream to boat
     } else if (req_.target() == remote_transceiver::targets::GLOBAL_PATH) {
         // TODO(): Allow POST global path
         res_.result(http::status::not_implemented);
@@ -203,20 +208,30 @@ void HTTPServer::doPost()
     }
 }
 
+// since we currently have no need for get requests, simply return an empty placeholder
 void HTTPServer::doGet()
 {
+    // set response status to ok
     res_.result(http::status::ok);
+    // set server field to sailbot remote transciever
     res_.set(http::field::server, "Sailbot Remote Transceiver");
+    // set content type to plain text
     res_.set(http::field::content_type, "text/plain");
+    // put a placeholder string into the body of the response
     beast::ostream(res_.body()) << "PLACEHOLDER\r\n";
 }
 
+// once we have been given our formed HTTP response, we write the response to output socket
 void HTTPServer::writeRes()
 {
+    // set content_length field
     res_.set(http::field::content_length, std::to_string(res_.body().size()));
 
+    // obtain pointer to ourself
     std::shared_ptr<HTTPServer> self = shared_from_this();
+    // asynchronously write the result to the socket and run the given callback function once writing is complete
     http::async_write(socket_, res_, [self](beast::error_code e, std::size_t /*bytesWritten*/) {
+        // the callback function shutsdown the socket since this is a non-persistent connection
         self->socket_.shutdown(tcp::socket::shutdown_send, e);
         if (e) {
             std::cerr << "Error: " << e.message() << std::endl;
@@ -226,6 +241,7 @@ void HTTPServer::writeRes()
 
 // END PRIVATE
 
+// sends a get request to the test server used in testing
 std::pair<http::status, std::string> http_client::get(ConnectionInfo info)
 {
     bio::io_context io;
@@ -258,6 +274,7 @@ std::pair<http::status, std::string> http_client::get(ConnectionInfo info)
     return {status, ""};
 }
 
+// sends a post request to test server used in testing
 http::status http_client::post(ConnectionInfo info, std::string content_type, const std::string & body)
 {
     bio::io_context io;
