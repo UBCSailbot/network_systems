@@ -169,16 +169,18 @@ void HTTPServer::doPost()
     if (req_.target() == remote_transceiver::targets::SENSORS) {
         // obtain the content type
         beast::string_view content_type = req_["content-type"];
-        // since we only support the application/x-www-form-urlencoded type, check for this
+        // since we only support the application/x-www-form-urlencoded type (from iridium), check for this
         if (content_type == "application/x-www-form-urlencoded") {
-            res_.result(http::status::ok);
-            std::shared_ptr<HTTPServer> self = shared_from_this();
+            res_.result(http::status::ok);                          // set result status to ok
+            std::shared_ptr<HTTPServer> self = shared_from_this();  // obtain reference to this instance of HTTP
             // Detach a thread to process the data so that the server can write a response within the 3 seconds allotted
-            std::thread post_thread([self]() {
-                std::string         query_string = beast::buffers_to_string(self->req_.body().data());
-                MOMsgParams::Params params       = MOMsgParams(query_string).params_;
-                if (!params.data_.empty()) {
-                    Polaris::Sensors       sensors;
+            std::thread post_thread([self]() {  // create a thread and start executing the function given here
+                // parse data of post to a string
+                std::string query_string = beast::buffers_to_string(self->req_.body().data());
+                // create a sensor parameters object which parses the string into a C++ data representation
+                MOMsgParams::Params params = MOMsgParams(query_string).params_;
+                if (!params.data_.empty()) {         // if our params has data in it
+                    Polaris::Sensors       sensors;  // create new sensors object
                     SailbotDB::RcvdMsgInfo info = {params.lat_, params.lon_, params.cep_, params.transmit_time_};
                     sensors.ParseFromString(params.data_);
                     if (!self->db_.storeNewSensors(sensors, info)) {
