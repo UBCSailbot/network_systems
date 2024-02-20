@@ -18,18 +18,26 @@
 namespace bstream = bsoncxx::builder::stream;
 using Polaris::Sensors;
 
-mongocxx::instance SailbotDB::inst_{};  // staticallly initialize instance
+mongocxx::instance SailbotDB::inst_{};  // staticallly initialize instance so that it is available everywhere in this
+                                        // translation unit
 
 // PUBLIC
 
-SailbotDB::SailbotDB(const std::string & db_name, const std::string & mongodb_conn_str) : db_name_(db_name)
+// constructor for a sailbotdb instance that takes in a db name to set, and a connection string that defines the port that
+// is used on local host for now
+SailbotDB::SailbotDB(const std::string & db_name, const std::string & mongodb_conn_str)
+: db_name_(db_name)  // sets the db name
 {
-    mongocxx::uri uri = mongocxx::uri{mongodb_conn_str};
-    pool_             = std::make_unique<mongocxx::pool>(uri);
+    mongocxx::uri uri = mongocxx::uri{
+      mongodb_conn_str};  // creates a mongodb uri based on the connection string which is an address and port
+    pool_ = std::make_unique<mongocxx::pool>(uri);  // given a database, create a set of ready to use connections
+                                                    // that the app can connect to and access the db
 }
 
+// prints out a given document into the terminal, it prints out one set of data defined in the comments in sailbot_db.h
 void SailbotDB::printDoc(const DocVal & doc) { std::cout << bsoncxx::to_json(doc.view()) << std::endl; }
 
+// tests the connection given
 bool SailbotDB::testConnection()
 {
     const DocVal          ping_cmd = bstream::document{} << "ping" << 1 << bstream::finalize;

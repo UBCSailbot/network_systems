@@ -114,6 +114,7 @@ class SailbotDB
 public:
     /**
      * Structure to represent metadata associated with a received Iridium message
+     * contains only the Iridium header values - the actual payload needs to be further parsed
      */
     struct RcvdMsgInfo
     {
@@ -124,6 +125,8 @@ public:
 
         /**
          * @brief overload stream operator
+         * When a RcvdMsgInfo class is output to a stream, format the output
+         * example: std::cout << RcvdMsgInfo_inst << std::endl; will give us a string formatted as such below
          */
         friend std::ostream & operator<<(std::ostream & os, const RcvdMsgInfo & info)
         {
