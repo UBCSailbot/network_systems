@@ -30,7 +30,7 @@ TEST_F(TestSailbotDB, TestConnection)
 TEST_F(TestSailbotDB, TestStoreSensors)
 {
     SCOPED_TRACE("Seed: " + std::to_string(g_rand_seed));  // Print seed on any failure
-    auto [rand_sensors, rand_info] = g_test_db.genRandData();
+    auto [rand_sensors, rand_info] = g_test_db.genRandData(UtilDB::getTimestamp());
     ASSERT_TRUE(g_test_db.storeNewSensors(rand_sensors, rand_info));
 
     std::array<Sensors, 1>                expected_sensors = {rand_sensors};

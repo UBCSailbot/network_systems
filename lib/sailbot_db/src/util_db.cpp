@@ -92,14 +92,25 @@ Sensors UtilDB::genRandSensors()
     return sensors;
 }
 
-std::pair<Sensors, SailbotDB::RcvdMsgInfo> UtilDB::genRandData()
+std::tm UtilDB::getTimestamp()
 {
-    Sensors                rand_sensors = genRandSensors();
+    // Get the current time
+    std::time_t t  = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+    std::tm *   tm = std::gmtime(&t);  // NOLINT(concurrency-mt-unsafe)
+    // tm stores years since 1900 by default, the schema expects years since 2000
+    tm->tm_year -= 100;  // NOLINT(readability-magic-numbers)
+    return *tm;
+}
+
+std::pair<Sensors, SailbotDB::RcvdMsgInfo> UtilDB::genRandData(const std::tm & tm)
+{
+    Sensors rand_sensors = genRandSensors();
+
     SailbotDB::RcvdMsgInfo rand_info{
-      .lat_       = 0,                                              // Not processed yet, so just set to 0
-      .lon_       = 0,                                              // Not processed yet, so just set to 0
-      .cep_       = 0,                                              // Not processed yet, so just set to 0
-      .timestamp_ = std::to_string(rand_sensors.gps().heading())};  // Some random string
+      .lat_       = 0,  // Not processed yet, so just set to 0
+      .lon_       = 0,  // Not processed yet, so just set to 0
+      .cep_       = 0,  // Not processed yet, so just set to 0
+      .timestamp_ = SailbotDB::RcvdMsgInfo::mkTimestamp(tm)};
     return {rand_sensors, rand_info};
 }
 

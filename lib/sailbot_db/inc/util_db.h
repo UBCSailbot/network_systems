@@ -36,11 +36,17 @@ public:
     Polaris::Sensors genRandSensors();
 
     /**
+     * @return timestamp for the current time
+     */
+    static std::tm getTimestamp();
+
+    /**
     * @brief Generate random sensors and Iridium msg info
     *
+    * @param tm Timestamp to associate with the generated data
     * @return std::pair<Sensors, SailbotDB::RcvdMsgInfo>
     */
-    std::pair<Polaris::Sensors, SailbotDB::RcvdMsgInfo> genRandData();
+    std::pair<Polaris::Sensors, SailbotDB::RcvdMsgInfo> genRandData(const std::tm & tm);
 
     /**
     * @brief Query the database and check that the sensor and message are correct

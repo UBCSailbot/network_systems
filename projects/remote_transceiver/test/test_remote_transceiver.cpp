@@ -111,7 +111,7 @@ std::string createPostBody(remote_transceiver::MOMsgParams::Params params)
 TEST_F(TestRemoteTransceiver, TestPostSensors)
 {
     SCOPED_TRACE("Seed: " + std::to_string(g_rand_seed));  // Print seed on any failure
-    auto [rand_sensors, rand_info] = g_test_db.genRandData();
+    auto [rand_sensors, rand_info] = g_test_db.genRandData(UtilDB::getTimestamp());
 
     std::string rand_sensors_str;
     ASSERT_TRUE(rand_sensors.SerializeToString(&rand_sensors_str));
@@ -147,16 +147,20 @@ TEST_F(TestRemoteTransceiver, TestPostSensorsMult)
 {
     SCOPED_TRACE("Seed: " + std::to_string(g_rand_seed));  // Print seed on any failure
 
-    constexpr int                                NUM_REQS = 50;
-    std::array<std::string, NUM_REQS>            queries;
-    std::array<std::thread, NUM_REQS>            req_threads;
-    std::array<http::status, NUM_REQS>           res_statuses;
-    std::array<Polaris::Sensors, NUM_REQS>       expected_sensors;
+    constexpr int                          NUM_REQS = 50;  // Keep this number under 60 to simplify timestamp logic
+    std::array<std::string, NUM_REQS>      queries;
+    std::array<std::thread, NUM_REQS>      req_threads;
+    std::array<http::status, NUM_REQS>     res_statuses;
+    std::array<Polaris::Sensors, NUM_REQS> expected_sensors;
     std::array<SailbotDB::RcvdMsgInfo, NUM_REQS> expected_info;
 
+    std::tm tm = UtilDB::getTimestamp();
     // Prepare all queries
     for (int i = 0; i < NUM_REQS; i++) {
-        auto [rand_sensors, rand_info] = g_test_db.genRandData();
+        // Timestamps are only granular to the second, so if we want to maintain document ordering by time
+        // without adding a lot of 1 second delays, then the time must be modified
+        tm.tm_sec                      = i;
+        auto [rand_sensors, rand_info] = g_test_db.genRandData(tm);
         expected_sensors[i]            = rand_sensors;
         expected_info[i]               = rand_info;
         std::string rand_sensors_str;

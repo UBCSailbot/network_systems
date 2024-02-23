@@ -125,14 +125,9 @@ public:
         /**
          * @brief overload stream operator
          */
-        friend std::ostream & operator<<(std::ostream & os, const RcvdMsgInfo & info)
-        {
-            os << "Latitude: " << info.lat_ << "\n"
-               << "Longitude: " << info.lon_ << "\n"
-               << "Accuracy (km): " << info.cep_ << "\n"
-               << "Timestamp: " << info.timestamp_;
-            return os;
-        }
+        friend std::ostream & operator<<(std::ostream & os, const RcvdMsgInfo & info);
+
+        static std::string mkTimestamp(const std::tm & tm);
     };
 
     /**
