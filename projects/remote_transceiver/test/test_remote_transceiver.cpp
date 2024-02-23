@@ -26,11 +26,10 @@ using remote_transceiver::TESTING_HOST;
 using remote_transceiver::TESTING_PORT;
 namespace http_client = remote_transceiver::http_client;
 
-static std::random_device      g_rd        = std::random_device();  // random number sampler
-static uint32_t                g_rand_seed = g_rd();                // seed used for random number generation
-static std::mt19937            g_mt(g_rand_seed);                   // initialize random number generator with seed
-static std::shared_ptr<UtilDB> g_test_db =
-  std::make_shared<UtilDB>("test", MONGODB_CONN_STR, std::make_shared<std::mt19937>(g_mt));
+static std::random_device g_rd        = std::random_device();  // random number sampler
+static uint32_t           g_rand_seed = g_rd();                // seed used for random number generation
+static std::mt19937       g_mt(g_rand_seed);                   // initialize random number generator with seed
+static UtilDB             g_test_db("test", MONGODB_CONN_STR, std::make_shared<std::mt19937>(g_mt));
 
 class TestRemoteTransceiver : public ::testing::Test
 {
@@ -64,7 +63,7 @@ protected:
         }
     }
 
-    TestRemoteTransceiver() { g_test_db->cleanDB(); }
+    TestRemoteTransceiver() { g_test_db.cleanDB(); }
 
     ~TestRemoteTransceiver() override {}
 };
@@ -112,7 +111,7 @@ std::string createPostBody(remote_transceiver::MOMsgParams::Params params)
 TEST_F(TestRemoteTransceiver, TestPostSensors)
 {
     SCOPED_TRACE("Seed: " + std::to_string(g_rand_seed));  // Print seed on any failure
-    auto [rand_sensors, rand_info] = g_test_db->genRandData();
+    auto [rand_sensors, rand_info] = g_test_db.genRandData();
 
     std::string rand_sensors_str;
     ASSERT_TRUE(rand_sensors.SerializeToString(&rand_sensors_str));
@@ -137,7 +136,7 @@ TEST_F(TestRemoteTransceiver, TestPostSensors)
 
     std::array<Sensors, 1>                expected_sensors = {rand_sensors};
     std::array<SailbotDB::RcvdMsgInfo, 1> expected_info    = {rand_info};
-    g_test_db->verifyDBWrite(expected_sensors, expected_info);
+    EXPECT_TRUE(g_test_db.verifyDBWrite(expected_sensors, expected_info));
 }
 
 /**
@@ -157,7 +156,7 @@ TEST_F(TestRemoteTransceiver, TestPostSensorsMult)
 
     // Prepare all queries
     for (int i = 0; i < NUM_REQS; i++) {
-        auto [rand_sensors, rand_info] = g_test_db->genRandData();
+        auto [rand_sensors, rand_info] = g_test_db.genRandData();
         expected_sensors[i]            = rand_sensors;
         expected_info[i]               = rand_info;
         std::string rand_sensors_str;
@@ -194,5 +193,5 @@ TEST_F(TestRemoteTransceiver, TestPostSensorsMult)
     std::this_thread::sleep_for(WAIT_AFTER_RES);
 
     // Check that DB is updated properly for all requests
-    g_test_db->verifyDBWrite(expected_sensors, expected_info);
+    EXPECT_TRUE(g_test_db.verifyDBWrite(expected_sensors, expected_info));
 }
