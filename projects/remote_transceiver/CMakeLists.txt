@@ -4,12 +4,14 @@ set(link_libs
     ${PROTOBUF_LINK_LIBS}
     mongo::mongocxx_shared
     mongo::bsoncxx_shared
+    sailbot_db
 )
 
 set(inc_dirs
     ${PROTOBUF_INCLUDE_PATH}
     ${LIBMONGOCXX_INCLUDE_DIRS}
     ${LIBBSONCXX_INCLUDE_DIRS}
+    ${SAILBOT_DB_INC_DIR}
 )
 
 set(compile_defs
@@ -25,7 +27,7 @@ set(bin_srcs
 )
 
 # Make executable
-make_ros_exe(${module} "${bin_srcs}" "${link_libs}" "${inc_dirs}" "${compile_defs}")
+make_exe(${module} "${bin_srcs}" "${link_libs}" "${inc_dirs}" "${compile_defs}")
 
 # Create unit test
 set(test_srcs

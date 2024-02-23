@@ -21,7 +21,7 @@ set(bin_srcs
     ${srcs}
     ${CMAKE_CURRENT_LIST_DIR}/src/cached_fib_ros_intf.cpp
 )
-make_ros_exe(${module} "${bin_srcs}" "${link_libs}" "${inc_dirs}" "${compile_defs}")
+make_exe(${module} "${bin_srcs}" "${link_libs}" "${inc_dirs}" "${compile_defs}")
 
 # Create unit test
 set(test_srcs

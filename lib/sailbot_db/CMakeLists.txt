@@ -17,10 +17,12 @@ set(compile_defs
 
 set(srcs
     ${CMAKE_CURRENT_LIST_DIR}/src/sailbot_db.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/src/util_db.cpp
 )
 
 # make sailbot_db library
 make_lib(${module} "${srcs}" "${link_libs}" "${inc_dirs}" "${compile_defs}")
+set(SAILBOT_DB_INC_DIR ${CMAKE_CURRENT_LIST_DIR}/inc CACHE INTERNAL "Sailbot DB header include directory")
 
 set(bin_srcs
     ${srcs}
