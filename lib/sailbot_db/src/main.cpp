@@ -62,8 +62,7 @@ int main(int argc, char ** argv)
 
         const std::string usage_instructions = [&o_desc]() {
             std::stringstream ss;
-            ss << "Usage: " << EXE_FILE
-               << " DB-NAME [COMMAND]\n\n"
+            ss << "Usage: sailbot_db DB-NAME [COMMAND]\n\n"
                // Need to separately print that DB-NAME is a positional argument
                << "DB-NAME: " << CLIOptDesc.at(CLIOpt::DBName) << "\n\n"
                << o_desc << std::endl;

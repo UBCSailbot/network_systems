@@ -8,11 +8,11 @@
 
 Given an input text file where each line is the name of a ROS topic, generates a C++ header file matching those names.
 
-## DB Util
+## Sailbot DB
 
 ```shell
-./db_util <db-name> [COMMAND]
-./db_util --help
+./sailbot_db <db-name> [COMMAND]
+./sailbot_db --help
 ```
 
 Wrapper for the [SailbotDB Utility DB tool](../lib/sailbot_db/src/main.cpp).

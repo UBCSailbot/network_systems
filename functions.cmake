@@ -30,6 +30,7 @@ function(make_exe module srcs link_libs inc_dirs compile_defs)
     install(TARGETS ${bin_module} DESTINATION lib/${PROJECT_NAME})
     # Rename the output binary to just be the module name
     set_target_properties(${bin_module} PROPERTIES OUTPUT_NAME ${module})
+    set(${module}_inc_dir ${CMAKE_CURRENT_LIST_DIR}/inc CACHE INTERNAL "${module} header include directory")
 endfunction()
 
 # Create unit test
