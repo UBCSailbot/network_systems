@@ -26,10 +26,11 @@ using remote_transceiver::TESTING_HOST;
 using remote_transceiver::TESTING_PORT;
 namespace http_client = remote_transceiver::http_client;
 
-static std::random_device g_rd        = std::random_device();  // random number sampler
-static uint32_t           g_rand_seed = g_rd();                // seed used for random number generation
-static std::mt19937       g_mt(g_rand_seed);                   // initialize random number generator with seed
-static UtilDB             g_test_db("test", MONGODB_CONN_STR, std::make_shared<std::mt19937>(g_mt));
+static const std::string  test_db_name = "test";
+static std::random_device g_rd         = std::random_device();  // random number sampler
+static uint32_t           g_rand_seed  = g_rd();                // seed used for random number generation
+static std::mt19937       g_mt(g_rand_seed);                    // initialize random number generator with seed
+static UtilDB             g_test_db(test_db_name, MONGODB_CONN_STR, std::make_shared<std::mt19937>(g_mt));
 
 class TestRemoteTransceiver : public ::testing::Test
 {
@@ -40,15 +41,16 @@ protected:
 
     // Network objects that are shared amongst all HTTP test suites
     static bio::io_context          io_;
-    static tcp::acceptor            acceptor_;
-    static tcp::socket              socket_;
     static std::vector<std::thread> io_threads_;
     static SailbotDB                server_db_;
-    static ::Listener               listener_;
+    static bio::ip::address         addr_;
 
     static void SetUpTestSuite()
     {
-        listener_.run();
+        std::make_shared<remote_transceiver::Listener>(
+          TestRemoteTransceiver::io_, tcp::endpoint{TestRemoteTransceiver::addr_, TESTING_PORT},
+          std::move(TestRemoteTransceiver::server_db_))
+          ->run();
 
         for (std::thread & io_thread : io_threads_) {
             io_thread = std::thread([]() { io_.run(); });
@@ -69,12 +71,10 @@ protected:
 };
 
 // Initialize static objects
-bio::io_context TestRemoteTransceiver::io_{TestRemoteTransceiver::NUM_THREADS};
-tcp::acceptor   TestRemoteTransceiver::acceptor_{io_, {bio::ip::make_address(TESTING_HOST), TESTING_PORT}};
-tcp::socket     TestRemoteTransceiver::socket_{io_};
-std::vector     TestRemoteTransceiver::io_threads_ = std::vector<std::thread>(NUM_THREADS);
-SailbotDB TestRemoteTransceiver::server_db_ = UtilDB("test", MONGODB_CONN_STR, std::make_shared<std::mt19937>(g_mt));
-Listener  TestRemoteTransceiver::listener_  = Listener(io_, std::move(acceptor_), std::move(server_db_));
+bio::io_context  TestRemoteTransceiver::io_{TestRemoteTransceiver::NUM_THREADS};
+std::vector      TestRemoteTransceiver::io_threads_ = std::vector<std::thread>(NUM_THREADS);
+SailbotDB        TestRemoteTransceiver::server_db_  = SailbotDB(test_db_name, MONGODB_CONN_STR);
+bio::ip::address TestRemoteTransceiver::addr_       = bio::ip::make_address(TESTING_HOST);
 
 /**
  * @brief Test HTTP GET request sending and handling. Currently just retrieves a placeholder string.

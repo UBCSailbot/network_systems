@@ -62,19 +62,47 @@ HTTPServer::HTTPServer(tcp::socket socket, SailbotDB & db) : socket_(std::move(s
 
 void HTTPServer::doAccept() { readReq(); }
 
-Listener::Listener(bio::io_context & io, tcp::acceptor acceptor, SailbotDB && db)
-: io_(io), acceptor_(std::move(acceptor)), db_(std::move(db)){};
+Listener::Listener(bio::io_context & io, tcp::endpoint endpoint, SailbotDB && db)
+: io_(io), acceptor_(bio::make_strand(io)), db_(std::move(db))
+{
+    beast::error_code ec;
+
+    try {
+        acceptor_.open(endpoint.protocol(), ec);
+        if (ec) {
+            throw(ec);
+        }
+
+        acceptor_.set_option(bio::socket_base::reuse_address(true), ec);
+        if (ec) {
+            throw(ec);
+        }
+
+        acceptor_.bind(endpoint, ec);
+        if (ec) {
+            throw(ec);
+        }
+
+        acceptor_.listen(bio::socket_base::max_listen_connections, ec);
+        if (ec) {
+            throw(ec);
+        }
+    } catch (beast::error_code ec) {
+        std::cerr << "Error: " << ec.message() << std::endl;
+    }
+};
 
 void Listener::run()
 {
-    acceptor_.async_accept(bio::make_strand(io_), [&](beast::error_code e, tcp::socket socket) {
+    std::shared_ptr<Listener> self = shared_from_this();
+    acceptor_.async_accept(bio::make_strand(io_), [self](beast::error_code e, tcp::socket socket) {
         if (!e) {
-            std::make_shared<HTTPServer>(std::move(socket), db_)->doAccept();
+            std::make_shared<HTTPServer>(std::move(socket), self->db_)->doAccept();
         } else {
             // Do not throw an error as we can still try to accept new requests
             std::cerr << "Error: " << e.message() << std::endl;
         }
-        run();
+        self->run();
     });
 }
 
@@ -85,6 +113,7 @@ void Listener::run()
 void HTTPServer::readReq()
 {
     std::shared_ptr<HTTPServer> self = shared_from_this();
+    req_                             = {};
     http::async_read(socket_, buf_, req_, [self](beast::error_code e, std::size_t /*bytesTransferred*/) {
         if (!e) {
             self->processReq();
@@ -97,6 +126,7 @@ void HTTPServer::readReq()
 
 void HTTPServer::processReq()
 {
+    res_ = {};
     res_.version(req_.version());
     res_.keep_alive(false);  // Expect very infrequent requests, so disable keep alive
 
