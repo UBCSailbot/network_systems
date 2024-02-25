@@ -71,17 +71,79 @@ bool isFloatEQ(T to_check, T expected)
     return isFloatEQ<T>(to_check, expected, "");
 }
 
+/**
+ * @brief Check if two non-floating point values are equal and output an error on mismatch
+ *
+ * @tparam T non-floating point type
+ * @param rcvd     received value
+ * @param expected expected value
+ * @param err_msg  error string
+ * @return true  if rcvd and expected match
+ * @return false otherwise
+ */
+template <not_float T>
+bool checkEQ(T rcvd, T expected, const std::string & err_msg)
+{
+    if (rcvd != expected) {
+        std::cerr << "Expected: " << expected << " but received: " << rcvd << std::endl;
+        std::cerr << err_msg << std::endl;
+        return false;
+    }
+    return true;
+};
+
+/**
+ * @brief Check if two floating point values are equal using isFloatEq() and output an error on mismatch
+ *
+ * @tparam T floating point values (float, double, etc...)
+ * @param rcvd     received value
+ * @param expected expected value
+ * @param err_msg  error string
+ * @return true  if rcvd and expected match
+ * @return false otherwise
+ */
+template <std::floating_point T>
+bool checkEQ(T rcvd, T expected, const std::string & err_msg)
+{
+    std::stringstream ss;
+    ss << "Expected: " << expected << " but received: " << rcvd << "\n" << err_msg;
+    return static_cast<bool>(utils::isFloatEQ<T>(rcvd, expected, ss.str()));
+};
+
+/**
+ * @brief Simple class to count number of failures
+ *
+ */
 class FailTracker
 {
 public:
+    /**
+     * @brief Update the tracker
+     *
+     * @param was_success result of operation to check
+     */
     void track(bool was_success)
     {
         if (!was_success) {
             fail_count_++;
         }
     }
-    void     reset() { fail_count_ = 0; }
-    bool     failed() const { return fail_count_ != 0; }
+
+    /**
+     * @brief Reset fail count
+     *
+     */
+    void reset() { fail_count_ = 0; }
+
+    /**
+     * @return true  if any failures were tracked
+     * @return false otherwise
+     */
+    bool failed() const { return fail_count_ != 0; }
+
+    /**
+     * @return number of failures
+     */
     uint32_t failCount() const { return fail_count_; }
 
 private:

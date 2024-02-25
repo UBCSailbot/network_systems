@@ -108,8 +108,8 @@ int main(int argc, char ** argv)
     if (vm.count(to_string(CLIOpt::DumpSensors)) != 0) {
         utils::FailTracker t;
         auto [sensors_vec, timestamp_vec] = db.dumpSensors(t, 1);
-        std::cout << "Latest sensors:\n\n" << sensors_vec[0].DebugString() << std::endl;
-        std::cout << "Timestamp: " << timestamp_vec[0] << std::endl;
+        std::cout << "Latest sensors:\n\n" << sensors_vec.at(sensors_vec.size() - 1).DebugString() << std::endl;
+        std::cout << "Timestamp: " << timestamp_vec.at(sensors_vec.size() - 1) << std::endl;
     }
 
     if (vm.count(to_string(CLIOpt::DumpGlobalPath)) != 0) {

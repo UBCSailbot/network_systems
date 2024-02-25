@@ -4,7 +4,7 @@
 EXE=$ROS_WORKSPACE/build/network_systems/lib/sailbot_db/db_util
 
 if [ -f $EXE ]; then
-    $EXE
+    $EXE "$@"
 else
     echo "$EXE not found! Did you build network_systems?"
 fi

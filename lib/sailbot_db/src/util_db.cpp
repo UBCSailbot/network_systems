@@ -18,27 +18,6 @@
 
 using Polaris::Sensors;
 
-namespace
-{
-template <not_float T>
-bool checkEQ(T rcvd, T expected, const std::string & err_msg)
-{
-    if (rcvd != expected) {
-        std::cerr << "Expected: " << expected << " but received: " << rcvd << std::endl;
-        std::cerr << err_msg << std::endl;
-        return false;
-    }
-    return true;
-};
-template <std::floating_point T>
-bool checkFloatEQ(T rcvd, T expected, const std::string & err_msg)
-{
-    std::stringstream ss;
-    ss << "Expected: " << expected << " but received: " << rcvd << "\n" << err_msg;
-    return static_cast<bool>(utils::isFloatEQ<T>(rcvd, expected, ss.str()));
-};
-}  // namespace
-
 void UtilDB::cleanDB()
 {
     mongocxx::pool::entry entry = pool_->acquire();
@@ -119,10 +98,10 @@ bool UtilDB::verifyDBWrite(std::span<Sensors> expected_sensors, std::span<Sailbo
     utils::FailTracker tracker;
 
     auto expectEQ = [&tracker]<not_float T>(T rcvd, T expected, const std::string & err_msg) -> void {
-        tracker.track(checkEQ(rcvd, expected, err_msg));
+        tracker.track(utils::checkEQ(rcvd, expected, err_msg));
     };
     auto expectFloatEQ = [&tracker]<std::floating_point T>(T rcvd, T expected, const std::string & err_msg) -> void {
-        tracker.track(checkFloatEQ(rcvd, expected, err_msg));
+        tracker.track(utils::checkEQ(rcvd, expected, err_msg));
     };
 
     expectEQ(expected_sensors.size(), expected_msg_info.size(), "Must have msg info for each set of Sensors");
@@ -194,7 +173,7 @@ std::pair<std::vector<Sensors>, std::vector<std::string>> UtilDB::dumpSensors(
   utils::FailTracker & tracker, size_t num_docs)
 {
     auto expectEQ = [&tracker]<not_float T>(T rcvd, T expected, const std::string & err_msg) -> void {
-        tracker.track(checkEQ(rcvd, expected, err_msg));
+        tracker.track(utils::checkEQ(rcvd, expected, err_msg));
     };
 
     std::vector<Sensors>     sensors_vec(num_docs);

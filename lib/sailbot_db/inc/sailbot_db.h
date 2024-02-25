@@ -10,88 +10,8 @@
 #include "sensors.pb.h"
 #include "waypoint.pb.h"
 
-// BSON document formats (from: https://ubcsailbot.atlassian.net/wiki/spaces/prjt22/pages/1907589126/Database+Schemas):
-
-// GPS
-// {
-//   latitude: decimal,
-//   longitude: decimal,
-//   speed: decimal,
-//   heading: decimal,
-//   timestamp: <year - 2000>-<month>-<day> <hour>:<minute>:<second>
-// }
-
-// Global Path
-// {
-//   waypoints: [
-//     {
-//       latitude: decimal,
-//       longitude: decimal
-//     }
-//   ],
-//   timestamp: <year - 2000>-<month>-<day> <hour>:<minute>:<second>
-// }
-
-// Local Path
-// {
-//   waypoints: [
-//     {
-//       latitude: decimal,
-//       longitude: decimal
-//     }
-//   ],
-//   timestamp: <year - 2000>-<month>-<day> <hour>:<minute>:<second>
-// }
-
-// AIS Ships
-// {
-//   ships: [
-//     {
-//       id: Number,
-//       latitude: decimal,
-//       longitude: decimal,
-//       cog: decimal,
-//       rot: decimal,
-//       sog: decimal,
-//       width: decimal,
-//       length: decimal
-//     }
-//   ],
-//   timestamp: <year - 2000>-<month>-<day> <hour>:<minute>:<second>
-// }
-
-// Generic Sensors
-// {
-//   genericSensors: [
-//     {
-//       id: integer
-//       data: long
-//     }
-//   ],
-//   timestamp: <year - 2000>-<month>-<day> <hour>:<minute>:<second>
-// }
-
-// Wind Sensors
-// {
-//   windSensors: [
-//     {
-//       speed: decimal,
-//       direction: number
-//     }
-//   ],
-//   timestamp: <year - 2000>-<month>-<day> <hour>:<minute>:<second>
-// }
-
-// Batteries
-// {
-//   batteries: [
-//     {
-//       voltage: decimal,
-//       current: decimal
-//     }
-//   ],
-//   timestamp: <year - 2000>-<month>-<day> <hour>:<minute>:<second>
-// }
+// >>>>IMPORTANT<<<<<
+// BSON document formats from: https://ubcsailbot.atlassian.net/wiki/spaces/prjt22/pages/1907589126/Database+Schemas:
 
 const std::string COLLECTION_AIS_SHIPS    = "ais_ships";
 const std::string COLLECTION_BATTERIES    = "batteries";
@@ -127,6 +47,12 @@ public:
          */
         friend std::ostream & operator<<(std::ostream & os, const RcvdMsgInfo & info);
 
+        /**
+         * @brief Get a properly formatted timestamp string
+         *
+         * @param tm standard C/C++ time structure
+         * @return tm converted to a timestamp string
+         */
         static std::string mkTimestamp(const std::tm & tm);
     };
 
