@@ -57,11 +57,11 @@ public:
     bool verifyDBWrite(
       std::span<Polaris::Sensors> expected_sensors, std::span<SailbotDB::RcvdMsgInfo> expected_msg_info);
 
-private:
-    std::shared_ptr<std::mt19937> rng_;
-
     std::pair<std::vector<Polaris::Sensors>, std::vector<std::string>> dumpSensors(
       utils::FailTracker & tracker, size_t num_docs = 1);
+
+private:
+    std::shared_ptr<std::mt19937> rng_;
 
     /**
     * @brief generate random GPS data
