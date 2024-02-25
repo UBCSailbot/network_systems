@@ -1,5 +1,7 @@
 set(module sailbot_db)
 
+set(exe_file db_util)
+
 set(link_libs
     ${PROTOBUF_LINK_LIBS}
     mongo::mongocxx_shared
@@ -13,6 +15,7 @@ set(inc_dirs
 )
 
 set(compile_defs
+    EXE_FILE="${exe_file}"
 )
 
 set(srcs
@@ -30,7 +33,7 @@ set(bin_srcs
 )
 
 # Make executable
-make_exe(${module} "${bin_srcs}" "${link_libs}" "${inc_dirs}" "${compile_defs}")
+make_exe(${exe_file} "${bin_srcs}" "${link_libs}" "${inc_dirs}" "${compile_defs}")
 
 # Create unit test
 set(test_srcs

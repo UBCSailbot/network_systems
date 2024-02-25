@@ -14,7 +14,7 @@ function(make_lib module srcs link_libs inc_dirs compile_defs)
 endfunction()
 
 # Create project module ROS executable
-function(make_exe module srcs link_libs inc_dirs ${compile_defs})
+function(make_exe module srcs link_libs inc_dirs compile_defs)
     set(bin_module bin_${module})
     add_executable(${bin_module} ${srcs})
     target_compile_definitions(${bin_module} PUBLIC ${compile_defs})
