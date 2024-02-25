@@ -8,6 +8,14 @@
 
 Given an input text file where each line is the name of a ROS topic, generates a C++ header file matching those names.
 
+## HTTP Echo Server
+
+```shell
+python3 http_echo_server.py
+```
+
+Runs a simple HTTP server that just echos the requests it receives. Default host is `http://127.0.0.1:8081`.
+
 ## Run Virtual Iridium
 
 ```shell
@@ -21,7 +29,7 @@ Allows testing of satellite code without needing physical hardware.
 Optional argument - webhook server url:
 
 - Specify where the URL where the Remote Transceiver or whatever other HTTP server is running.
-- Default is 127.0.0.1:8081, which assumes fully local testing.
+- Default is `http://127.0.0.1:8081`, which assumes fully local testing.
 
 Optional argument - virtual iridium server port
 
