@@ -37,7 +37,6 @@ protected:
  */
 TEST_F(TestCanFrameParser, BatteryTestValid)
 {
-    //TODO implement this test
     constexpr std::array<float, NUM_BATTERIES>   expected_volts{12.5, 10.6};
     constexpr std::array<float, NUM_BATTERIES>   expected_currs{2.5, -1.0};  // negative currents are valid
     constexpr std::array<int16_t, NUM_BATTERIES> expected_raw_volts{1250, 1060};
@@ -201,19 +200,14 @@ protected:
     int                   fd_;
     TestCanTransceiver()
     {
-        const static std::string tmp_file_template_str = "/tmp/TestCanTransceiverXXXXXX";
-        std::vector<char>        tmp_file_template_cstr(
-                 tmp_file_template_str.c_str(), tmp_file_template_str.c_str() + tmp_file_template_str.size() + 1);
-        fd_ = mkstemp(tmp_file_template_cstr.data());
-        EXPECT_NE(fd_, -1) << "Failed to open a test file with error: " << errno << ": "
-                           << strerror(errno);  // NOLINT(concurrency-mt-unsafe)
+        fd_       = mockCanFd("/tmp/TestCanTransceiverXXXXXX");
         canbus_t_ = new CanTransceiver(fd_);
     }
     ~TestCanTransceiver() override { delete canbus_t_; }
 };
 
 /**
- * @brief Test the callbacks that get called on new data
+ * @brief Test that callbacks can be properly registered and invoked on desired CanIds
  *
  */
 TEST_F(TestCanTransceiver, TestNewDataValid)
@@ -229,12 +223,8 @@ TEST_F(TestCanTransceiver, TestNewDataValid)
 
     // just need a valid and matching ID for this test
     CAN_FP::CanFrame dummy_frame{.can_id = static_cast<canid_t>(CAN_FP::CanId::BMS_P_DATA_FRAME_1)};
-    std::copy(std::begin(GARBAGE_DATA), std::end(GARBAGE_DATA), dummy_frame.data);
 
     canbus_t_->send(dummy_frame);
-    // Since we're writing to the same file we're reading from, we need to reset the seek offset
-    // This is NOT necessary in deployment as we won't be using a file to mock it
-    lseek(fd_, 0, SEEK_SET);
 
     std::this_thread::sleep_for(SLEEP_TIME);
 

@@ -509,15 +509,15 @@ protected:
 
     // Network objects that are shared amongst all HTTP test suites
     static bio::io_context          io_;
-    static tcp::acceptor            acceptor_;
-    static tcp::socket              socket_;
     static std::vector<std::thread> io_threads_;
     static SailbotDB                server_db_;
-    static ::Listener               listener_;
+    static bio::ip::address         addr_;
 
     static void SetUpTestSuite()
     {
-        listener_.run();
+        std::make_shared<remote_transceiver::Listener>(
+          TestHTTP::io_, tcp::endpoint{TestHTTP::addr_, TESTING_PORT}, std::move(TestHTTP::server_db_))
+          ->run();
 
         for (std::thread & io_thread : io_threads_) {
             io_thread = std::thread([]() { io_.run(); });
@@ -541,12 +541,10 @@ protected:
 };
 
 // Initialize static objects
-bio::io_context TestHTTP::io_{TestHTTP::NUM_THREADS};
-tcp::acceptor   TestHTTP::acceptor_{io_, {bio::ip::make_address(TESTING_HOST), TESTING_PORT}};
-tcp::socket     TestHTTP::socket_{io_};
-std::vector     TestHTTP::io_threads_ = std::vector<std::thread>(NUM_THREADS);
-SailbotDB       TestHTTP::server_db_  = TestDB();
-Listener        TestHTTP::listener_   = Listener(io_, std::move(acceptor_), std::move(server_db_));
+bio::io_context  TestHTTP::io_{TestHTTP::NUM_THREADS};
+std::vector      TestHTTP::io_threads_ = std::vector<std::thread>(NUM_THREADS);
+SailbotDB        TestHTTP::server_db_  = TestDB();
+bio::ip::address TestHTTP::addr_       = bio::ip::make_address(TESTING_HOST);
 
 /**
  * @brief Test HTTP GET request sending and handling. Currently just retrieves a placeholder string.
