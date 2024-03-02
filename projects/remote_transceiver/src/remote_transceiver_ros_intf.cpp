@@ -74,19 +74,25 @@ public:
 
             // create a sailbot_db object given an address to MongoDB
             SailbotDB sailbot_db(db_name, MONGODB_CONN_STR);
+            // test the connection to ensure that the DB is made
             if (!sailbot_db.testConnection()) {
                 throw std::runtime_error("Failed to connect to database");
             }
 
             try {
+                // create the io synchronizer and reserve the number of threads for connection
                 io_ = std::make_unique<bio::io_context>(num_threads);
                 io_threads_.reserve(num_threads);
+                // given an IP address string, create a boost ip address obj
                 bio::ip::address addr = bio::ip::make_address(host);
 
+                // create a listener and pass it the io context, a created tcp:endpoint given ip and port and
+                // pass ownership of the db to the listener and remote transciever
                 std::make_shared<remote_transceiver::Listener>(
                   *io_, tcp::endpoint{addr, static_cast<uint16_t>(port)}, std::move(sailbot_db))
                   ->run();
 
+                // create a thread, pass the reference of the boost asio obj to the thread and run it
                 for (std::thread & io_thread : io_threads_) {
                     io_thread = std::thread([&io_ = io_]() { io_->run(); });
                 }
@@ -122,6 +128,7 @@ private:
 
 int main(int argc, char ** argv)
 {
+    // main function that spins on the ros network, handles new ros messages and synchronization
     rclcpp::init(argc, argv);
     try {
         rclcpp::spin(std::make_shared<RemoteTransceiverRosIntf>());

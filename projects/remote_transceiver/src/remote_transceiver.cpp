@@ -212,7 +212,8 @@ void HTTPServer::doPost()
                 MOMsgParams::Params params = MOMsgParams(query_string).params_;
                 if (!params.data_.empty()) {   // if our params has data in it
                     Polaris::Sensors sensors;  // create new sensors object
-                    // obtain information about iridium header which contains lat, lon, cep_ and transmit_time_
+                    // obtain information about iridium header which contains lat, lon, cep_ and transmit_time_ and put it
+                    // into a sailbot db message info object
                     SailbotDB::RcvdMsgInfo info = {params.lat_, params.lon_, params.cep_, params.transmit_time_};
 
                     // create polaris sensors object from data_string sent from iridium
@@ -275,10 +276,12 @@ void HTTPServer::writeRes()
 // sends a get request to the test server used in testing
 std::pair<http::status, std::string> http_client::get(ConnectionInfo info)
 {
+    // create io, socket and TCP resolver
     bio::io_context io;
     tcp::socket     socket{io};
     tcp::resolver   resolver{io};
 
+    // obtain information to the test server
     auto [host, port, target] = info.get();
 
     tcp::resolver::results_type const results = resolver.resolve(host, port);
