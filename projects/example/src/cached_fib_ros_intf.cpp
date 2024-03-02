@@ -1,5 +1,6 @@
 // Include this module
 #include "cached_fib.h"
+#include "net_node.h"
 // Include ROS headers
 #include <rclcpp/rclcpp.hpp>
 #include <std_msgs/msg/u_int64.hpp>
@@ -10,10 +11,10 @@ constexpr int ROS_Q_SIZE    = 10;
 constexpr int INIT_FIB_SIZE = 5;
 }  // namespace
 
-class CachedFibNode : public rclcpp::Node
+class CachedFibNode : public NetNode
 {
 public:
-    explicit CachedFibNode(const std::size_t initSize) : Node("cached_fib_node"), c_fib_(initSize)
+    explicit CachedFibNode(const std::size_t initSize) : NetNode("cached_fib_node"), c_fib_(initSize)
     {
         this->declare_parameter("enabled", false);
         bool enabled = this->get_parameter("enabled").as_bool();
