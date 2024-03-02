@@ -5,12 +5,14 @@
 #include <bsoncxx/builder/stream/helpers.hpp>
 #include <bsoncxx/json.hpp>
 #include <cstdint>
+#include <iomanip>
 #include <iostream>
 #include <memory>
 #include <mongocxx/client.hpp>
 #include <mongocxx/collection.hpp>
 #include <mongocxx/database.hpp>
 #include <mongocxx/instance.hpp>
+#include <sstream>
 
 #include "global_path.pb.h"
 #include "sensors.pb.h"
@@ -22,6 +24,27 @@ using Polaris::Sensors;
 mongocxx::instance SailbotDB::inst_{};  // staticallly initialize instance
 
 // PUBLIC
+
+std::ostream & operator<<(std::ostream & os, const SailbotDB::RcvdMsgInfo & info)
+{
+    os << "Latitude: " << info.lat_ << "\n"
+       << "Longitude: " << info.lon_ << "\n"
+       << "Accuracy (km): " << info.cep_ << "\n"
+       << "Timestamp: " << info.timestamp_;
+    return os;
+}
+
+std::string SailbotDB::RcvdMsgInfo::mkTimestamp(const std::tm & tm)
+{
+    // This is impossible to read. It's reading each field of tm and 0 padding it to 2 digits with either "-" or ":"
+    // in between each number
+    std::stringstream tm_ss;
+    tm_ss << std::setfill('0') << std::setw(2) << tm.tm_year << "-" << std::setfill('0') << std::setw(2) << tm.tm_mon
+          << "-" << std::setfill('0') << std::setw(2) << tm.tm_mday << " " << std::setfill('0') << std::setw(2)
+          << tm.tm_hour << ":" << std::setfill('0') << std::setw(2) << tm.tm_min << ":" << std::setfill('0')
+          << std::setw(2) << tm.tm_sec;
+    return tm_ss.str();
+}
 
 SailbotDB::SailbotDB(const std::string & db_name, const std::string & mongodb_conn_str) : db_name_(db_name)
 {

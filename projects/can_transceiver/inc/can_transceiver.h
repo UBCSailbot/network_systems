@@ -8,103 +8,93 @@
 #include "can_frame_parser.h"
 
 /**
- * Abstract CAN Transceiver Class
- * Handles transmission and reception of data to and from the hardware/simulator
+ * @brief CAN Transceiver Class
+ *        Handles transmission and reception of data to and from the hardware/simulator
  *
  */
 class CanTransceiver
 {
 public:
     /**
-    * @brief Destroy the Can Transceiver object
+    * @brief Construct a new Can Transceiver and connect it to the default CAN interface (can0)
+    * @note  Can only be used in deployment
     *
     */
-    virtual ~CanTransceiver() = 0;
+    CanTransceiver();
 
     /**
-     * @brief Call when a new command (ex. rudder command) needs to be executed
-     *        Passes the command down to the hardware/simulator
+     * @brief Construct a new Can Transceiver and connect it to an existing and open file descriptor
+     * @note  Can only be used if simulating the CAN bus
+     *
+     * @param fd
+     */
+    explicit CanTransceiver(int fd);
+
+    /**
+     * @brief Close the opened CAN port and kill the receive() thread
      *
      */
-    void onNewCmd(CanId id /*, other data fields... */);
+    ~CanTransceiver();
 
     /**
-     * @brief Retrieve the most recent set of sensors data
+     * @brief Send a CAN frame to the CAN port
      *
-     * @return Data in some format - string is just a placeholder; DO NOT USE STRING IN ACTUAL IMPLEMENTATION
+     * @param frame CAN frame to send
      */
-    std::string getRecentSensors();
+    void send(const CAN_FP::CanFrame & frame) const;
 
-protected:
-    // Buffer where recent data is stored - DO NOT USE VOID POINTER IN ACTUAL IMPLEMENTATION
-    void * sensor_buf_;
     /**
-     * @brief Retrieve latest incoming data from hardware/simulator and process it
+     * @brief Register a CanId -> CallbackFunc mapping to be called when the CanId is read from the CAN port
      *
+     * @param cb_kvp pair of CanId and the callback function to associate with it
      */
-    virtual void receive() = 0;
+    void registerCanCb(std::pair<CAN_FP::CanId, std::function<void(const CAN_FP::CanFrame &)>> cb_kvp);
 
     /**
-     * @brief Send a command to the hardware/simulator
+     * @brief Register multiple CanId -> CallbackFunc mappings. See registerCanCb().
      *
-     * @param frame Command frame to send
+     * @param cb_kvps initializer list of cb_kvp pairs
      */
-    virtual void send(const CanFrame & frame) const = 0;
-
-    /**
-     * @brief Call on receiving a new CAN data frame from hardware/simulator
-     *
-     * @param frame received CAN data frame
-     */
-    void onNewCanData(const CanFrame & frame);
-};
-
-/**
- * Implementation of CAN Transceiver that interfaces with CAN hardware
- *
- */
-class CanbusIntf : public CanTransceiver
-{
-public:
-    /**
-    * @brief Construct a new Canbus Intf object and start listening for incoming data on a new thread
-    *
-    * @param can_inst
-    */
-    explicit CanbusIntf(const std::string & can_inst);
-
-    /**
-     * @brief Destroy the Canbus Intf object
-     *
-     */
-    ~CanbusIntf();
+    void registerCanCbs(
+      const std::initializer_list<std::pair<CAN_FP::CanId, std::function<void(const CAN_FP::CanFrame &)>>> & cb_kvps);
 
 private:
+    // CAN socket this instance is attached to (can be a normal file descriptor when simulating)
+    int sock_desc_;
+    // flag to indicate whether the connected CAN socket is a simulated socket or a real socket
+    bool is_can_simulated_;
+    // Mutex to protect the CAN port from simultaneous reads and writes
+    // mutable keyword required for std::lock_guard
+    mutable std::mutex can_mtx_;
+
     // Thread that listens to CAN
     std::thread receive_thread_;
+    // Flag to tell the receive_thread_ to stop
+    bool shutdown_flag_ = false;
 
-    // CAN socket this instance is attached to
-    int sock_desc_;
+    // For each CanId key in this map, if the CanId is read from the CAN bus, then the associated callback function
+    // is invoked
+    std::map<CAN_FP::CanId, std::function<void(const CAN_FP::CanFrame &)>> read_callbacks_;
 
     /**
      * @brief Retrieve latest incoming CAN frame from hardware and process it
-     *
+     *        Infinitely loops on a read() syscall, so needs to be run in another thread
+     *        Can be shutdown by setting shutdown_flag_ to true
      */
     void receive();
 
     /**
-     * @brief Send a command to hardware
+     * @brief Call on successfully reading a new CAN data frame from hardware/simulator
      *
-     * @param frame command frame to send
+     * @param frame received CAN data frame
      */
-    void send(const CanFrame & frame) const;
+    void onNewCanData(const CAN_FP::CanFrame & frame) const;
 };
 
 /**
- * Implementation of CAN Transceiver that interfaces with the simulator
+ * @brief Create a mock CAN socket descriptor for simulation purposes
  *
+ * @param template_str File path ending in XXXXXX. Ex: "/tmp/fileXXXXXX"
+ * @return int opened file descriptor
  */
-class CanSimTransceiver : public CanTransceiver
-{
-    void receive();
-};
+int mockCanFd(std::string template_str);
