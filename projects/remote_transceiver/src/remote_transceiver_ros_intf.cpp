@@ -1,4 +1,5 @@
 #include <boost/asio/io_context.hpp>
+#include <boost/asio/strand.hpp>
 #include <iostream>
 #include <memory>
 #include <rclcpp/parameter.hpp>
@@ -30,10 +31,9 @@ public:
             rclcpp::Parameter mode_param = this->get_parameter("mode");
             std::string       mode       = mode_param.as_string();
 
-            // setup local variables
-            std::string default_db_name;    // Database name from remote_transciever.h (placeholder for now)
-            std::string default_host;       // IP address of the server (localhost for now)
-            int64_t     default_port;       // connection request port for the server
+            std::string default_db_name;
+            std::string default_host;
+            int64_t     default_port;
             int64_t     default_num_threads = remote_transceiver::DEFAULT_NUM_IO_THREADS;
 
             if (mode == SYSTEM_MODE::PROD) {
@@ -79,20 +79,14 @@ public:
             }
 
             try {
-                io_ = std::make_unique<bio::io_context>(num_threads);  // create boost async io handler and specify number concurrent requests
-                io_threads_.reserve(num_threads);                      // reserve space for num_treads thread objects in vector
-                bio::ip::address addr = bio::ip::make_address(host);   // given a string representation of an IP address, make a boost ip address obj
+                io_ = std::make_unique<bio::io_context>(num_threads);
+                io_threads_.reserve(num_threads);
+                bio::ip::address addr = bio::ip::make_address(host);
 
-                tcp::acceptor acceptor{*io_, {addr, static_cast<uint16_t>(port)}};  // create an accept object that handles black box accepting of new connections
-                                                                                    // based on the ip address and accept port of the server
-                tcp::socket   socket{*io_}; // ??                                   // creates a tcp socket and binds that socket to the async io handler
+                std::make_shared<remote_transceiver::Listener>(
+                  *io_, tcp::endpoint{addr, static_cast<uint16_t>(port)}, std::move(sailbot_db))
+                  ->run();
 
-                // given an async io handler, an acceptor, and a sailbot_db, create HTTPHandler and give acceptor and sailbot_db to handler
-                listener_ =
-                  std::make_unique<remote_transceiver::Listener>(*io_, std::move(acceptor), std::move(sailbot_db));
-                listener_->run();   // async run and begin listening for connection requests
-
-                // for every concurrent thread we selected, create a thread and call run on async handler so we technically have "num_threads" async handlers
                 for (std::thread & io_thread : io_threads_) {
                     io_thread = std::thread([&io_ = io_]() { io_->run(); });
                 }
@@ -121,9 +115,8 @@ public:
     }
 
 private:
-    std::unique_ptr<remote_transceiver::Listener> listener_;    // Pointer to the HTTP Listener
-    std::unique_ptr<bio::io_context>              io_;          // io_context that all boost::asio operations run off of
-    std::vector<std::thread>                      io_threads_;  // Vector of all concurrent IO/HTTP request threads
+    std::unique_ptr<bio::io_context> io_;          // io_context that all boost::asio operations run off of
+    std::vector<std::thread>         io_threads_;  // Vector of all concurrent IO/HTTP request threads
     bool enabled_;  // Status flag that indicates whether the Remote Transceiver is running or not
 };
 
@@ -131,8 +124,7 @@ int main(int argc, char ** argv)
 {
     rclcpp::init(argc, argv);
     try {
-        rclcpp::spin(std::make_shared<RemoteTransceiverRosIntf>()); // initialize Remote transciever (listener -> on new connection -> server for connection)
-                                                                    // blocks on remote transciever and only runs constructor once
+        rclcpp::spin(std::make_shared<RemoteTransceiverRosIntf>());
     } catch (std::runtime_error & e) {
         std::cerr << e.what() << std::endl;
         return -1;

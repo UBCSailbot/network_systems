@@ -72,25 +72,49 @@ HTTPServer::HTTPServer(tcp::socket socket, SailbotDB & db) : socket_(std::move(s
 // accepts its connection and calls private readReq function
 void HTTPServer::doAccept() { readReq(); }
 
-// constructor for a listener that takes in an async io handler, tcp acceptor bound to a specific ip and port and a sailbot db instance for the servers
-Listener::Listener(bio::io_context & io, tcp::acceptor acceptor, SailbotDB && db)
-: io_(io), acceptor_(std::move(acceptor)), db_(std::move(db)){};
+Listener::Listener(bio::io_context & io, tcp::endpoint endpoint, SailbotDB && db)
+: io_(io), acceptor_(bio::make_strand(io)), db_(std::move(db))
+{
+    beast::error_code ec;
+
+    try {
+        acceptor_.open(endpoint.protocol(), ec);
+        if (ec) {
+            throw(ec);
+        }
+
+        acceptor_.set_option(bio::socket_base::reuse_address(true), ec);
+        if (ec) {
+            throw(ec);
+        }
+
+        acceptor_.bind(endpoint, ec);
+        if (ec) {
+            throw(ec);
+        }
+
+        acceptor_.listen(bio::socket_base::max_listen_connections, ec);
+        if (ec) {
+            throw(ec);
+        }
+    } catch (beast::error_code ec) {
+        std::cerr << "Error: " << ec.message() << std::endl;
+    }
+};
 
 // endless run function that creates an HTTP server and attaches it to the sailbot_db instance and its own private socket then instructs the new server to
 // accept the new connection request -> want one strand per listener
 void Listener::run()
 {
-    // for this tcp acceptor, we will make a strand, and then associate this function with the strand, this enables
-    // the function to be called synchronously
-    // uses overload 3 of 6
-    acceptor_.async_accept(bio::make_strand(io_), [&](beast::error_code e, tcp::socket socket) {
+    std::shared_ptr<Listener> self = shared_from_this();
+    acceptor_.async_accept(bio::make_strand(io_), [self](beast::error_code e, tcp::socket socket) {
         if (!e) {
-            std::make_shared<HTTPServer>(std::move(socket), db_)->doAccept();  // strand creates
+            std::make_shared<HTTPServer>(std::move(socket), self->db_)->doAccept();
         } else {
             // Do not throw an error as we can still try to accept new requests
             std::cerr << "Error: " << e.message() << std::endl;
         }
-        run();
+        self->run();
     });
 }
 
@@ -104,6 +128,7 @@ void HTTPServer::readReq()
     // obtains a pointer to the HTTPserver associated with caller so it can be accessed in the callback function
     std::shared_ptr<HTTPServer> self = shared_from_this();
     // asynchronously read from the socket which contains our request into req_ and process it
+    req_ = {};
     http::async_read(socket_, buf_, req_, [self](beast::error_code e, std::size_t /*bytesTransferred*/) {
         if (!e) {
             // call processReq
@@ -119,6 +144,7 @@ void HTTPServer::readReq()
 void HTTPServer::processReq()
 {
     // set result version cause its the same
+    res_ = {};
     res_.version(req_.version());
     // disconnect after receiving post
     res_.keep_alive(false);  // Expect very infrequent requests, so disable keep alive

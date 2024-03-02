@@ -160,7 +160,7 @@ public:
      * @param acceptor tcp::acceptor configured with desired host and port
      * @param db       SailbotDB instance - the Listener requires that it takes ownership of the db
      */
-    Listener(bio::io_context & io, tcp::acceptor acceptor, SailbotDB && db);
+    Listener(bio::io_context & io, tcp::endpoint endpoint, SailbotDB && db);
 
     /**
      * @brief Run the Listener
