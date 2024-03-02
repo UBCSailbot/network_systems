@@ -323,7 +323,7 @@ void WindSensor::checkBounds() const
 
 // GPS START
 // GPS public START
-
+/*
 GPS::GPS(const CanFrame & cf) : GPS(static_cast<CanId>(cf.can_id)) { updateRos(cf); }
 
 GPS::GPS(msg::GPS ros_gps, CanId id)
@@ -473,6 +473,6 @@ void GPS::checkBounds() const
         std::string err_msg = err.value();
         throw std::out_of_range("Heading is out of bounds!\n" + debugStr() + "\n" + err_msg);
     }
-}
+}*/
 
 }  // namespace CAN_FP
