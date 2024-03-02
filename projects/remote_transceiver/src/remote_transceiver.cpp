@@ -72,27 +72,30 @@ HTTPServer::HTTPServer(tcp::socket socket, SailbotDB & db) : socket_(std::move(s
 // accepts its connection and calls private readReq function
 void HTTPServer::doAccept() { readReq(); }
 
+// listener constructor that opens a tcp endpoint and listens to it
 Listener::Listener(bio::io_context & io, tcp::endpoint endpoint, SailbotDB && db)
 : io_(io), acceptor_(bio::make_strand(io)), db_(std::move(db))
 {
     beast::error_code ec;
 
     try {
+        // open a socket given the endpoint
         acceptor_.open(endpoint.protocol(), ec);
         if (ec) {
             throw(ec);
         }
-
+        // use the same address for the acceptor
         acceptor_.set_option(bio::socket_base::reuse_address(true), ec);
         if (ec) {
             throw(ec);
         }
-
+        // bind to the socket
         acceptor_.bind(endpoint, ec);
         if (ec) {
             throw(ec);
         }
 
+        // listen to the socket for incoming connections
         acceptor_.listen(bio::socket_base::max_listen_connections, ec);
         if (ec) {
             throw(ec);
@@ -106,7 +109,9 @@ Listener::Listener(bio::io_context & io, tcp::endpoint endpoint, SailbotDB && db
 // accept the new connection request -> want one strand per listener
 void Listener::run()
 {
+    // obtain pointer to listener
     std::shared_ptr<Listener> self = shared_from_this();
+    // asynchronously wait for new connection and accept on a strand, calls the lambda function on new message
     acceptor_.async_accept(bio::make_strand(io_), [self](beast::error_code e, tcp::socket socket) {
         if (!e) {
             std::make_shared<HTTPServer>(std::move(socket), self->db_)->doAccept();
