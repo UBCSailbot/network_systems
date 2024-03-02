@@ -106,6 +106,15 @@ msg::HelperBattery Battery::toRosMsg() const
     msg::HelperBattery msg;
     msg.set__voltage(volt_);
     msg.set__current(curr_);
+
+    std::vector<msg::HelperBattery> batteries;
+    batteries.push_back(msg);
+
+    if (batteries.size() >= 2) {
+        std::array<msg::HelperBattery, 2> msg_arr;
+        copy(batteries.begin(), batteries.end(), msg_arr.begin());
+    }
+
     return msg;
 }
 
@@ -228,5 +237,242 @@ void SailCmd::checkBounds() const
 
 // SailCmd private END
 // SailCmd END
+
+// WindSensor START
+// WindSensor public START
+
+WindSensor::WindSensor(const CanFrame & cf) : WindSensor(static_cast<CanId>(cf.can_id))
+{
+    int16_t raw_wind_speed;
+    int16_t raw_wind_dir;
+
+    std::memcpy(&raw_wind_speed, cf.data + BYTE_OFF_SPEED, sizeof(int16_t));
+    std::memcpy(&raw_wind_dir, cf.data + BYTE_OFF_ANGLE, sizeof(int16_t));
+
+    wind_speed_ = static_cast<float>(raw_wind_speed) * 1.852 / 10.0;  //NOLINT
+    wind_angle_ = static_cast<int16_t>(raw_wind_dir);
+
+    checkBounds();
+}
+
+WindSensor::WindSensor(msg::WindSensor ros_wind_sensor, CanId id)
+: BaseFrame(id, CAN_BYTE_DLEN_), wind_angle_(ros_wind_sensor.direction), wind_speed_(ros_wind_sensor.speed.speed)
+{
+    checkBounds();
+}
+
+msg::WindSensor WindSensor::toRosMsg() const
+{
+    msg::WindSensor  msg;
+    msg::HelperSpeed speed;
+    msg.set__direction(static_cast<int16_t>(wind_angle_));
+    speed.set__speed(wind_speed_);
+    msg.set__speed(speed);
+    return msg;
+}
+
+CanFrame WindSensor::toLinuxCan() const
+{
+    int16_t raw_wind_speed = static_cast<int16_t>(wind_speed_ * 10 / 1.852);  //NOLINT
+    int16_t raw_wind_dir   = static_cast<int16_t>(wind_angle_);
+
+    CanFrame cf = BaseFrame::toLinuxCan();
+    std::memcpy(cf.data + BYTE_OFF_SPEED, &raw_wind_speed, sizeof(int16_t));
+    std::memcpy(cf.data + BYTE_OFF_ANGLE, &raw_wind_dir, sizeof(int16_t));
+
+    return cf;
+}
+
+std::string WindSensor::debugStr() const
+{
+    std::stringstream ss;
+    ss << BaseFrame::debugStr() << "\n"
+       << "Wind speed (m/s): " << wind_speed_ << "\n"
+       << "Wind angle (degrees): " << wind_angle_;
+    return ss.str();
+}
+
+std::optional<CanId> WindSensor::rosIdxToCanId(size_t wind_idx)
+{
+    if (wind_idx < WIND_SENSOR_IDS.size()) {
+        return WIND_SENSOR_IDS[wind_idx];
+    }
+    return std::nullopt;
+}
+// WindSensor public END
+// WindSensor private START
+
+WindSensor::WindSensor(CanId id) : BaseFrame(std::span{WIND_SENSOR_IDS}, id, CAN_BYTE_DLEN_) {}
+
+void WindSensor::checkBounds() const
+{
+    auto err = utils::isOutOfBounds<float>(wind_angle_, WIND_DIRECTION_LBND, WIND_DIRECTION_UBND);
+    if (err) {
+        std::string err_msg = err.value();
+        throw std::out_of_range("Wind angle is out of bounds!\n" + debugStr() + "\n" + err_msg);
+    }
+    err = utils::isOutOfBounds<float>(wind_speed_, SPEED_LBND, SPEED_UBND);
+    if (err) {
+        std::string err_msg = err.value();
+        throw std::out_of_range("Wind speed is out of bounds!\n" + debugStr() + "\n" + err_msg);
+    }
+}
+
+// WindSensor private END
+// WindSensor END
+
+// GPS START
+// GPS public START
+
+GPS::GPS(const CanFrame & cf) : GPS(static_cast<CanId>(cf.can_id)) { updateRos(cf); }
+
+GPS::GPS(msg::GPS ros_gps, CanId id)
+: BaseFrame(id, CAN_BYTE_DLEN_),
+  lon_(ros_gps.lat_lon.longitude),
+  lat_(ros_gps.lat_lon.latitude),
+  speed_(ros_gps.speed.speed),
+  heading_(ros_gps.heading.heading)
+{
+    checkBounds();
+}
+
+msg::GPS GPS::toRosMsg() const
+{
+    msg::GPS           msg;
+    msg::HelperLatLon  lat_lon;
+    msg::HelperSpeed   speed;
+    msg::HelperHeading heading;
+
+    lat_lon.set__latitude(lat_);
+    lat_lon.set__longitude(lon_);
+    speed.set__speed(speed_);
+    heading.set__heading(heading_);
+
+    msg.set__lat_lon(lat_lon);
+    msg.set__speed(speed);
+    msg.set__heading(heading);
+    return msg;
+}
+
+CanFrame GPS::toLinuxCan(int frame_index) const
+{
+    CanFrame cf = BaseFrame::toLinuxCan();
+    int8_t   raw_degree;
+    float    raw_minute;
+
+    int16_t raw_speed;
+    int16_t raw_track;
+    int16_t raw_mag_var;
+    int16_t raw_heading;
+
+    switch (frame_index) {
+        case 0:
+            raw_degree = static_cast<int8_t>(lat_);
+            raw_minute = (lat_ - raw_degree) * 60.0;  // NOLINT
+            std::memcpy(cf.data + BYTE_OFF_DEG, &raw_degree, sizeof(int8_t));
+            std::memcpy(cf.data + BYTE_OFF_MIN, &raw_minute, sizeof(int32_t));
+            break;
+        case 1:
+            raw_degree = static_cast<int8_t>(lon_);
+            raw_minute = (lat_ - raw_degree) * 60.0;  // NOLINT
+            std::memcpy(cf.data + BYTE_OFF_DEG, &raw_degree, sizeof(int8_t));
+            std::memcpy(cf.data + BYTE_OFF_MIN, &raw_minute, sizeof(int32_t));
+            break;
+        case 2:
+            raw_speed   = static_cast<int16_t>(speed_);
+            raw_mag_var = static_cast<int16_t>(mag_var_);
+            raw_heading = static_cast<int16_t>(heading_);
+            raw_track   = static_cast<int16_t>(track_);
+            std::memcpy(cf.data + BYTE_OFF_SPEED, &raw_speed, sizeof(int16_t));
+            std::memcpy(cf.data + BYTE_OFF_HEADING, &raw_heading, sizeof(int16_t));
+            std::memcpy(cf.data + BYTE_OFF_MAG_VAR, &raw_mag_var, sizeof(int16_t));
+            std::memcpy(cf.data + BYTE_OFF_TRACK, &raw_track, sizeof(int16_t));
+            break;
+        default:
+            throw std::out_of_range("Invalid frame index for GPS!");
+    }
+    return cf;
+}
+
+void GPS::updateRos(CanFrame cf)
+{
+    int8_t  raw_degree;
+    float   raw_minute;
+    int16_t raw_speed;
+    int16_t raw_heading;
+    int16_t raw_track;
+    int16_t raw_mag_var;
+
+    //note: GPS_IDS[0] is latitude, GPS_IDS[1] is longitude, GPS_IDS[2] is speed, heading, track, and magnetic variation
+    switch (cf.can_id) {
+        case static_cast<canid_t>(GPS_IDS[0]):
+            std::memcpy(&raw_degree, cf.data + BYTE_OFF_DEG, sizeof(int8_t));
+            std::memcpy(&raw_minute, cf.data + BYTE_OFF_MIN, sizeof(int32_t));
+            lat_ = static_cast<float>(raw_degree + static_cast<float>(raw_minute) / 60.0);  //NOLINT
+            break;
+
+        case static_cast<canid_t>(GPS_IDS[1]):
+            std::memcpy(&raw_degree, cf.data + BYTE_OFF_DEG, sizeof(int8_t));
+            std::memcpy(&raw_minute, cf.data + BYTE_OFF_MIN, sizeof(int32_t));
+            lon_ = static_cast<float>(raw_degree + static_cast<float>(raw_minute) / 60.0);  //NOLINT
+            break;
+
+        case static_cast<canid_t>(GPS_IDS[2]):
+            std::memcpy(&raw_speed, cf.data + BYTE_OFF_SPEED, sizeof(int16_t));
+            std::memcpy(&raw_heading, cf.data + BYTE_OFF_HEADING, sizeof(int16_t));
+            std::memcpy(&raw_mag_var, cf.data + BYTE_OFF_MAG_VAR, sizeof(int16_t));
+            std::memcpy(&raw_track, cf.data + BYTE_OFF_TRACK, sizeof(int16_t));
+            speed_   = static_cast<float>(raw_speed);
+            heading_ = static_cast<float>(raw_heading);
+            track_   = static_cast<float>(raw_track);
+            mag_var_ = static_cast<float>(raw_mag_var);
+            break;
+
+        default:
+            throw CanIdMismatchException(GPS_IDS, static_cast<CanId>(cf.can_id));
+    }
+
+    checkBounds();
+}
+
+std::string GPS::debugStr() const
+{
+    std::stringstream ss;
+    ss << BaseFrame::debugStr() << "\n"
+       << "Latitude: " << lat_ << "\n"
+       << "Longitude: " << lon_ << "\n"
+       << "Speed (m/s): " << speed_ << "\n"
+       << "Heading (degrees): " << heading_;
+    return ss.str();
+}
+
+// GPS public END
+// GPS private START
+
+GPS::GPS(CanId id) : BaseFrame(std::span{GPS_IDS}, id, CAN_BYTE_DLEN_) {}
+
+void GPS::checkBounds() const
+{
+    auto err = utils::isOutOfBounds<float>(lat_, LAT_LBND, LAT_UBND);
+    if (err) {
+        std::string err_msg = err.value();
+        throw std::out_of_range("Latitude is out of bounds!\n" + debugStr() + "\n" + err_msg);
+    }
+    err = utils::isOutOfBounds<float>(lon_, LON_LBND, LON_UBND);
+    if (err) {
+        std::string err_msg = err.value();
+        throw std::out_of_range("Longitude is out of bounds!\n" + debugStr() + "\n" + err_msg);
+    }
+    err = utils::isOutOfBounds<float>(speed_, SPEED_LBND, SPEED_UBND);
+    if (err) {
+        std::string err_msg = err.value();
+        throw std::out_of_range("Speed is out of bounds!\n" + debugStr() + "\n" + err_msg);
+    }
+    err = utils::isOutOfBounds<float>(heading_, HEADING_LBND, HEADING_UBND);
+    if (err) {
+        std::string err_msg = err.value();
+        throw std::out_of_range("Heading is out of bounds!\n" + debugStr() + "\n" + err_msg);
+    }
+}
 
 }  // namespace CAN_FP
