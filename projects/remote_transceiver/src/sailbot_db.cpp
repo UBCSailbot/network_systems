@@ -12,6 +12,7 @@
 #include <mongocxx/database.hpp>
 #include <mongocxx/instance.hpp>
 
+#include "global_path.pb.h"
 #include "sensors.pb.h"
 #include "waypoint.pb.h"
 
@@ -151,5 +152,32 @@ bool SailbotDB::storePathSensors(
     DocVal local_path_doc = local_path_doc_arr << bstream::close_array << "timestamp" << timestamp << bstream::finalize;
     return static_cast<bool>(local_path_coll.insert_one(local_path_doc.view()));
 }
+
+bool SailbotDB::storeNewGlobalPath(
+  const Polaris::GlobalPath & global_path_pb, const std::string & timestamp, mongocxx::client & client)
+{
+    mongocxx::database           db               = client[db_name_];
+    mongocxx::collection         global_path_coll = db[COLLECTION_GLOBAL_PATH];
+    bstream::document            doc_builder{};
+    auto                         global_path_doc_arr = doc_builder << "waypoints" << bstream::open_array;
+    ProtoList<Polaris::Waypoint> waypoints           = global_path_pb.waypoints();
+    for (const Polaris::Waypoint & waypoint : waypoints) {
+        global_path_doc_arr = global_path_doc_arr << bstream::open_document << "latitude" << waypoint.latitude()
+                                                  << "longitude" << waypoint.longitude() << bstream::close_document;
+    }
+    // global_path_doc_arr = buildGlobalPathDoc(global_path_doc_arr, waypoints);
+    DocVal global_path_doc = global_path_doc_arr << bstream::close_array << "timestamp" << timestamp
+                                                 << bstream::finalize;
+    return static_cast<bool>(global_path_coll.insert_one(global_path_doc.view()));
+}
+
+// void buildGlobalPathDoc(auto global_path_doc_arr, const ProtoList<Polaris::Waypoint> & waypoints)
+// {
+//     for (const Polaris::Waypoint & waypoint : waypoints) {
+//         global_path_doc_arr = global_path_doc_arr << bstream::open_document << "latitude" << waypoint.latitude()
+//                                                   << "longitude" << waypoint.longitude() << bstream::close_document;
+//     }
+//     return global_path_doc_arr;
+// }
 
 // END PRIVATE

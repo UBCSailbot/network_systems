@@ -351,6 +351,24 @@ void genRandPathData(Sensors::Path * path_data)
     }
 }
 
+void genFixedGlobalPathData(Polaris::GlobalPath * path_data) {
+
+    for(int i = 0; i < static_cast<int>(path_data->num_waypoints()); i++) {
+        
+        
+    }
+} 
+
+Polaris::GlobalPath genGlobalPath()
+{
+    Polaris::GlobalPath global_path;
+    for(int i = 0; i < static_cast<int>(global_path.num_waypoints()); i++) {
+        genFixedGlobalPathData(&global_path);
+        
+    }
+    
+    return global_path;
+}
 /**
  * @brief Generate random data for all sensors
  *
@@ -404,6 +422,8 @@ std::pair<Sensors, SailbotDB::RcvdMsgInfo> genRandData()
       .timestamp_ = std::to_string(g_doc_num++)};  // increment counter after converting and storing
     return {rand_sensors, rand_info};
 }
+
+std::pair<Polaris::GlobalPath, SailbotDB::RcvdMsgInfo> gen 
 
 /**
  * @brief Query the database and check that the sensor and message are correct
