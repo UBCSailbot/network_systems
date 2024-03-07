@@ -4,7 +4,9 @@
 // Section numbers in this header file refer to this document
 
 #include <cstdint>
+#include <sstream>
 #include <string>
+#include <vector>
 
 namespace AT
 {
@@ -42,7 +44,7 @@ struct Line
     : str_((str == AT::DELIMITER || str == "\n" || str == "\r") ? str : (str + "\r"))
     {
     }
-    // In most cases, str_ will just be the input str to the constructor
+    // In most cases, str_ will just be the input str to the constructor + "\r"
     // AT::DELIMITER, \n, and \r are exceptions, and remain the same
     const std::string str_;
 };
@@ -56,7 +58,7 @@ struct SBDStatusRsp  // TODO(Jng468): Implement this class
     static constexpr uint8_t MO_SUCCESS_START = 0;
     static constexpr uint8_t MO_SUCCESS_END   = 4;
 
-    uint8_t  MO_status_;
+    uint8_t  MO_status_;  // indicates if MO message is transferred successfully [1, 4]
     uint16_t MOMSN_;
     uint8_t  MT_status_;
     uint16_t MTMSN_;
@@ -70,13 +72,27 @@ struct SBDStatusRsp  // TODO(Jng468): Implement this class
      */
     explicit SBDStatusRsp(const std::string & rsp_string)
     {
-        (void)rsp_string;
-        MO_status_ = 0;
-        MOMSN_     = 0;
-        MT_status_ = 0;
-        MTMSN_     = 0;
-        MT_len_    = 0;
-        MT_queued_ = 0;
+        size_t                   begin_point = rsp_string.find(':');
+        std::string              data        = rsp_string.substr(begin_point + 1);
+        std::vector<std::string> tokens;
+
+        size_t start = 0;
+        size_t end;
+        while ((end = data.find(',', start)) != std::string::npos) {
+            tokens.push_back(data.substr(start, end - start));
+            start = end + 1;
+        }
+        tokens.push_back(data.substr(start));
+
+        // assign index numbers
+        enum { MO_STATUS_INDEX, MOMSN_INDEX, MT_STATUS_INDEX, MTMSN_INDEX, MT_LEN_INDEX, MT_QUEUED_INDEX };
+
+        MO_status_ = std::stoi(tokens[MO_STATUS_INDEX]);
+        MOMSN_     = std::stoi(tokens[MOMSN_INDEX]);
+        MT_status_ = std::stoi(tokens[MT_STATUS_INDEX]);
+        MTMSN_     = std::stoi(tokens[MTMSN_INDEX]);
+        MT_len_    = std::stoi(tokens[MT_LEN_INDEX]);
+        MT_queued_ = std::stoi(tokens[MT_QUEUED_INDEX]);
     };
 
     /**

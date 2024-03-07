@@ -135,7 +135,7 @@ bool LocalTransceiver::send()
         throw std::length_error(err_string);
     }
 
-    std::string write_bin_cmd_str = AT::write_bin::CMD + std::to_string(data.size());
+    std::string write_bin_cmd_str = AT::write_bin::CMD + std::to_string(data.size()); //according to specs
     AT::Line    at_write_cmd(write_bin_cmd_str);
 
     static constexpr int MAX_NUM_RETRIES = 20;  // allow retries because the connection is imperfect
