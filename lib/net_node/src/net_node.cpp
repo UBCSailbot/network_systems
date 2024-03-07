@@ -1,24 +1,28 @@
 #include "net_node.h"
 
-#include <boost/asio/buffer.hpp>
-#include <boost/asio/posix/stream_descriptor.hpp>
-#include <boost/asio/read.hpp>
-#include <boost/asio/streambuf.hpp>
 #include <rclcpp/rclcpp.hpp>
 
-namespace bio = boost::asio;
-
-NetNode::NetNode(const std::string & node_name) : rclcpp::Node(node_name)
+NetNode::NetNode(const std::string & node_name)
+: rclcpp::Node(node_name), stdout_stream_(STDOUT_FILENO, this->get_logger())
 {
-    bio::posix::stream_descriptor stdout_stream(io_, STDOUT_FILENO);
-    bio::streambuf                stdout_buf;
-    rclcpp::Logger                logger = this->get_logger();
+    std::cout.rdbuf(stdout_stream_.rdbuf());
+    stdout_stream_ << "test" << std::endl;
+}
 
-    bio::async_read(
-      io_, stdout_buf, [&logger, &stdout_buf](const boost::system::error_code & e, std::size_t bytes_transferred) {
-          std::string output_str = std::string(
-            bio::buffers_begin(stdout_buf.data()),
-            bio::buffers_begin(stdout_buf.data()) + static_cast<int64_t>(stdout_buf.data().size()));
-          RCLCPP_INFO(logger, "%s", output_str.c_str());
-      });
+NetNode::~NetNode() {}
+
+LogOverride::LogOverride(int fd, rclcpp::Logger logger) : fd_(fd), logger_(logger) {}
+
+LogOverride & LogOverride::operator<<(const std::string & str)
+{
+    std::cerr << "HERE" << std::endl;
+    switch (fd_) {
+        case STDIN_FILENO:
+            RCLCPP_INFO(logger_, "%s", str.c_str());
+            break;
+        case STDOUT_FILENO:
+            RCLCPP_ERROR(logger_, "%s", str.c_str());
+            break;
+    }
+    return *this;
 }
