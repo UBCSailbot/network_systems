@@ -164,38 +164,3 @@ TEST_F(TestLocalTransceiver, sendData)
     lcl_trns_->updateSensor(local_paths);
     lcl_trns_->send();
 }
-
-/**
- * @brief Open LOCAL_TRANSCEIVER_TEST_PORT as a file and visually confirm response
- *
- */
-TEST_F(TestLocalTransceiver, visualVerification)
-{
-    constexpr float holder = 14.3;
-
-    custom_interfaces::msg::GPS gps;
-    gps.heading.set__heading(holder);
-    gps.lat_lon.set__latitude(holder);
-    gps.lat_lon.set__longitude(holder);
-    gps.speed.set__speed(holder);
-    lcl_trns_->updateSensor(gps);
-    lcl_trns_->send();
-
-    std::ifstream port(LOCAL_TRANSCEIVER_TEST_PORT);
-    std::string   portline;
-
-    port.close();
-
-    /*std::ofstream mockSerialFile(LOCAL_TRANSCEIVER_TEST_PORT);
-
-    // Redirect cout to the file
-    std::streambuf *originalCoutBuffer = std::cout.rdbuf();
-    std::cout.rdbuf(mockSerialFile.rdbuf());
-
-    // Execute the function that generates output
-    lcl_trns_->receive();
-
-    // Restore the original cout buffer
-    std::cout.rdbuf(originalCoutBuffer);
-    */
-}
