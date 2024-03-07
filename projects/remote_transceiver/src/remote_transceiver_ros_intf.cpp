@@ -1,4 +1,5 @@
 #include <boost/asio/io_context.hpp>
+#include <boost/asio/strand.hpp>
 #include <iostream>
 #include <memory>
 #include <rclcpp/parameter.hpp>
@@ -79,12 +80,9 @@ public:
                 io_threads_.reserve(num_threads);
                 bio::ip::address addr = bio::ip::make_address(host);
 
-                tcp::acceptor acceptor{*io_, {addr, static_cast<uint16_t>(port)}};
-                tcp::socket   socket{*io_};
-
-                listener_ =
-                  std::make_unique<remote_transceiver::Listener>(*io_, std::move(acceptor), std::move(sailbot_db));
-                listener_->run();
+                std::make_shared<remote_transceiver::Listener>(
+                  *io_, tcp::endpoint{addr, static_cast<uint16_t>(port)}, std::move(sailbot_db))
+                  ->run();
 
                 for (std::thread & io_thread : io_threads_) {
                     io_thread = std::thread([&io_ = io_]() { io_->run(); });
@@ -112,9 +110,8 @@ public:
     }
 
 private:
-    std::unique_ptr<remote_transceiver::Listener> listener_;    // Pointer to the HTTP Listener
-    std::unique_ptr<bio::io_context>              io_;          // io_context that all boost::asio operations run off of
-    std::vector<std::thread>                      io_threads_;  // Vector of all concurrent IO/HTTP request threads
+    std::unique_ptr<bio::io_context> io_;          // io_context that all boost::asio operations run off of
+    std::vector<std::thread>         io_threads_;  // Vector of all concurrent IO/HTTP request threads
     bool enabled_;  // Status flag that indicates whether the Remote Transceiver is running or not
 };
 

@@ -80,9 +80,9 @@ CanTransceiver::CanTransceiver(int fd) : sock_desc_(fd), is_can_simulated_(true)
 
 CanTransceiver::~CanTransceiver()
 {
-    close(sock_desc_);
     shutdown_flag_ = true;
     receive_thread_.join();
+    close(sock_desc_);
 }
 
 void CanTransceiver::receive()
