@@ -85,9 +85,9 @@ void LocalTransceiver::updateSensor(msg::GenericSensors msg)
 void LocalTransceiver::updateSensor(msg::LPathData localData)
 {
     sensors_.clear_local_path_data();
+    Sensors::Path * new_local = sensors_.mutable_local_path_data();
     for (const msg::HelperLatLon & local_data : localData.local_path.waypoints) {
-        Sensors::Path *     new_local = sensors_.mutable_local_path_data();
-        Polaris::Waypoint * waypoint  = new_local->add_waypoints();
+        Polaris::Waypoint * waypoint = new_local->add_waypoints();
         waypoint->set_latitude(local_data.latitude);
         waypoint->set_longitude(local_data.longitude);
     }
@@ -135,7 +135,7 @@ bool LocalTransceiver::send()
         throw std::length_error(err_string);
     }
 
-    std::string write_bin_cmd_str = AT::write_bin::CMD + std::to_string(data.size()); //according to specs
+    std::string write_bin_cmd_str = AT::write_bin::CMD + std::to_string(data.size());  //according to specs
     AT::Line    at_write_cmd(write_bin_cmd_str);
 
     static constexpr int MAX_NUM_RETRIES = 20;  // allow retries because the connection is imperfect
@@ -170,38 +170,38 @@ bool LocalTransceiver::send()
             continue;
         }
 
-        // Check SBD Session status to see if data was sent successfully
-        // NEEDS AN ACTIVE SERVER ON $WEBHOOK_SERVER_ENDPOINT OR VIRTUAL IRIDIUM WILL CRASH
-        static const AT::Line sbdix_cmd = AT::Line(AT::SBD_SESSION);
-        if (!send(sbdix_cmd)) {
-            continue;
-        }
+        //     // Check SBD Session status to see if data was sent successfully
+        //     // NEEDS AN ACTIVE SERVER ON $WEBHOOK_SERVER_ENDPOINT OR VIRTUAL IRIDIUM WILL CRASH
+        //     static const AT::Line sbdix_cmd = AT::Line(AT::SBD_SESSION);
+        //     if (!send(sbdix_cmd)) {
+        //         continue;
+        //     }
 
-        if (!rcvRsps({
-              AT::Line("\r"),
-              sbdix_cmd,
-              AT::Line(AT::DELIMITER),
-            })) {
-            continue;
-        }
+        //     if (!rcvRsps({
+        //           AT::Line("\r"),
+        //           sbdix_cmd,
+        //           AT::Line(AT::DELIMITER),
+        //         })) {
+        //         continue;
+        //     }
 
-        auto opt_rsp = readRsp();
-        if (!opt_rsp) {
-            continue;
-        }
+        //     auto opt_rsp = readRsp();
+        //     if (!opt_rsp) {
+        //         continue;
+        //     }
 
-        // This string will look something like:
-        // "+SBDIX:<MO status>,<MOMSN>,<MT status>,<MTMSN>,<MT length>,<MTqueued>\r\n\r\nOK\r"
-        // on success
-        // Don't bother to check for OK\r as MO status will tell us if it succeeded or not
-        std::string              opt_rsp_val = opt_rsp.value();
-        std::vector<std::string> sbd_status_vec;
-        boost::algorithm::split(sbd_status_vec, opt_rsp_val, boost::is_any_of(AT::DELIMITER));
+        //     // This string will look something like:
+        //     // "+SBDIX:<MO status>,<MOMSN>,<MT status>,<MTMSN>,<MT length>,<MTqueued>\r\n\r\nOK\r"
+        //     // on success
+        //     // Don't bother to check for OK\r as MO status will tell us if it succeeded or not
+        //     std::string              opt_rsp_val = opt_rsp.value();
+        //     std::vector<std::string> sbd_status_vec;
+        //     boost::algorithm::split(sbd_status_vec, opt_rsp_val, boost::is_any_of(AT::DELIMITER));
 
-        AT::SBDStatusRsp rsp(sbd_status_vec[0]);
-        if (rsp.MOSuccess()) {
-            return true;
-        }
+        //     AT::SBDStatusRsp rsp(sbd_status_vec[0]);
+        //     if (rsp.MOSuccess()) {
+        //         return true;
+        //     }
     }
     std::cerr << "Failed to transmit data to satellite!" << std::endl;
     std::cerr << sensors.DebugString() << std::endl;

@@ -42,9 +42,12 @@ protected:
     {
         try {
             lcl_trns_ = new LocalTransceiver(LOCAL_TRANSCEIVER_TEST_PORT, SATELLITE_BAUD_RATE);
-        } catch (boost::system::system_error & /**/) {
-            std::cerr << "Failed to create Local Transceiver for tests, is only one instance of: \""
-                      << RUN_VIRTUAL_IRIDIUM_SCRIPT_PATH << "\" running?" << std::endl;
+        } catch (boost::system::system_error & e) {
+            std::stringstream ss;
+            ss << "Failed to create Local Transceiver for tests, is only one instance of: \""
+               << RUN_VIRTUAL_IRIDIUM_SCRIPT_PATH << "\" running?" << std::endl;
+            ss << e.what() << std::endl;
+            throw std::runtime_error(ss.str());
         }
     }
     ~TestLocalTransceiver() override
@@ -162,5 +165,6 @@ TEST_F(TestLocalTransceiver, sendData)
     lcl_trns_->updateSensor(batteries);
     lcl_trns_->updateSensor(sensors);
     lcl_trns_->updateSensor(local_paths);
-    lcl_trns_->send();
+
+    EXPECT_TRUE(lcl_trns_->send());
 }
