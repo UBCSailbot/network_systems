@@ -170,38 +170,38 @@ bool LocalTransceiver::send()
             continue;
         }
 
-        //     // Check SBD Session status to see if data was sent successfully
-        //     // NEEDS AN ACTIVE SERVER ON $WEBHOOK_SERVER_ENDPOINT OR VIRTUAL IRIDIUM WILL CRASH
-        //     static const AT::Line sbdix_cmd = AT::Line(AT::SBD_SESSION);
-        //     if (!send(sbdix_cmd)) {
-        //         continue;
-        //     }
+        // Check SBD Session status to see if data was sent successfully
+        // NEEDS AN ACTIVE SERVER ON $WEBHOOK_SERVER_ENDPOINT OR VIRTUAL IRIDIUM WILL CRASH
+        static const AT::Line sbdix_cmd = AT::Line(AT::SBD_SESSION);
+        if (!send(sbdix_cmd)) {
+            continue;
+        }
 
-        //     if (!rcvRsps({
-        //           AT::Line("\r"),
-        //           sbdix_cmd,
-        //           AT::Line(AT::DELIMITER),
-        //         })) {
-        //         continue;
-        //     }
+        if (!rcvRsps({
+              AT::Line("\r"),
+              sbdix_cmd,
+              AT::Line(AT::DELIMITER),
+            })) {
+            continue;
+        }
 
-        //     auto opt_rsp = readRsp();
-        //     if (!opt_rsp) {
-        //         continue;
-        //     }
+        auto opt_rsp = readRsp();
+        if (!opt_rsp) {
+            continue;
+        }
 
-        //     // This string will look something like:
-        //     // "+SBDIX:<MO status>,<MOMSN>,<MT status>,<MTMSN>,<MT length>,<MTqueued>\r\n\r\nOK\r"
-        //     // on success
-        //     // Don't bother to check for OK\r as MO status will tell us if it succeeded or not
-        //     std::string              opt_rsp_val = opt_rsp.value();
-        //     std::vector<std::string> sbd_status_vec;
-        //     boost::algorithm::split(sbd_status_vec, opt_rsp_val, boost::is_any_of(AT::DELIMITER));
+        // This string will look something like:
+        // "+SBDIX:<MO status>,<MOMSN>,<MT status>,<MTMSN>,<MT length>,<MTqueued>\r\n\r\nOK\r"
+        // on success
+        // Don't bother to check for OK\r as MO status will tell us if it succeeded or not
+        std::string              opt_rsp_val = opt_rsp.value();
+        std::vector<std::string> sbd_status_vec;
+        boost::algorithm::split(sbd_status_vec, opt_rsp_val, boost::is_any_of(AT::DELIMITER));
 
-        //     AT::SBDStatusRsp rsp(sbd_status_vec[0]);
-        //     if (rsp.MOSuccess()) {
-        //         return true;
-        //     }
+        AT::SBDStatusRsp rsp(sbd_status_vec[0]);
+        if (rsp.MOSuccess()) {
+            return true;
+        }
     }
     std::cerr << "Failed to transmit data to satellite!" << std::endl;
     std::cerr << sensors.DebugString() << std::endl;
@@ -214,13 +214,6 @@ std::optional<std::string> LocalTransceiver::debugSend(const std::string & cmd)
     std::string sent_cmd;
 
     if (!send(at_cmd)) {
-        return std::nullopt;
-    }
-
-    if (!rcvRsps({
-          at_cmd,
-          AT::Line(AT::DELIMITER),
-        })) {
         return std::nullopt;
     }
 

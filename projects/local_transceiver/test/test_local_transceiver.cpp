@@ -34,7 +34,15 @@ Local Transceiver unit tests rely on two other programs: Virtual Iridium and HTT
 class TestLocalTransceiver : public ::testing::Test
 {
 protected:
-    static void SetUpTestSuite() { http_echo_server_proc_ = bp::child(RUN_HTTP_ECHO_SERVER_CMD); }
+    static void SetUpTestSuite()
+    {
+        bp::system("pkill -f http_echo_server");  // kill any currently running http_echo_server processes
+        http_echo_server_proc_ = bp::child(RUN_HTTP_ECHO_SERVER_CMD, bp::std_out > stdout, bp::std_err > stderr);
+        std::error_code e;
+        if (!http_echo_server_proc_.running(e)) {
+            throw std::runtime_error("Failed to start http echo server process! " + e.message());
+        }
+    }
 
     static void TearDownTestSuite() { http_echo_server_proc_.terminate(); }
 
@@ -68,7 +76,10 @@ bp::child TestLocalTransceiver::http_echo_server_proc_ = {};
  */
 TEST_F(TestLocalTransceiver, debugSendTest)
 {
-    EXPECT_EQ(lcl_trns_->debugSend(AT::CHECK_CONN), AT::Line(AT::STATUS_OK).str_);
+    auto opt_result = lcl_trns_->debugSend(AT::CHECK_CONN);
+    EXPECT_TRUE(opt_result);
+    std::string result = opt_result.value();
+    EXPECT_TRUE(boost::algorithm::contains(result, AT::Line(AT::STATUS_OK).str_));
 }
 
 /**
