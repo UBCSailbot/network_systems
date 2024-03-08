@@ -119,8 +119,19 @@ private:
 
 int main(int argc, char * argv[])
 {
+    bool err = false;
     rclcpp::init(argc, argv);
-    rclcpp::spin(std::make_shared<MockAisRosIntf>());
+    try {
+        std::shared_ptr<MockAisRosIntf> node = std::make_shared<MockAisRosIntf>();
+        try {
+            rclcpp::spin(node);
+        } catch (std::exception & e) {
+            RCLCPP_ERROR(node->get_logger(), "%s", e.what());
+            throw e;
+        }
+    } catch (std::exception & e) {
+        err = true;
+    }
     rclcpp::shutdown();
-    return 0;
+    return err ? -1 : 0;
 }

@@ -68,11 +68,15 @@ int main(int argc, char * argv[])
     bool err = false;
     rclcpp::init(argc, argv);
     std::shared_ptr<LocalTransceiver> lcl_trns = std::make_shared<LocalTransceiver>("PLACEHOLDER", SATELLITE_BAUD_RATE);
-    std::shared_ptr<LocalTransceiverIntf> node = std::make_shared<LocalTransceiverIntf>(lcl_trns);
     try {
-        rclcpp::spin(node);
+        std::shared_ptr<LocalTransceiverIntf> node = std::make_shared<LocalTransceiverIntf>(lcl_trns);
+        try {
+            rclcpp::spin(node);
+        } catch (std::exception & e) {
+            RCLCPP_ERROR(node->get_logger(), "%s", e.what());
+            throw e;
+        }
     } catch (std::exception & e) {
-        RCLCPP_ERROR(node->get_logger(), "%s", e.what());
         err = true;
     }
     rclcpp::shutdown();

@@ -53,11 +53,15 @@ int main(int argc, char * argv[])
 {
     bool err = false;
     rclcpp::init(argc, argv);
-    std::shared_ptr<CachedFibNode> node = std::make_shared<CachedFibNode>(INIT_FIB_SIZE);
     try {
-        rclcpp::spin(node);
-    } catch (std::exception & e) {
-        RCLCPP_ERROR(node->get_logger(), "%s", e.what());
+        std::shared_ptr<CachedFibNode> node = std::make_shared<CachedFibNode>(INIT_FIB_SIZE);
+        try {
+            rclcpp::spin(node);
+        } catch (std::exception & e) {
+            RCLCPP_ERROR(node->get_logger(), "%s", e.what());
+            throw e;
+        }
+    } catch (std::exception e) {
         err = true;
     }
     rclcpp::shutdown();
