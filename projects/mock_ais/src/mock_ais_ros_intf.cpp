@@ -12,14 +12,15 @@
 #include "cmn_hdrs/ros_info.h"
 #include "cmn_hdrs/shared_constants.h"
 #include "mock_ais.h"
+#include "net_node.h"
 
 /**
  * Connect the Mock AIS to the onbaord ROS network
  */
-class MockAisRosIntf : public rclcpp::Node
+class MockAisRosIntf : public NetNode
 {
 public:
-    MockAisRosIntf() : Node("mock_ais_node")
+    MockAisRosIntf() : NetNode("mock_ais_node")
     {
         static constexpr int ROS_Q_SIZE = 5;
         this->declare_parameter("enabled", false);

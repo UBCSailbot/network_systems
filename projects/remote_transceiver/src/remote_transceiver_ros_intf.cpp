@@ -7,6 +7,7 @@
 #include <stdexcept>
 
 #include "cmn_hdrs/shared_constants.h"
+#include "net_node.h"
 #include "remote_transceiver.h"
 #include "sailbot_db.h"
 
@@ -14,10 +15,10 @@
  * @brief Connect the Remote Transceiver to the onboard ROS network
  *
  */
-class RemoteTransceiverRosIntf : public rclcpp::Node
+class RemoteTransceiverRosIntf : public NetNode
 {
 public:
-    RemoteTransceiverRosIntf() : Node("remote_transceiver_node")
+    RemoteTransceiverRosIntf() : NetNode("remote_transceiver_node")
     {
         this->declare_parameter("enabled", true);
         enabled_ = this->get_parameter("enabled").as_bool();

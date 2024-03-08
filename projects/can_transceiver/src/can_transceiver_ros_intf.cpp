@@ -15,6 +15,7 @@
 #include "can_transceiver.h"
 #include "cmn_hdrs/ros_info.h"
 #include "cmn_hdrs/shared_constants.h"
+#include "net_node.h"
 
 constexpr int  QUEUE_SIZE     = 10;  // Arbitrary number
 constexpr auto TIMER_INTERVAL = std::chrono::milliseconds(500);
@@ -23,10 +24,10 @@ namespace msg = custom_interfaces::msg;
 using CAN_FP::CanFrame;
 using CAN_FP::CanId;
 
-class CanTransceiverIntf : public rclcpp::Node
+class CanTransceiverIntf : public NetNode
 {
 public:
-    CanTransceiverIntf() : Node("can_transceiver_node")
+    CanTransceiverIntf() : NetNode("can_transceiver_node")
     {
         this->declare_parameter("enabled", true);
 
