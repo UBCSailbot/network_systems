@@ -189,8 +189,15 @@ private:
 
 int main(int argc, char * argv[])
 {
+    bool err = false;
     rclcpp::init(argc, argv);
-    rclcpp::spin(std::make_shared<CanTransceiverIntf>());
+    std::shared_ptr<CanTransceiverIntf> node = std::make_shared<CanTransceiverIntf>();
+    try {
+        rclcpp::spin(node);
+    } catch (std::exception & e) {
+        RCLCPP_ERROR(node->get_logger(), "%s", e.what());
+        err = true;
+    }
     rclcpp::shutdown();
-    return 0;
+    return err ? -1 : 0;
 }

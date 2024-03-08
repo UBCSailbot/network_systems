@@ -118,14 +118,16 @@ private:
 
 int main(int argc, char ** argv)
 {
+    bool err = false;
     rclcpp::init(argc, argv);
+    std::shared_ptr<RemoteTransceiverRosIntf> node = std::make_shared<RemoteTransceiverRosIntf>();
     try {
-        rclcpp::spin(std::make_shared<RemoteTransceiverRosIntf>());
-    } catch (std::runtime_error & e) {
-        std::cerr << e.what() << std::endl;
-        return -1;
+        rclcpp::spin(node);
+    } catch (std::exception & e) {
+        RCLCPP_ERROR(node->get_logger(), "%s", e.what());
+        err = true;
     }
     rclcpp::shutdown();
 
-    return 0;
+    return err ? -1 : 0;
 }
