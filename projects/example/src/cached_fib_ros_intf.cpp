@@ -61,7 +61,8 @@ int main(int argc, char * argv[])
             RCLCPP_ERROR(node->get_logger(), "%s", e.what());
             throw e;
         }
-    } catch (std::exception e) {
+    } catch (std::exception & e) {
+        std::cerr << e.what() << std::endl;
         err = true;
     }
     rclcpp::shutdown();

@@ -200,6 +200,7 @@ int main(int argc, char * argv[])
             throw e;
         }
     } catch (std::exception & e) {
+        std::cerr << e.what() << std::endl;
         err = true;
     }
     rclcpp::shutdown();
