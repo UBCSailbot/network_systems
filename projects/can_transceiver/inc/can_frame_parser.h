@@ -355,90 +355,87 @@ private:
  * @brief GPS class derived from the BaseFrame. Represents GPS data.
  *
  */
-// class GPS final : public BaseFrame
-// {
-// public:
-// static constexpr std::array<CanId, 4> GPS_IDS = {
-//     CanId::PATH_GPS_DATA_FRAME_1, CanId::PATH_GPS_DATA_FRAME_2, CanId::PATH_GPS_DATA_FRAME_3};
-// static constexpr uint8_t CAN_BYTE_DLEN_   = 8;
-// static constexpr uint8_t BYTE_OFF_MIN     = 0;
-// static constexpr uint8_t BYTE_OFF_DEG     = 4;
-// static constexpr uint8_t BYTE_OFF_SPEED   = 0;
-// static constexpr uint8_t BYTE_OFF_MAG_VAR = 2;
-// static constexpr uint8_t BYTE_OFF_TRACK   = 4;
-// static constexpr uint8_t BYTE_OFF_HEADING = 6;
+class GPS final : public BaseFrame
+{
+public:
+    static constexpr std::array<CanId, 1> GPS_IDS          = {CanId::PATH_GPS_DATA_FRAME_1};
+    static constexpr uint8_t              CAN_BYTE_DLEN_   = 24;
+    static constexpr uint32_t             BYTE_OFF_LAT     = 0;
+    static constexpr uint32_t             BYTE_OFF_LON     = 4;
+    static constexpr uint32_t             BYTE_OFF_SEC     = 8;
+    static constexpr uint32_t             BYTE_OFF_MIN     = 12;
+    static constexpr uint32_t             BYTE_OFF_HOUR    = 13;
+    static constexpr uint32_t             BYTE_OFF_RESV    = 14;
+    static constexpr uint32_t             BYTE_OFF_HEADING = 16;
+    static constexpr uint32_t             BYTE_OFF_SPEED   = 20;
 
-// using BaseFrame::toLinuxCan;  // to create a new toLinuxCan() function that takes a parameter
+    /**
+       * @brief Explicitly deleted no-argument constructor
+       *
+       */
+    GPS() = delete;
 
-// /**
-//     * @brief Explicitly deleted no-argument constructor
-//     *
-//     */
-// GPS() = delete;
+    /**
+     * @brief Construct a GPS object from a Linux CanFrame representation
+     *
+     * @param cf Linux CanFrame
+     */
+    explicit GPS(const CanFrame & cf);
 
-// /**
-//     * @brief Construct a GPS object from a Linux CanFrame representation
-//     *
-//     * @param cf Linux CanFrame
-//     */
-// explicit GPS(const CanFrame & cf);
+    /**
+     * @brief Construct a GPS object from a custom_interfaces ROS msg representation
+     *
+     * @param ros_gps custom_interfaces representation of a GPS
+     * @param id      CanId of the GPS (use the rosIdxToCanId() method if unknown)
+     */
+    explicit GPS(msg::GPS ros_gps, CanId id);
 
-// /**
-//     * @brief Construct a GPS object from a custom_interfaces ROS msg representation
-//     *
-//     * @param ros_gps custom_interfaces representation of a GPS
-//     * @param id      CanId of the GPS (use the rosIdxToCanId() method if unknown)
-//     */
-// explicit GPS(msg::GPS ros_gps, CanId id);
+    /**
+     * @return the custom_interfaces ROS representation of the GPS object
+     */
+    msg::GPS toRosMsg() const;
 
-// /**
-//     * @return the custom_interfaces ROS representation of the GPS object
-//     */
-// msg::GPS toRosMsg() const;
+    /**
+     * @return the Linux CanFrame representation of the GPS object
+     */
+    CanFrame toLinuxCan() const override;
 
-// /**
-//     * @return the Linux CanFrame representation of the GPS object. Requires an index to
-//     *         determine which GPS frame to create.
-//     */
-// CanFrame toLinuxCan(int frame_index) const;
+    /**
+     * @return A string that can be printed or logged to debug a GPS object
+     */
+    std::string debugStr() const override;
 
-// void updateRos(CanFrame cf);
+    /**
+     * @brief Factory method to convert the index of a GPS in the custom_interfaces ROS representation
+     *        into a CanId if valid.
+     *
+     * @param gps_idx idx of the GPS in a custom_interfaces::msg::GPS array
+     * @return CanId if valid, std::nullopt if invalid
+     */
+    static std::optional<CanId> rosIdxToCanId(size_t gps_idx);
 
-// /**
-//     * @return A string that can be printed or logged to debug a GPS object
-//     */
-// std::string debugStr() const override;
+private:
+    /**
+     * @brief Private helper constructor for GPS objects
+     *
+     * @param id CanId of the GPS
+     */
+    explicit GPS(CanId id);
 
-// private:
-// /**
-//     * @brief Private helper constructor for GPS objects
-//     *
-//     * @param id CanId of the GPS
-//     */
-// explicit GPS(CanId id);
+    /**
+     * @brief Check if the assigned fields after constructing a GPS object are within bounds.
+     * @throws std::out_of_range if any assigned fields are outside of expected bounds
+     */
+    void checkBounds() const;
 
-// /**
-//     * @brief Check if the assigned fields after constructing a GPS object are within bounds.
-//     * @throws std::out_of_range if any assigned fields are outside of expected bounds
-//     */
-// void checkBounds() const;
-
-// //TODO: add the remaining fields
-// union {
-//     struct
-//     {
-//         float    lat_;
-//         float    lon_;
-//         float    sec_;
-//         uint8_t  min_;
-//         uint8_t  hrs_;
-//         uint16_t reserved_;
-//         float    heading_;
-//         float    speed_;
-//     } fields_;
-//     std::array<uint8_t, 24> data_;  //NOLINT
-//     static_assert(sizeof(fields_) == sizeof(data_));
-// }
-// };
+    float lat_;
+    float lon_;
+    float sec_;
+    float min_;
+    float hour_;
+    //float reserved;  // Unused
+    float heading_;
+    float speed_;
+};
 
 }  // namespace CAN_FP

@@ -323,156 +323,82 @@ void WindSensor::checkBounds() const
 
 // GPS START
 // GPS public START
-/*
-GPS::GPS(const CanFrame & cf) : GPS(static_cast<CanId>(cf.can_id)) { updateRos(cf); }
+GPS::GPS(const CanFrame & cf) : GPS(static_cast<CanId>(cf.can_id))
+{
+    int32_t raw_lat;
+    int32_t raw_lon;
+    int32_t raw_sec;
+    int8_t  raw_min;
+    int8_t  raw_hour;
+    int32_t raw_heading;
+    int32_t raw_speed;
 
+    std::memcpy(&raw_lat, cf.data + BYTE_OFF_LAT, sizeof(int32_t));
+    std::memcpy(&raw_lon, cf.data + BYTE_OFF_LON, sizeof(int32_t));
+    std::memcpy(&raw_sec, cf.data + BYTE_OFF_SEC, sizeof(int32_t));
+    std::memcpy(&raw_min, cf.data + BYTE_OFF_MIN, sizeof(int8_t));
+    std::memcpy(&raw_hour, cf.data + BYTE_OFF_HOUR, sizeof(int8_t));
+    std::memcpy(&raw_heading, cf.data + BYTE_OFF_HEADING, sizeof(int32_t));
+    std::memcpy(&raw_speed, cf.data + BYTE_OFF_SPEED, sizeof(int32_t));
+
+    lat_     = (static_cast<float>(raw_lat) - 90.0) / 1000.0;   //NOLINT
+    lon_     = (static_cast<float>(raw_lon) - 180.0) / 1000.0;  //NOLINT
+    sec_     = static_cast<float>(raw_sec) / 1000.0;            //NOLINT
+    min_     = static_cast<float>(raw_min);
+    hour_    = static_cast<float>(raw_hour);
+    heading_ = static_cast<float>(raw_heading) / 1000.0;  //NOLINT
+    speed_   = static_cast<float>(raw_speed) / 1000.0;    //NOLINT
+
+    checkBounds();
+}
+/*
 GPS::GPS(msg::GPS ros_gps, CanId id)
 : BaseFrame(id, CAN_BYTE_DLEN_),
-  lon_(ros_gps.lat_lon.longitude),
   lat_(ros_gps.lat_lon.latitude),
-  speed_(ros_gps.speed.speed),
-  heading_(ros_gps.heading.heading)
-{
-    checkBounds();
+  lon_(ros_gps.lat_lon.longitude),
+  sec_(0),   //temp set to 0
+  min_(0),   // temp set to 0
+  hour_(0),  //temp set to 0
+  heading_(ros_gps.heading.heading),
+  speed_(ros_gps.speed.speed) checkBounds();
 }
 
 msg::GPS GPS::toRosMsg() const
 {
     msg::GPS           msg;
     msg::HelperLatLon  lat_lon;
-    msg::HelperSpeed   speed;
     msg::HelperHeading heading;
-
+    msg::HelperSpeed   speed;
     lat_lon.set__latitude(lat_);
     lat_lon.set__longitude(lon_);
-    speed.set__speed(speed_);
     heading.set__heading(heading_);
-
+    speed.set__speed(speed_);
     msg.set__lat_lon(lat_lon);
-    msg.set__speed(speed);
     msg.set__heading(heading);
+    msg.set__speed(speed);
     return msg;
 }
 
-CanFrame GPS::toLinuxCan(int frame_index) const
+CanFrame GPS::toLinuxCan() const
 {
+    int32_t raw_lat     = static_cast<int32_t>((lat_ + 90.0) * 1000.0);  //NOLINT
+    int32_t raw_lon     = static_cast<int32_t>((lon_ + 90.0) * 1000.0);  //NOLINT
+    int32_t raw_sec     = static_cast<int32_t>(sec_ * 1000);             //NOLINT
+    int8_t  raw_min     = static_cast<int8_t>(min_);
+    int8_t  raw_hour    = static_cast<int8_t>(hour_);
+    int32_t raw_heading = static_cast<int32_t>(heading_ * 1000);  //NOLINT
+    int32_t raw_speed   = static_cast<int32_t>(speed_ * 1000);    //NOLINT
+
     CanFrame cf = BaseFrame::toLinuxCan();
-    int8_t   raw_degree;
-    float    raw_minute;
+    std::memcpy(cf.data + BYTE_OFF_LAT, &raw_lat, sizeof(int32_t));
+    std::memcpy(cf.data + BYTE_OFF_LON, &raw_lon, sizeof(int32_t));
+    std::memcpy(cf.data + BYTE_OFF_SEC, &raw_sec, sizeof(int32_t));
+    std::memcpy(cf.data + BYTE_OFF_MIN, &raw_min, sizeof(int8_t));
+    std::memcpy(cf.data + BYTE_OFF_HOUR, &raw_hour, sizeof(int8_t));
+    std::memcpy(cf.data + BYTE_OFF_HEADING, &raw_heading, sizeof(int32_t));
+    std::memcpy(cf.data + BYTE_OFF_SPEED, &raw_speed, sizeof(int32_t));
 
-    int16_t raw_speed;
-    int16_t raw_track;
-    int16_t raw_mag_var;
-    int16_t raw_heading;
-
-    switch (frame_index) {
-        case 0:
-            raw_degree = static_cast<int8_t>(lat_);
-            raw_minute = (lat_ - raw_degree) * 60.0;  // NOLINT
-            std::memcpy(cf.data + BYTE_OFF_DEG, &raw_degree, sizeof(int8_t));
-            std::memcpy(cf.data + BYTE_OFF_MIN, &raw_minute, sizeof(int32_t));
-            break;
-        case 1:
-            raw_degree = static_cast<int8_t>(lon_);
-            raw_minute = (lat_ - raw_degree) * 60.0;  // NOLINT
-            std::memcpy(cf.data + BYTE_OFF_DEG, &raw_degree, sizeof(int8_t));
-            std::memcpy(cf.data + BYTE_OFF_MIN, &raw_minute, sizeof(int32_t));
-            break;
-        case 2:
-            raw_speed   = static_cast<int16_t>(speed_);
-            raw_mag_var = static_cast<int16_t>(mag_var_);
-            raw_heading = static_cast<int16_t>(heading_);
-            raw_track   = static_cast<int16_t>(track_);
-            std::memcpy(cf.data + BYTE_OFF_SPEED, &raw_speed, sizeof(int16_t));
-            std::memcpy(cf.data + BYTE_OFF_HEADING, &raw_heading, sizeof(int16_t));
-            std::memcpy(cf.data + BYTE_OFF_MAG_VAR, &raw_mag_var, sizeof(int16_t));
-            std::memcpy(cf.data + BYTE_OFF_TRACK, &raw_track, sizeof(int16_t));
-            break;
-        default:
-            throw std::out_of_range("Invalid frame index for GPS!");
-    }
     return cf;
-}
-
-void GPS::updateRos(CanFrame cf)
-{
-    int8_t  raw_degree;
-    float   raw_minute;
-    int16_t raw_speed;
-    int16_t raw_heading;
-    int16_t raw_track;
-    int16_t raw_mag_var;
-
-    //note: GPS_IDS[0] is latitude, GPS_IDS[1] is longitude, GPS_IDS[2] is speed, heading, track, and magnetic variation
-    switch (cf.can_id) {
-        case static_cast<canid_t>(GPS_IDS[0]):
-            std::memcpy(&raw_degree, cf.data + BYTE_OFF_DEG, sizeof(int8_t));
-            std::memcpy(&raw_minute, cf.data + BYTE_OFF_MIN, sizeof(int32_t));
-            lat_ = static_cast<float>(raw_degree + static_cast<float>(raw_minute) / 60.0);  //NOLINT
-            break;
-
-        case static_cast<canid_t>(GPS_IDS[1]):
-            std::memcpy(&raw_degree, cf.data + BYTE_OFF_DEG, sizeof(int8_t));
-            std::memcpy(&raw_minute, cf.data + BYTE_OFF_MIN, sizeof(int32_t));
-            lon_ = static_cast<float>(raw_degree + static_cast<float>(raw_minute) / 60.0);  //NOLINT
-            break;
-
-        case static_cast<canid_t>(GPS_IDS[2]):
-            std::memcpy(&raw_speed, cf.data + BYTE_OFF_SPEED, sizeof(int16_t));
-            std::memcpy(&raw_heading, cf.data + BYTE_OFF_HEADING, sizeof(int16_t));
-            std::memcpy(&raw_mag_var, cf.data + BYTE_OFF_MAG_VAR, sizeof(int16_t));
-            std::memcpy(&raw_track, cf.data + BYTE_OFF_TRACK, sizeof(int16_t));
-            speed_   = static_cast<float>(raw_speed);
-            heading_ = static_cast<float>(raw_heading);
-            track_   = static_cast<float>(raw_track);
-            mag_var_ = static_cast<float>(raw_mag_var);
-            break;
-
-        default:
-            throw CanIdMismatchException(GPS_IDS, static_cast<CanId>(cf.can_id));
-    }
-
-    checkBounds();
-}
-
-std::string GPS::debugStr() const
-{
-    std::stringstream ss;
-    ss << BaseFrame::debugStr() << "\n"
-       << "Latitude: " << lat_ << "\n"
-       << "Longitude: " << lon_ << "\n"
-       << "Speed (m/s): " << speed_ << "\n"
-       << "Heading (degrees): " << heading_;
-    return ss.str();
-}
-
-// GPS public END
-// GPS private START
-
-GPS::GPS(CanId id) : BaseFrame(std::span{GPS_IDS}, id, CAN_BYTE_DLEN_) {}
-
-void GPS::checkBounds() const
-{
-    auto err = utils::isOutOfBounds<float>(lat_, LAT_LBND, LAT_UBND);
-    if (err) {
-        std::string err_msg = err.value();
-        throw std::out_of_range("Latitude is out of bounds!\n" + debugStr() + "\n" + err_msg);
-    }
-    err = utils::isOutOfBounds<float>(lon_, LON_LBND, LON_UBND);
-    if (err) {
-        std::string err_msg = err.value();
-        throw std::out_of_range("Longitude is out of bounds!\n" + debugStr() + "\n" + err_msg);
-    }
-    err = utils::isOutOfBounds<float>(speed_, SPEED_LBND, SPEED_UBND);
-    if (err) {
-        std::string err_msg = err.value();
-        throw std::out_of_range("Speed is out of bounds!\n" + debugStr() + "\n" + err_msg);
-    }
-    err = utils::isOutOfBounds<float>(heading_, HEADING_LBND, HEADING_UBND);
-    if (err) {
-        std::string err_msg = err.value();
-        throw std::out_of_range("Heading is out of bounds!\n" + debugStr() + "\n" + err_msg);
-    }
 }*/
 
 }  // namespace CAN_FP

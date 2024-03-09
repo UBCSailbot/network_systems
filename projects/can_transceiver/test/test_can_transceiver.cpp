@@ -279,13 +279,11 @@ TEST_F(TestCanFrameParser, TestWindSensorInvalid)
         EXPECT_THROW(CAN_FP::WindSensor tmp(msg, valid_id), std::out_of_range);
     };
 
-    // /** Garbage value test does not work because garbage values are in knots*10, so
-    //     after conversion to km/hr they are well within bounds
+    /** Garbage value test does not work because garbage values are within bounds
     cf.can_id = static_cast<canid_t>(CAN_FP::CanId::SAIL_WIND_DATA_FRAME_1);
     std::copy(std::begin(GARBAGE_DATA), std::end(GARBAGE_DATA), cf.data);
-
-    CAN_FP::WindSensor tmp(cf);
-    //EXPECT_THROW(CAN_FP::WindSensor tmp(cf), std::out_of_range);
+    EXPECT_THROW(CAN_FP::WindSensor tmp(cf), std::out_of_range);
+    */
 }
 
 /**
