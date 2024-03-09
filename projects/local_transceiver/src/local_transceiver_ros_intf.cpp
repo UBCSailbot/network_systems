@@ -9,12 +9,13 @@
 #include "cmn_hdrs/ros_info.h"
 #include "cmn_hdrs/shared_constants.h"
 #include "local_transceiver.h"
+#include "net_node.h"
 
 /**
  * Local Transceiver Interface Node
  *
  */
-class LocalTransceiverIntf : public rclcpp::Node
+class LocalTransceiverIntf : public NetNode
 {
 public:
     /**
@@ -23,7 +24,7 @@ public:
      * @param lcl_trns Local Transceiver instance
      */
     explicit LocalTransceiverIntf(std::shared_ptr<LocalTransceiver> lcl_trns)
-    : Node("local_transceiver_node"), lcl_trns_(lcl_trns)
+    : NetNode("local_transceiver_node"), lcl_trns_(lcl_trns)
     {
         static constexpr int  ROS_Q_SIZE     = 5;
         static constexpr auto TIMER_INTERVAL = std::chrono::milliseconds(500);
@@ -64,9 +65,21 @@ private:
 
 int main(int argc, char * argv[])
 {
+    bool err = false;
     rclcpp::init(argc, argv);
     std::shared_ptr<LocalTransceiver> lcl_trns = std::make_shared<LocalTransceiver>("PLACEHOLDER", SATELLITE_BAUD_RATE);
-    rclcpp::spin(std::make_shared<LocalTransceiverIntf>(lcl_trns));
+    try {
+        std::shared_ptr<LocalTransceiverIntf> node = std::make_shared<LocalTransceiverIntf>(lcl_trns);
+        try {
+            rclcpp::spin(node);
+        } catch (std::exception & e) {
+            RCLCPP_ERROR(node->get_logger(), "%s", e.what());
+            throw e;
+        }
+    } catch (std::exception & e) {
+        std::cerr << e.what() << std::endl;
+        err = true;
+    }
     rclcpp::shutdown();
-    return 0;
+    return err ? -1 : 0;
 }
