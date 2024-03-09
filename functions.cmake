@@ -51,5 +51,6 @@ function(make_unit_test module srcs link_libs inc_dirs compile_defs)
         add_dependencies(${test_module} ${AUTOGEN_TARGETS})
         # Make the unit test runnable with CTest (invoked via test.sh)
         add_test(NAME ${test_module} COMMAND ${test_module})
+        set_tests_properties(${test_module} PROPERTIES TIMEOUT 60) # 1 minute per test timeout
     endif()
 endfunction()
